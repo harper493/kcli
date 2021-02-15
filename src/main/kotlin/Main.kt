@@ -8,11 +8,25 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.extensions.authentication
 
 import JsonObject
+import Rest
+import Properties
+import Datatype
 
 fun fn(s: String) {
     println("Hello $s!")
 }
 
+fun main(args: Array<String>) {
+    Datatype.load()
+    Properties.load("/home/john/stm/files/props/objects.properties")
+    val rest = Rest(server="192.168.1.70", user="kcli", password="FuckYou1!", trace=true)
+    Metadata.load(rest)
+    val a = Metadata.getAttribute("interface", "bytes_received")
+    println("${a?.name}: ${a?.displayName} ${a?.typeName}")
+}
+
+
+/*
 fun main(args: Array<String>) {
     val js = "[[\"foo\",\"bah\",],[\"baz\"],\"whizz\"]"
     val j = JsonObject.load(js)
@@ -49,3 +63,4 @@ fun main(args: Array<String>) {
 //    val free = get(url+url2, auth=a)
 //    println(free.text)
 }
+*/

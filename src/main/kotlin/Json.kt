@@ -35,11 +35,10 @@ class JsonObject_(): JsonObject {
             return index < string.length
         }
         fun skipWs() : Char? {
-            while (good()
-                && (string[index]==' ' || string[index]=='\t' || string[index]=='\n')) {
+            while (good() && (string[index] in " \t\n")) {
                 ++index
             }
-            return if (index < string.length) string[index] else null
+            return if (good()) string[index] else null
         }
         fun backup() {
             if (index>0) {

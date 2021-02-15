@@ -1,7 +1,7 @@
 import ShowLevel
 import Datatype
 import AttributeMetadata
-
+/*
 class CollectionMetadata(
     name: String,
     owner: ClassMetadata,
@@ -13,3 +13,4 @@ class CollectionMetadata(
 ) : AttributeMetadata(name, owner, level, type, nature, explanation) {
     lateinit var classMetadata: ClassMetadata
 }
+*/
