@@ -1,44 +1,43 @@
 class Properties (
-    var filename: String? = null
+    private var filename: String? = null
 ) {
     class Property (
         name: String,
     ) {
-        var leaf: String? = null
-        var children: MutableMap<String, Property> = mutableMapOf()
-        fun getChild(key: String) : Property {
+        private var leaf: String? = null
+        private var children: MutableMap<String, Property> = mutableMapOf()
+        private fun getChild(key: String) : Property {
             if (children[key] == null) {
                 children[key] = Property(key)
             }
             return children[key]!!
         }
-        fun addValue(value: String, keys: Array<String>) {
-            if (keys.isEmpty()) {
+        fun addValue(value: String, keys: Iterable<String>) {
+            if (keys.none()) {
                 leaf = value
             } else {
-                getChild(keys[0]).addValue(value, keys.copyOfRange(1, keys.size))
+                getChild(keys.first()).addValue(value, keys.drop(1))
             }
         }
-        fun get(keys: Array<String>) : String? {
-            if (keys.isEmpty()) {
-                return leaf
+        fun get(keys: Iterable<String>) : String? {
+            return if (keys.none()) {
+                leaf
             } else {
-                val c = children[keys[0]]
-                return c?.get(keys.copyOfRange(1, keys.size))
+               children[keys.first()]?.get(keys.drop(1) )
             }
         }
     }
-    val root = Property("")
-    fun addValue(value: String, keys: Array<String>) {
+    private val root = Property("")
+    fun addValue(value: String, keys: Iterable<String>) {
         root.addValue(value, keys)
     }
-    fun get(vararg keys: String) = root.get(keys as Array<String>)
-    fun load_(fn: String) {
+    fun get(vararg keys: String) = root.get(keys.toList())
+    fun loadFile(fn: String) {
         filename = fn
         java.io.File(filename!!).forEachLine {
             try {
                 val (key, value) = it.split("#")[0].split("=")
-                addValue(value.trim(), key.trim().split(".").toTypedArray())
+                addValue(value.trim(), key.trim().split("."))
             } catch (exc: Exception) { }
         }
     }
@@ -50,7 +49,7 @@ class Properties (
     companion object {
         private var properties = Properties()
         fun load(fn: String) {
-            properties.load_(fn)
+            properties.loadFile(fn)
         }
         fun get(vararg keys: String) = properties.get(*keys)
     }

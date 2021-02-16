@@ -11,13 +11,14 @@ open class AttributeMetadata(
     private val natures: MutableMap<String,String?> = mutableMapOf()
     private var type: Datatype
     private var nature: String
-    private var displayName_: String
+    var displayName: String
     val defaultValue: String? get() = natures["default"]
     val unit: String get() = (md["unit"]?.getString() ?: "")
     val filterType: Datatype get() = Datatype[natures["f"] ?: ""] ?: type
     val preference: Int get() = (md["preference"]?.getString() ?: "0").toIntOrNull() ?: 0
-    val displayName: String get() = displayName_
-    val typeName: String get() = type.name
+    val isCollection: Boolean = md["usage_type"]?.getString()?:"" == "collection"
+    val relativeUrl: String = md["relative_url"]?.getString()?:""
+    val typeName: String = md["type_name"]?.getString()?:""
 
     init {
         nature = md["nature"]?.getString() ?: ""
@@ -27,7 +28,7 @@ open class AttributeMetadata(
             natures[nn[0]] = if (nn.size>1) nn[1] else null
         }
         type = Datatype[md["type_name"]?.getString() ?: ""]
-        displayName_ = Properties.get("attribute", name) ?: name
+        displayName = Properties.get("attribute", name) ?: name
     }
 
     fun getRange() = natures["range"]

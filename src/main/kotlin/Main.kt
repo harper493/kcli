@@ -21,8 +21,17 @@ fun main(args: Array<String>) {
     Properties.load("/home/john/stm/files/props/objects.properties")
     val rest = Rest(server="192.168.1.70", user="kcli", password="FuckYou1!", trace=true)
     Metadata.load(rest)
-    val a = Metadata.getAttribute("interface", "bytes_received")
-    println("${a?.name}: ${a?.displayName} ${a?.typeName}")
+    while (true) {
+        print("kcli# ")
+        var command = "show interfaces" //readLine() ?: ""
+        try {
+            println(command)
+            Cli(rest).oneLine(command)
+            break //@@@
+        } catch (exc: CliExitException) {
+            break
+        }
+    }
 }
 
 
@@ -45,6 +54,8 @@ fun main(args: Array<String>) {
     var password = "FlowCommand#1"
     val url = "http://192.168.1.70:5000/rest/top/configurations/running/applications/youtube?link=name"
     var (_, _, result) = Fuel.get(url).authentication().basic(username, password).responseString()
+    val a = Metadata.getAttribute("interface", "bytes_received")
+    println("${a?.name}: ${a?.displayName} ${a?.typeName}")
     when (result) {
         is Result.Failure -> {
             val ex = result.getException()
