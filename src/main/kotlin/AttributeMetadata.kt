@@ -35,4 +35,5 @@ open class AttributeMetadata(
     fun getDefault() = natures["default"]
     fun getType() = type
     fun getNature(n: String) = natures[n]
+    fun convert(value: String) = type.convert(value)
 }

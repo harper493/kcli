@@ -34,7 +34,9 @@ class Cli (
         for ((name, value) in obj.getDict()!!) {
             val attrMd = classMd.getAttribute(name)
             if (attrMd!=null) {
-                println("${attrMd.displayName} = ${value}")
+                val converted = attrMd.convert(value.getString() ?: "")
+                val display = converted.toString()
+                println("${attrMd.displayName} = ${display}")
             }
         }
     }

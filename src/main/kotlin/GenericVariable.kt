@@ -5,8 +5,8 @@ abstract class GenericVariable {
     open fun less(other: GenericVariable): Boolean { return false }
     open fun equal(other: GenericVariable): Boolean { return false }
     open fun add(other: GenericVariable): Unit { }
-    open fun string(): String { return "" }
-    open fun getFloat(): Double { return 0.0 }
+    open override fun toString(): String { return "" }
+    open fun toFloat(): Double { return 0.0 }
 }
 
 open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable() {
@@ -26,7 +26,7 @@ open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable()
             return false
         }
     }
-    override fun string(): String {
+    override fun toString(): String {
         return _value.toString()
     }
 }
@@ -40,7 +40,6 @@ open class NumericGenericVariable<T: Comparable<T>>(initial: T, initial_numeric:
         } catch (e: Exception) {
         }
     }
-    override fun getFloat(): Double { return _num_value }
 }
 
 /*

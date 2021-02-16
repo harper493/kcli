@@ -126,7 +126,7 @@ class FloatDatatype(
     validator,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( Datatype.toInt(it), Datatype.toInt(it).toDouble()) }
+    { NumericGenericVariable( Datatype.toFloat(it), Datatype.toFloat(it)) }
 ) {
     override fun validate(value: String) =
         if (validator==null) conversionValidator(value, this)
