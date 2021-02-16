@@ -1,10 +1,10 @@
 interface JsonObject {
-    fun getString(): String?
-    fun getInt(): Int?
-    fun getBoolean(): Boolean?
-    fun getFloat(): Double?
-    fun getArray(): MutableList<JsonObject>?
-    fun getDict(): Map<String, JsonObject>?
+    fun asString(): String
+    fun asInt(): Int
+    fun asBoolean(): Boolean
+    fun asFloat(): Double
+    fun asArray(): List<JsonObject>
+    fun asDict(): Map<String, JsonObject>
     fun isString(): Boolean
     fun isOnlyString(): Boolean
     fun isInt(): Boolean
@@ -19,18 +19,18 @@ interface JsonObject {
     operator fun get(index: Int): JsonObject?
     companion object {
         fun load(value: String): JsonObject {
-            return JsonObject_().parse(value)
+            return JsonObjectImpl().parse(value)
         }
     }
 }
 
 class JsonException(text: String) : Exception(text)
 
-class JsonObject_(): JsonObject {
+class JsonObjectImpl : JsonObject {
     class Reader(
         val string : String
     ) {
-        var index: Int = 0
+        private var index: Int = 0
         fun good() : Boolean {
             return index < string.length
         }
@@ -45,17 +45,16 @@ class JsonObject_(): JsonObject {
                 --index
             }
         }
-        fun getChar() : Char? {
+        fun getChar(): Char? {
             ++index
-            val result = skipWs()
-            return result
+            return skipWs()
         }
         fun skipChar(ch: Char) : Boolean {
-            if (skipWs()==ch) {
+            return if (skipWs()==ch) {
                 getChar()
-                return true
+                true
             } else {
-                return false
+                false
             }
         }
         fun getStr() : String? {
@@ -96,18 +95,18 @@ class JsonObject_(): JsonObject {
             throw JsonException("${msg} near position ${index} \"${snippet}\"")
         }
     }
-    var stringVal : String? = null
-    var intVal : Int? = null
-    var boolVal : Boolean? = null
-    var floatVal : Double? = null
-    var arrayVal : MutableList<JsonObject>? = null
-    var dictVal : MutableMap<String, JsonObject>? = null
-    override fun getString() = stringVal
-    override fun getInt() = intVal
-    override fun getBoolean() = boolVal
-    override fun getFloat() = floatVal
-    override fun getArray() = arrayVal
-    override fun getDict() = dictVal
+    private var stringVal : String? = null
+    private var intVal : Int? = null
+    private var boolVal : Boolean? = null
+    private var floatVal : Double? = null
+    private var arrayVal : MutableList<JsonObject>? = null
+    private var dictVal : MutableMap<String, JsonObject>? = null
+    override fun asString() = stringVal ?: ""
+    override fun asInt() = intVal ?: 0
+    override fun asBoolean() = boolVal ?: false
+    override fun asFloat() = floatVal ?: 0.0
+    override fun asArray() = arrayVal ?: listOf()
+    override fun asDict() = dictVal ?: mapOf()
     override fun isString() = (stringVal != null)
     override fun isOnlyString() = (stringVal != null && intVal == null && floatVal == null && boolVal==null)
     override fun isInt() = (intVal != null)
@@ -121,38 +120,36 @@ class JsonObject_(): JsonObject {
     override fun toString() = toString(2, "")
     override fun toString(indent: Int, prefix: String): String {
         fun nl() = if (indent>0) "\n" else ""
-        var myPrefix = prefix + " ".repeat(indent)
+        val myPrefix = prefix + " ".repeat(indent)
         fun toStr(v: JsonObject) = v.toString(indent, myPrefix)
         fun eToStr(s: String) = "\"${s}\":${" ".repeat(minOf(1,indent))}${dictVal!![s]!!.toString(indent, myPrefix)}"
-        if (isFloat()) {
-            return floatVal!!.toString()
-        } else if (isInt()) {
-            return intVal!!.toString()
-        } else if (isBoolean()) {
-            return boolVal!!.toString()
-        } else if (isString()) {
-            return "\"${stringVal!!.replace("\\", "\\\\").replace("\"", "\\\"")}\""
-        } else if (isArray()) {
-            val content = arrayVal!!.joinToString(",${nl()}${myPrefix}") { it -> toStr(it) }
-            return "[${nl()}${myPrefix}${content}${nl()}${prefix}]"
-        } else if (isDict()) {
-            val content = dictVal!!.keys.joinToString(",${nl()}${myPrefix}") { it -> eToStr(it) }
-            return "{${nl()}${myPrefix}${content}${nl()}${prefix}}"
-        } else {
-            return "null"
+        return when {
+            isFloat() -> floatVal!!.toString()
+            isInt() -> intVal!!.toString()
+            isBoolean() -> boolVal!!.toString()
+            isString() -> "\"${stringVal!!.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+            isArray() -> {
+                val content = arrayVal!!.joinToString(",${nl()}${myPrefix}") { toStr(it) }
+                "[${nl()}${myPrefix}${content}${nl()}${prefix}]"
+            }
+            isDict() -> {
+                val content = dictVal!!.keys.joinToString(",${nl()}${myPrefix}") { eToStr(it) }
+                "{${nl()}${myPrefix}${content}${nl()}${prefix}}"
+            }
+            else -> "null"
         }
     }
-    override fun parse(value: String): JsonObject_ {
-        var reader = Reader(value)
+    override fun parse(value: String): JsonObjectImpl {
+        val reader = Reader(value)
         parseOne(reader)
         if (reader.good()) {
             reader.throwJson("unexpected trailing characters")
         }
         return this
     }
-    private fun parseOne(reader : Reader) : JsonObject_ {
+    private fun parseOne(reader : Reader) : JsonObjectImpl {
         while (reader.good()) {
-            var ch = reader.skipWs()
+            val ch = reader.skipWs()
             if (reader.skipChar('{')) {
                 dictVal = mutableMapOf()
                 while (reader.good()) {
@@ -164,7 +161,7 @@ class JsonObject_(): JsonObject {
                         if (!reader.skipChar(':')) {
                             reader.throwJson("expected ':'")
                         }
-                        val v = JsonObject_().parseOne(reader)
+                        val v = JsonObjectImpl().parseOne(reader)
                         dictVal?.put(key, v)
                     } else {
                         reader.throwJson("key expected")
@@ -182,7 +179,7 @@ class JsonObject_(): JsonObject {
                     if (reader.skipChar(']')) {
                         break
                     }
-                    val v = JsonObject_().parseOne(reader)
+                    val v = JsonObjectImpl().parseOne(reader)
                     arrayVal?.add(v)
                     if (reader.skipChar(']')) {
                        break
@@ -201,18 +198,18 @@ class JsonObject_(): JsonObject {
                 if (v.isNotEmpty()) {
                     if (v!="null") {
                         stringVal = v
-                        if (v=="true") {
-                            boolVal = true
-                        } else if (v=="false") {
-                            boolVal = false
-                        } else {
-                            try {
-                                intVal = v.toInt()
-                            } catch (exc: NumberFormatException) {
+                        when (v) {
+                            "true" -> boolVal = true
+                            "false" -> boolVal = false
+                            else -> {
                                 try {
-                                    floatVal = v.toDouble()
+                                    intVal = v.toInt()
                                 } catch (exc: NumberFormatException) {
-                                    reader.throwJson("invalid unquoted value")
+                                    try {
+                                        floatVal = v.toDouble()
+                                    } catch (exc: NumberFormatException) {
+                                        reader.throwJson("invalid unquoted value")
+                                    }
                                 }
                             }
                         }

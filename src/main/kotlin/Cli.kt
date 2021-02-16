@@ -16,12 +16,13 @@ class Cli (
 
     private fun doShow() {
         val configMd = Metadata.getClass("configuration")
-        val classes = KeywordList().addAttributes(configMd!!.getCollections())
-        var thisClass = parser.findKeyword(classes)?.attribute!!
-        val url = thisClass?.relativeUrl
-        val json = rest.getCollection("${url}", options=mapOf("level" to "brief", "link" to "name"))
-        for (obj in json?.getArray()!!) {
-            showOne(thisClass.typeName, obj)
+        var oname = parser.getObjectName().first
+        val json = rest.getCollection("${oname.url}", options = mapOf("level" to "brief", "link" to "name"))
+        if (json != null) {
+            for (obj in json.asArray()) {
+                val leafClassMd = oname.leafClass
+                showOne(leafClassMd!!, obj)
+            }
         }
     }
 
@@ -29,14 +30,16 @@ class Cli (
         throw CliExitException()
     }
 
-    private fun showOne(typeName: String, obj: JsonObject) {
-        val classMd = Metadata.getClass(typeName)!!
-        for ((name, value) in obj.getDict()!!) {
+    private fun showOne(classMd: ClassMetadata, obj: JsonObject) {
+        for ((name, value) in obj.asDict()) {
             val attrMd = classMd.getAttribute(name)
+            var display = value.asString()
             if (attrMd!=null) {
-                val converted = attrMd.convert(value.getString() ?: "")
-                val display = converted.toString()
-                println("${attrMd.displayName} = ${display}")
+                try {
+                    val converted = attrMd.convert(value.asString())
+                    display = converted.toString()
+                } catch (exc: Exception) { }
+                println("%30s = %s %s".format(attrMd.displayName, display, attrMd.unit))
             }
         }
     }

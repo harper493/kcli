@@ -2,58 +2,6 @@ class SyntaxException(val why: String) : Exception(why)
 
 class AmbiguityException(val values: Iterable<String>) : Exception("")
 
-class Keyword(
-    val key: String,
-    val value: String?=null,
-    val attribute: AttributeMetadata?=null,
-    val function: (()->Unit)? = null)
-{ }
-
-class KeywordList()
-{
-    private val keywords: MutableList<Keyword> = mutableListOf()
-
-    fun addAttributes(attrs: Iterable<AttributeMetadata>): KeywordList {
-        for (a in attrs) {
-            keywords.add(Keyword(a.name, attribute=a))
-        }
-        return this
-    }
-    fun addAttributes(vararg attrs: AttributeMetadata): KeywordList {
-        addAttributes(*attrs)
-        return this
-    }
-    fun addKeys(vararg keys: String) {
-        for (k in keys) keywords.add(Keyword(k, value = k))
-    }
-    fun addFns(vararg fns: Pair<String, ()->Unit>)
-    {
-        for (f in fns) keywords.add(Keyword(f.first, function=f.second))
-    }
-    fun match(key: String): List<Keyword> {
-        val result: MutableList<Keyword> = mutableListOf()
-        for (k in keywords) if (k.key.startsWith(key)) result.add(k)
-        return result
-    }
-    fun exactMatch(key: String): Keyword? {
-        for (k in keywords) if (k.key==key) return k
-        return null
-    }
-    fun toStrings(keys: Iterable<Keyword>): List<String> {
-        val result: MutableList<String> = mutableListOf()
-        for (k in keys) result.add(k.key)
-        return result
-    }
-    constructor(vararg fns: Pair<String, ()->Unit>) : this() {
-        addFns(*fns)
-    }
-    constructor(vararg keys: String) : this() {
-        addKeys(*keys)
-    }
-    constructor(vararg attrs: AttributeMetadata) : this() {
-        addAttributes(*attrs)
-    }
-}
 
 class Parser (
     private var line: String
@@ -63,7 +11,7 @@ class Parser (
     var helpText: String = ""
     private val tokenStart: Int get() = if (tokenStarts.isEmpty()) 0 else tokenStarts.last()
     private var index = 0
-    val curtoken: String get() = if (tokens.isNotEmpty()) tokens.last() else ""
+    val curToken: String get() = tokens.lastOrNull() ?: ""
 
     private val digraphs = listOf( ">=", "<=", "!=", ">>", "!>>", "<<", "!<<" )
     private val nameChars = listOf( '_' )
@@ -163,10 +111,51 @@ class Parser (
         return result
     }
 
+    fun getObjectName(extras: KeywordList=KeywordList(), missOK: Boolean=false) : Pair<ObjectName, Keyword?> {
+        val result = ObjectName()
+        var terminator: Keyword? = null
+        var curMd = Metadata.getConfigMd()
+        while (true) {
+            val classKeys = KeywordList(curMd.getCollections())
+            if (result.isEmpty) {
+                classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
+            }
+            classKeys.add(extras)
+            val classKey = findKeyword(classKeys, missOK=true)
+            if (classKey==null) {
+                if (missOK) {
+                    backup()
+                    break
+                }
+                else throw Exception("unknown collection '$curToken'")
+            }
+            val attrMd = classKey.attribute
+            if (attrMd != null) {
+                val oname = nextToken(endOK=true)
+                if (oname!="") {
+                    val extra = extras.exactMatch(oname)
+                    if (extra != null) {
+                        result.append(attrMd, "")
+                        terminator = extra
+                        break
+                    }
+                }
+                result.append(attrMd, oname)
+                nextToken(endOK=true)
+                curMd = attrMd.myClass
+            } else {
+                terminator = classKey
+                break
+            }
+            if (isFinished()) break
+        }
+        return Pair(result, terminator)
+    }
+
     fun findKeyword(keys: KeywordList,
                      missOK: Boolean=false,
                      errFn: ((String)->Unit)?=null): Keyword? {
-        val token = curtoken
+        val token = curToken
         if (token.isNotEmpty()) {
             val exact = keys.exactMatch(token)
             if (exact!=null) {

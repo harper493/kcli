@@ -13,9 +13,11 @@ class Metadata (
     fun load() {
         val json = rest.get("rest/top/metadata/", mapOf("level" to "full"))
         val classMd = json["metadata"]?.get("collection")
-        for (c in classMd?.getArray()!!) {
-            val className = c["name"]?.getString()!!
-            classes[className] = ClassMetadata(className, c)
+        if (classMd != null) {
+            for (c in classMd?.asArray()) {
+                val className = c["name"]?.asString() ?: ""
+                classes[className] = ClassMetadata(className, c)
+            }
         }
     }
 
@@ -32,7 +34,9 @@ class Metadata (
         fun load(rest: Rest) {
             md = Metadata(rest)
         }
-        fun getClass(className: String) = md?.getClass(className)
-        fun getAttribute(className: String, aname: String) = md?.getAttribute(className, aname)
+        fun getClass(className: String) = md!!.getClass(className)
+        fun getAttribute(className: String, aname: String) = md!!.getAttribute(className, aname)
+        fun getConfigMd() = getClass("configuration")!!
+        fun getPolicyManagerMd() = getClass("policy_manager")!!
     }
 }
