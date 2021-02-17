@@ -1,16 +1,11 @@
-import ShowLevel
-import Datatype
-import ClassMetadata
-import Properties
-
 open class AttributeMetadata(
     val name: String,
     val myClass: ClassMetadata,
-    val md: JsonObject
+    private val md: JsonObject
 ) {
     private val natures: MutableMap<String,String?> = mutableMapOf()
     private var type: Datatype
-    private var nature: String
+    private var nature: String = md["nature"]?.asString() ?: ""
     var displayName: String
     val defaultValue: String? get() = natures["default"]
     val unit: String get() = (md["unit"]?.asString() ?: "")
@@ -21,9 +16,7 @@ open class AttributeMetadata(
     val typeName: String = md["type_name"]?.asString()?:""
 
     init {
-        nature = md["nature"]?.asString() ?: ""
-        val nature_split = nature.split("\\w+".toRegex())
-        for (n in nature_split) {
+        for (n in nature.split("\\w+".toRegex())) {
             val nn = n.split(":")
             natures[nn[0]] = if (nn.size>1) nn[1] else null
         }

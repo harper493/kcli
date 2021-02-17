@@ -1,14 +1,14 @@
 /**
- * Returns a comma (or other [delim]) separated list with the addition of one or more
+ * Returns a comma (or other [delimiter]) separated list with the addition of one or more
  * new items. The result is null if it would otherwise be empty.
  */
 
-fun addToTextList(old: String?, new: String, delim: String = ",") =
+fun addToTextList(old: String?, new: String, delimiter: String = ",") =
     (old ?: "")
-        .split(delim)
+        .split(delimiter)
         .toMutableList()
-        .also { it.addAll(new.split(delim)) }
-        .joinToString(delim)
+        .also { it.addAll(new.split(delimiter)) }
+        .joinToString(delimiter)
         .ifBlank { null }
 
 /**
@@ -63,4 +63,4 @@ fun <U, V> zip(u: Iterable<U>, v: Iterable<V>): List<Pair<U, V>> {
  * Take a string of the form abc_def_ghi and turn it into "Abc Def Ghi"
  */
 
-fun makeNameHuman(name: String) = name.split("_").map { it.capitalize() }.joinToString(" ")
+fun makeNameHuman(name: String) = name.split("_").joinToString(" ") { it.capitalize() }

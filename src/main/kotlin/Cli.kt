@@ -62,11 +62,14 @@ class Cli (
         for (obj in json.asArray().map{it.asDict()}) {
             val color = obj["color"]?.asString()
             for ((name, value) in obj) {
-                table.append(name, makeDisplay(classMd, name, value.asString()), color=color)
+                val attrMd = classMd.getAttribute(name)
+                if (attrMd != null && (Properties.get("suppress", classMd.name, name)==null || name=="name")) {
+                    table.append(name, makeDisplay(classMd, name, value.asString()), color = color)
+                }
             }
         }
         table.setColumns{ name: String, col: Table.Column ->
-            col.position = if (name=="name") 0 else classMd.getAttribute(name)?.preference ?: 10000
+            col.position = -(if (name=="name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
             col.heading = classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)
         }
         return table.render()

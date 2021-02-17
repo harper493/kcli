@@ -49,12 +49,13 @@ class JsonObjectImpl : JsonObject {
             ++index
             return skipWs()
         }
-        fun skipChar(ch: Char) : Boolean {
-            return if (skipWs()==ch) {
+        fun skipChar(ch: Char, doSkipWs: Boolean = true) : Boolean {
+            val thisCh = if (doSkipWs) skipWs() else string[index]
+            if (thisCh==ch) {
                 getChar()
-                true
+                return true
             } else {
-                false
+                return false
             }
         }
         fun getStr() : String? {
@@ -64,12 +65,15 @@ class JsonObjectImpl : JsonObject {
             }
             var escape = false
             while (good()) {
-                if (!escape && skipChar('\"')) {
+                if (!escape && skipChar('\"', doSkipWs=false)) {
                     return result
-                } else if (!escape && skipChar('\\')) {
+                } else if (!escape && skipChar('\\', doSkipWs=false)) {
                     escape = true
                 } else {
                     result += string[index]
+                    if (result=="this") {
+                        var i = 1
+                    }
                     ++index
                     escape = false
                 }

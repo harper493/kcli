@@ -1,11 +1,11 @@
 class StyledText (
     val text: String,
-    val color: String? = null,
-    val background: String? = null,
-    var style: String? = null
+    private val color: String? = null,
+    private val background: String? = null,
+    private var style: String? = null
         )
 {
-    val colors = mapOf(
+    private val colors = mapOf(
         "black" to 232,
         "red" to 9,
         "even_red" to 124,
@@ -30,7 +30,7 @@ class StyledText (
         "heading" to 232
     )
 
-    val styles = mapOf(
+    private val styles = mapOf(
         "none" to 0,
         "bold" to 1,
         "italic" to 3,
@@ -40,9 +40,9 @@ class StyledText (
         "inverted" to 7,
         )
 
-    val escape = "\u001b"
-    val fgOp = 38
-    val bgOp = 48
+    private val escape = "\u001b"
+    private val fgOp = 38
+    private val bgOp = 48
 
     val length get() = text.length
 
@@ -58,14 +58,12 @@ class StyledText (
         newBackground ?: background,
         newStyle ?: style)
 
-    fun addStyle(newStyle: String) {
-        style = StyledText.addStyle(style, newStyle)
-    }
+    fun addStyle(newStyle: String) { style = addStyle(style, newStyle) }
 
     private fun renderColor(op: Int, color: String?) : String {
         val code = colors[color?:""]
         return if (code==null) "${escape}[${op+1}m"
-               else "${escape}[${op}:5:${code!!}m"
+               else "${escape}[${op}:5:${code}m"
     }
 
     private fun renderStyle() : String {
@@ -77,7 +75,6 @@ class StyledText (
     }
 
     companion object {
-        fun addStyle(oldStyle: String?, newStyle: String) =
-            (oldStyle ?: "").split(",").toMutableList().also { it.add(newStyle) }.joinToString(",")
+        fun addStyle(oldStyle: String?, newStyle: String) = addToTextList(oldStyle, newStyle)
     }
 }

@@ -1,7 +1,3 @@
-import AttributeMetadata
-import Datatype
-import JsonObject
-
 data class ClassMetadata(
     val name: String,
     val jsonMetadata: JsonObject
@@ -9,8 +5,8 @@ data class ClassMetadata(
     lateinit var displayName: String
     private var attributes: MutableMap<String, AttributeMetadata> = mutableMapOf()
     private var collections: MutableList<AttributeMetadata> = mutableListOf()
-    private var container_: AttributeMetadata? = null
-    val container: AttributeMetadata get() { return container_!! }
+    private var _container: AttributeMetadata? = null
+    val container: AttributeMetadata get() { return _container!! }
     val parentClass: ClassMetadata get() { return container.myClass }
 
     fun getAttribute(aname: String) = attributes[aname]

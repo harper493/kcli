@@ -1,11 +1,5 @@
-import ClassMetadata
-import AttributeMetadata
-import Datatype
-import Rest
-import JsonObject
-
 class Metadata (
-    var rest: Rest,
+    private var rest: Rest,
     do_load: Boolean = true
 ) {
     private var classes: MutableMap<String, ClassMetadata> = mutableMapOf()
@@ -14,7 +8,7 @@ class Metadata (
         val json = rest.get("rest/top/metadata/", mapOf("level" to "full"))
         val classMd = json["metadata"]?.get("collection")
         if (classMd != null) {
-            for (c in classMd?.asArray()) {
+            for (c in classMd.asArray()) {
                 val className = c["name"]?.asString() ?: ""
                 classes[className] = ClassMetadata(className, c)
             }

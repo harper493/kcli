@@ -2,13 +2,13 @@ import kotlin.math.absoluteValue
 import kotlin.math.sign
 
 class Table (
-    val maxColumnWidth: Int = 0,
-    val columnSpacing: Int = 2,
-    val squishHeadings: Boolean = true,
-    val headingColor: String? = null,
-    val headingBackground: String? = null,
-    val headingStyle: String? = null,
-    val color_stripe: Iterable<String>? = null,
+    private val maxColumnWidth: Int = 0,
+    private val columnSpacing: Int = 2,
+    private val squishHeadings: Boolean = true,
+    private val headingColor: String? = null,
+    private val headingBackground: String? = null,
+    private val headingStyle: String? = null,
+    private val colorStripe: Iterable<String>? = null,
         )
 {
     class Column(
@@ -39,7 +39,7 @@ class Table (
         }
     }
 
-    val columns: MutableMap<String, Column> = mutableMapOf()
+    private val columns: MutableMap<String, Column> = mutableMapOf()
 
     val breadth get() = columns.size
     val depth get() = columns.values.map{it.size}.maxOrNull() ?: 0
@@ -86,9 +86,14 @@ class Table (
         for (i in 0 until headingDepth) {
             val style = if (i==headingDepth-1) StyledText.addStyle(headingStyle, "underline") else headingStyle
             result.add(
-                zip(sortedCols, headings)
-                .map{ StyledText(it.first.justify(it.second[i]), headingColor, headingBackground, style).render() }
-                .joinToString(colSep))
+                zip(sortedCols, headings).joinToString(colSep) {
+                    StyledText(
+                        it.first.justify(it.second[i]),
+                        headingColor,
+                        headingBackground,
+                        style
+                    ).render()
+                })
         }
         for (i in 0 until depth) {
             val rowCells = zip(sortedCols, sortedCols.map{it.content[i]})

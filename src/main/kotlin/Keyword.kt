@@ -3,7 +3,6 @@ class Keyword(
     val value: String?=null,
     val attribute: AttributeMetadata?=null,
     val function: (()->Unit)? = null)
-{ }
 
 class KeywordList()
 {
