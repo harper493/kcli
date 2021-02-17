@@ -45,7 +45,7 @@ class JsonObjectImpl : JsonObject {
                 --index
             }
         }
-        fun getChar(): Char? {
+        private fun getChar(): Char? {
             ++index
             return skipWs()
         }
@@ -92,7 +92,7 @@ class JsonObjectImpl : JsonObject {
         }
         fun throwJson(msg: String) {
             val snippet = string.subSequence(maxOf(0, index-7), minOf(string.length, index+7))
-            throw JsonException("${msg} near position ${index} \"${snippet}\"")
+            throw JsonException("$msg near position $index \"${snippet}\"")
         }
     }
     private var stringVal : String? = null

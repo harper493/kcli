@@ -1,15 +1,12 @@
-import com.github.kittinunf.fuel.httpGet
-import com.github.kittinunf.result.Result
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.extensions.authentication
-
-import JsonObject
+import com.github.kittinunf.result.Result
 
 class RestException (
     val status : Int,
     val text : String
 ) : Exception(text) {
-    override fun toString() = "${status} ${text}"
+    override fun toString() = "$status $text"
 }
 
 class Rest(
@@ -33,14 +30,14 @@ class Rest(
                 val rx = Regex(".*Body.*:.*?\"message\".*?:.*?\"(.*?)\".*")
                 val resp = response.toString().replace("\n", " ")
                 val m = rx.find(resp)
-                val msg = if (m!=null) m?.groupValues?.get(1) else response.responseMessage
+                val msg = if (m!=null) m.groupValues[1] else response.responseMessage
                 throw RestException(response.statusCode, msg.toString())
             }
             is Result.Success -> {
                 try {
                     return JsonObject.load(String(result.get()))
                 } catch (exc: JsonException) {
-                    throw RestException(999, "error in Json text: ${exc}")
+                    throw RestException(999, "error in Json text: $exc")
                 }
             }
         }

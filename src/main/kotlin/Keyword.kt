@@ -10,26 +10,29 @@ class KeywordList()
     private val keywords: MutableList<Keyword> = mutableListOf()
 
     fun addAttributes(attrs: Iterable<AttributeMetadata>): KeywordList {
-        for (a in attrs) {
-            keywords.add(Keyword(a.name, attribute=a))
-        }
+        for (a in attrs) keywords.add(Keyword(a.name, attribute=a))
+        return this
+    }
+    fun addKeys(keys: Iterable<String>): KeywordList {
+        for (k in keys) keywords.add(Keyword(k, value=k))
         return this
     }
     fun addAttributes(vararg attrs: AttributeMetadata): KeywordList {
         addAttributes(attrs.asIterable())
         return this
     }
-    fun addKeys(vararg keys: String) {
+    fun addKeys(vararg keys: String): KeywordList {
         for (k in keys) keywords.add(Keyword(k, value = k))
+        return this
     }
-    fun addFns(vararg fns: Pair<String, ()->Unit>)
+    fun addFns(vararg fns: Pair<String, ()->Unit>): KeywordList
     {
         for (f in fns) keywords.add(Keyword(f.first, function=f.second))
+        return this
     }
-    fun add(keys: KeywordList) {
-        for (k in keys.keywords) {
-            keywords += k
-        }
+    fun add(keys: KeywordList): KeywordList {
+        for (k in keys.keywords) keywords += k
+        return this
     }
     fun match(key: String): List<Keyword> {
         val result: MutableList<Keyword> = mutableListOf()

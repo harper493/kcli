@@ -42,7 +42,7 @@ class ObjectName {
         var curMd = Metadata.getPolicyManagerMd()
         for ((a,n) in attributes.zip(names)) {
             val collMd = curMd.getAttribute(a)
-            if (collMd==null || collMd.getContainedClass()==null) {
+            if (collMd?.getContainedClass() == null) {
                 throw UrlException("no collection '$a' in class '${curMd.name}")
             }
             elements.add(Element(Metadata.getAttribute("configuration", a)!!, n))

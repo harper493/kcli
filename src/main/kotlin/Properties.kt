@@ -32,7 +32,9 @@ class Properties (
         root.addValue(value, keys)
     }
     fun get(vararg keys: String) = root.get(keys.toList())
-    fun loadFile(fn: String) {
+    fun getInt(vararg keys: String, default: Int=0) = get(*keys)?.toIntOrNull() ?: default
+    fun getFloat(vararg keys: String, default: Double=0.0) = get(*keys)?.toDoubleOrNull() ?: default
+    fun load(fn: String): Properties {
         filename = fn
         java.io.File(filename!!).forEachLine {
             try {
@@ -40,6 +42,7 @@ class Properties (
                 addValue(value.trim(), key.trim().split("."))
             } catch (exc: Exception) { }
         }
+        return this
     }
     init {
         if (filename!=null) {
@@ -48,9 +51,11 @@ class Properties (
     }
     companion object {
         private var properties = Properties()
-        fun load(fn: String) {
-            properties.loadFile(fn)
+        fun load(fn: String): Properties {
+            return properties.load(fn)
         }
         fun get(vararg keys: String) = properties.get(*keys)
+        fun getInt(vararg keys: String, default: Int=0) = properties.getInt(*keys, default=default)
+        fun getFloat(vararg keys: String, default: Double=0.0) = properties.getFloat(*keys, default=default)
     }
 }

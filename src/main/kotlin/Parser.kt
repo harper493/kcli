@@ -11,7 +11,8 @@ class Parser (
     var helpText: String = ""
     private val tokenStart: Int get() = if (tokenStarts.isEmpty()) 0 else tokenStarts.last()
     private var index = 0
-    val curToken: String get() = tokens.lastOrNull() ?: ""
+    private var finished = false
+    val curToken: String get() = if (finished) "" else tokens.lastOrNull() ?: ""
 
     private val digraphs = listOf( ">=", "<=", "!=", ">>", "!>>", "<<", "!<<" )
     private val nameChars = listOf( '_' )
@@ -41,39 +42,43 @@ class Parser (
         fun good() = index < line.length
 
         val startIndex = index
-        while (good()) {
-            var ch = line[index]
-            if (escape) {
-                ch = escChars[ch] ?: ch
-            } else if (ch == '\\') {
-                escape = true
-                ++index
-                ch = nullCh
-            } else if (ch == quote) {
-                ++index
-            } else if (ch in whitespace) {
-                break
-            } else if (isName) {
-                if (!isNameChar(ch)) {
+        if (!good()) {
+            finished = true
+        } else {
+            while (good()) {
+                var ch = line[index]
+                if (escape) {
+                    ch = escChars[ch] ?: ch
+                } else if (ch == '\\') {
+                    escape = true
+                    ++index
+                    ch = nullCh
+                } else if (ch == quote) {
+                    ++index
+                } else if (ch in whitespace) {
+                    break
+                } else if (isName) {
+                    if (!isNameChar(ch)) {
+                        break
+                    }
+                } else if (isNumber) {
+                    if (!isNumberChar(ch)) {
+                        break
+                    }
+                } else if (token != null && !((token + ch) in digraphs)) {
                     break
                 }
-            } else if (isNumber) {
-                if (!isNumberChar(ch)) {
-                    break
-                }
-            } else if (token!=null && !((token + ch) in digraphs)) {
-                break
-            }
-            token = (token ?: "") + ch
-            ++index
-            if (token.length==1) {
-                if (isNumberChar(ch)) {
-                    isNumber = true
-                } else if (isNameChar(ch)) {
-                    isName = true
-                } else if (ch in quotes) {
-                    quote = ch
-                    token = null
+                token = (token ?: "") + ch
+                ++index
+                if (token.length == 1) {
+                    if (isNumberChar(ch)) {
+                        isNumber = true
+                    } else if (isNameChar(ch)) {
+                        isName = true
+                    } else if (ch in quotes) {
+                        quote = ch
+                        token = null
+                    }
                 }
             }
         }
@@ -97,7 +102,7 @@ class Parser (
         }
     }
 
-    fun isFinished() = (tokenStarts.lastOrNull() ?: 0) < line.length
+    fun isFinished() = finished
 
     fun peek() = if (!isFinished()) line[tokenStarts.last()] else nullCh
 
@@ -122,25 +127,21 @@ class Parser (
             }
             classKeys.add(extras)
             val classKey = findKeyword(classKeys, missOK=true)
-            if (classKey==null) {
-                if (missOK) {
+                ?: if (missOK) {
                     backup()
                     break
-                }
-                else throw Exception("unknown collection '$curToken'")
-            }
+                } else throw Exception("unknown collection '$curToken'")
             val attrMd = classKey.attribute
             if (attrMd != null) {
-                val oname = nextToken(endOK=true)
-                if (oname!="") {
-                    val extra = extras.exactMatch(oname)
+                if (curToken!="") {
+                    val extra = extras.exactMatch(curToken)
                     if (extra != null) {
                         result.append(attrMd, "")
                         terminator = extra
                         break
                     }
                 }
-                result.append(attrMd, oname)
+                result.append(attrMd, curToken)
                 nextToken(endOK=true)
                 curMd = attrMd.myClass
             } else {

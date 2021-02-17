@@ -19,7 +19,7 @@ data class ClassMetadata(
     init {
         val attrMd = jsonMetadata["metadata"]?.get("collection")
         if (attrMd != null) {
-            for (a in attrMd?.asArray()) {
+            for (a in attrMd.asArray()) {
                 val aname = a["name"]?.asString()
                 if (aname != null) {
                     val attr = AttributeMetadata(aname, this, a)

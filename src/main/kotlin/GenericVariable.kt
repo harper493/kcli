@@ -1,11 +1,8 @@
-
-import javax.print.attribute.IntegerSyntax
-
 abstract class GenericVariable {
     open fun less(other: GenericVariable): Boolean { return false }
     open fun equal(other: GenericVariable): Boolean { return false }
     open fun add(other: GenericVariable): Unit { }
-    open override fun toString(): String { return "" }
+    override fun toString(): String { return "" }
     open fun toFloat(): Double { return 0.0 }
 }
 
@@ -13,17 +10,17 @@ open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable()
     protected var _value: T = initial
     val value: T get() = _value
     override fun less(other: GenericVariable): Boolean {
-        try {
-            return this._value < (other as TypedGenericVariable<T>)._value
+        return try {
+            this._value < (other as TypedGenericVariable<T>)._value
         } catch (e: Exception) {
-            return false
+            false
         }
     }
     override fun equal(other: GenericVariable): Boolean {
-        try {
-            return _value == (other as TypedGenericVariable<T>)._value
+        return try {
+            _value == (other as TypedGenericVariable<T>)._value
         } catch (e: Exception) {
-            return false
+            false
         }
     }
     override fun toString(): String {
