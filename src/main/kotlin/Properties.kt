@@ -29,22 +29,14 @@ class Properties (
         }
         fun getWild(keys: Iterable<String>): List<Property> = when {
             keys.none() -> listOf(this)
-            else -> listOf(children[keys.first()], children["*"]).filterNotNull().map{it.getWild(keys.drop(1))}.flatten()
+            else -> listOfNotNull(children[keys.first()], children["*"]).map{it.getWild(keys.drop(1))}.flatten()
         }
     }
     private val root = Property("", null)
-    private fun countWild(keys: Iterable<String>) = keys.map{if (it=="*") 1 else 0}.sum()
     fun addValue(value: String, keys: Iterable<String>) { root.addValue(value, keys) }
     fun getInt(vararg keys: String, default: Int=0) = get(*keys)?.toIntOrNull() ?: default
     fun getFloat(vararg keys: String, default: Double=0.0) = get(*keys)?.toDoubleOrNull() ?: default
-    fun getX(vararg keys: String) = root.getWild(keys.toList()).sortedBy { it!!.wildness }.firstOrNull()?.value
-    fun get(vararg keys: String) : String? {
-        val x1 = root.getWild(keys.toList())
-        val x2 = x1.sortedBy { it!!.wildness }
-        val x3 = x2.firstOrNull()
-        val x4 = x3?.value
-        return x4
-    }
+    fun get(vararg keys: String) = root.getWild(keys.toList()).sortedBy { it.wildness }.firstOrNull()?.value
     fun load(fn: String): Properties {
         filename = fn
         java.io.File(filename!!).forEachLine {

@@ -51,11 +51,11 @@ class JsonObjectImpl : JsonObject {
         }
         fun skipChar(ch: Char, doSkipWs: Boolean = true) : Boolean {
             val thisCh = if (doSkipWs) skipWs() else string[index]
-            if (thisCh==ch) {
+            return if (thisCh==ch) {
                 getChar()
-                return true
+                true
             } else {
-                return false
+                false
             }
         }
         fun getStr() : String? {
@@ -71,9 +71,6 @@ class JsonObjectImpl : JsonObject {
                     escape = true
                 } else {
                     result += string[index]
-                    if (result=="this") {
-                        var i = 1
-                    }
                     ++index
                     escape = false
                 }

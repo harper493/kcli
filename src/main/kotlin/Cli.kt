@@ -1,4 +1,4 @@
-class CliExitException() : Exception("")
+class CliExitException : Exception("")
 
 class Cli (
     private val rest: Rest,
@@ -7,20 +7,27 @@ class Cli (
 
     fun oneLine(line: String) {
         parser = Parser(line)
-        var commands = KeywordList(Pair("show", { doShow() }),
+        val commands = KeywordList(Pair("show", { doShow() }),
                                    Pair("quit", { doQuit() }))
         parser.nextToken()
-        var cmd = parser.findKeyword(commands)
+        val cmd = parser.findKeyword(commands)
         cmd?.function?.invoke()
     }
 
     private fun doShow() {
         val levels = listOf("brief", "full", "detail", "debug")
         val extras = KeywordList("select").addKeys(levels)
-        val configMd = Metadata.getClass("configuration")
+        Metadata.getClass("configuration")
         val (oname, terminator) = parser.getObjectName(extras=extras)
-        val level = if (terminator?.value ?: "" in levels) (terminator!!.value ?: "") else "brief"
-        val json = rest.getCollection("${oname.url}", options = mapOf("level" to level, "link" to "name"))
+        val level = when {
+            terminator?.value ?: "" in levels -> terminator?.value ?: ""
+            oname.isWild -> "brief"
+            else -> "full"
+        }
+        val options =  mapOf("level" to level,
+                             "link" to "name",
+                             "select" to "+color",)
+        val json = rest.getCollection(oname.url, options=options)
         val leafClassMd = oname.leafClass!!
         if (json != null) {
             if (oname.isWild) {
@@ -57,14 +64,15 @@ class Cli (
     private fun showCollection(classMd: ClassMetadata, json: JsonObject): String {
         val table = Table(maxColumnWidth=Properties.getInt("parameter", "show_collection_max_field_width"),
             headingColor=Properties.get("parameter", "heading_color"),
-            headingStyle=Properties.get("parameter", "heading_style")
+            headingStyle=Properties.get("parameter", "heading_style"),
+            stripeColors=listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
         )
         for (obj in json.asArray().map{it.asDict()}) {
             val color = obj["color"]?.asString()
             for ((name, value) in obj) {
                 val attrMd = classMd.getAttribute(name)
                 if (attrMd != null && (Properties.get("suppress", classMd.name, name)==null || name=="name")) {
-                    table.append(name, makeDisplay(classMd, name, value.asString()), color = color)
+                    table.append(name, makeDisplay(classMd, name, value.asString()), color = color?.ifBlank{null})
                 }
             }
         }

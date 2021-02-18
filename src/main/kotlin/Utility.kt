@@ -64,3 +64,26 @@ fun <U, V> zip(u: Iterable<U>, v: Iterable<V>): List<Pair<U, V>> {
  */
 
 fun makeNameHuman(name: String) = name.split("_").joinToString(" ") { it.capitalize() }
+
+/**
+ * Make a [Sequence] returning elements from the iterable and saving a copy of each.
+ * When the iterable is exhausted, return elements from the saved copy. Repeats indefinitely.
+ *
+ */
+
+fun<T> Iterable<T>.cycle(): Sequence<T> = sequence {
+    val saved = mutableListOf<T>()
+    for (elem in this@cycle) {
+        saved.add(elem)
+        yield(elem)
+    }
+    while (true) {
+        for (elem in saved) yield(elem)
+    }
+}
+
+/**
+ * Return the given iterable if it is not empty, else null
+ */
+
+fun<T> Iterable<T>.anyOrNull(): Iterable<T>? = if (any()) this else null

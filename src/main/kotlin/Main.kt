@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
     Metadata.load(rest)
     while (true) {
         print("kcli# ")
-        var command = "show interfaces" //readLine() ?: ""
+        var command = "show flows" //readLine() ?: ""
         try {
             println(command)
             Cli(rest).oneLine(command)

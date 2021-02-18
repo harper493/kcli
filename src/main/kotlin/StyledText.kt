@@ -1,7 +1,7 @@
 class StyledText (
     val text: String,
-    private val color: String? = null,
-    private val background: String? = null,
+    private var color: String? = null,
+    private var background: String? = null,
     private var style: String? = null
         )
 {
@@ -21,8 +21,8 @@ class StyledText (
         "orange" to 208,
         "pink" to 201,
         "brown" to 1,
-        "odd" to 52,
-        "even" to 22,
+        "yucky_green" to 52,
+        "yucky_brown" to 22,
         "label" to 124,
         "even_label" to 28,
         "value" to 52,
@@ -45,6 +45,7 @@ class StyledText (
     private val bgOp = 48
 
     val length get() = text.length
+    fun getColor() = color
 
     fun render() = "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}$text"
 
@@ -57,6 +58,28 @@ class StyledText (
         newColor ?: color,
         newBackground ?: background,
         newStyle ?: style)
+
+    fun underride(
+        newColor: String? = null,
+        newBackground: String? = null,
+        newStyle: String? = null
+    ) : StyledText {
+        color = color ?: newColor
+        background = background ?: newBackground
+        style = style ?: newStyle
+        return this
+    }
+
+    fun override(
+        newColor: String? = null,
+        newBackground: String? = null,
+        newStyle: String? = null
+    ) : StyledText {
+        color = newColor ?: color
+        background = newBackground ?: background
+        style = newStyle ?: style
+        return this
+    }
 
     fun addStyle(newStyle: String) { style = addStyle(style, newStyle) }
 
