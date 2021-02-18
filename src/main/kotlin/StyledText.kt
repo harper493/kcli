@@ -47,7 +47,7 @@ class StyledText (
     val length get() = text.length
     fun getColor() = color
 
-    fun render() = "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}$text"
+    fun renderISO6429() = "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}$text"
 
     fun clone (
         newText: String? = null,

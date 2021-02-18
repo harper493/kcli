@@ -78,7 +78,7 @@ class Cli () {
             col.position = -(if (name=="name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
             col.heading = abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
         }
-        return table.render()
+        return table.layout().renderISO6429()
     }
 
     private fun makeDisplay(classMd: ClassMetadata, name: String, value: String): String {
