@@ -21,7 +21,8 @@ open class AttributeMetadata(
             natures[nn[0]] = if (nn.size>1) nn[1] else null
         }
         type = Datatype[md["type_name"]?.asString() ?: ""]
-        displayName = Properties.get("attribute", name) ?: name
+        displayName = (Properties.get("attribute", name) ?: makeNameHuman(name))
+                        .replace("&.*?;".toRegex(), "")
     }
 
     fun getContainedClass() = Metadata.getClass(typeName)

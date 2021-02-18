@@ -67,4 +67,19 @@ class Rest(
                     { "${it}=${options!![it]}"} else ""
         return "http://${server}${p}/${e}${opts}"
     }
+    companion object {
+        private var theRest: Rest? = null
+        fun connect(
+            server: String = "localhost",
+            port: Int = 5000,
+            user:String = "",
+            password: String = "",
+            config: String = "running",
+            trace: Boolean = false) = Rest(server=server, port=port, user=user, password=password, config=config, trace=trace)
+                                      .also{ theRest = it }
+
+        fun get(url: String, options: Map<String,String>?=null) = theRest?.get(url, options)
+        fun getCollection(url: String, options: Map<String,String>?=null) = theRest?.getCollection(url, options)
+        fun getObject(url: String, options: Map<String,String>?=null) = theRest?.getObject(url, options)
+    }
 }

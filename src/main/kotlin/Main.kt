@@ -20,14 +20,14 @@ fun main(args: Array<String>) {
     Datatype.load()
     Properties.load("/etc/kcli/objects.properties")
               .load("/etc/kcli/cli.properties")
-    val rest = Rest(server="192.168.1.70", user="kcli", password="FuckYou1!", trace=true)
-    Metadata.load(rest)
+    Rest.connect(server="192.168.1.70", user="kcli", password="FuckYou1!", trace=true)
+    Metadata.load()
     while (true) {
         print("kcli# ")
         var command = "show flows" //readLine() ?: ""
         try {
             println(command)
-            Cli(rest).oneLine(command)
+            Cli().oneLine(command)
             break //@@@
         } catch (exc: CliExitException) {
             break

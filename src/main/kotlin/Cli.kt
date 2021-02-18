@@ -1,8 +1,6 @@
 class CliExitException : Exception("")
 
-class Cli (
-    private val rest: Rest,
-) {
+class Cli () {
     private var parser = Parser("")
 
     fun oneLine(line: String) {
@@ -27,7 +25,7 @@ class Cli (
         val options =  mapOf("level" to level,
                              "link" to "name",
                              "select" to "+color",)
-        val json = rest.getCollection(oname.url, options=options)
+        val json = Rest.getCollection(oname.url, options=options)
         val leafClassMd = oname.leafClass!!
         if (json != null) {
             if (oname.isWild) {
