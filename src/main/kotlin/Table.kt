@@ -100,8 +100,8 @@ class Table (
         for (h in headingRows) result.add(h.map{it.render()}.joinToString(colSep))
         for (row in sortedCols.map{it.content}.transpose()) {
             val color = colorIterator.next()
-            val rowCells = zip(columns.values, row)
-                .map { wrap(it.second.text, it.first.maxWidth).toMutableList() }
+            val rowCells = zip(sortedCols, row)
+                .map { wrap(it.second.text, it.first.maxWidth, force=true).toMutableList() }
             val rowDepth = rowCells.maxSize()
             for (rc in rowCells) repeat(rowDepth - rc.size) { rc += "" }
             rowCells.transpose().map {
