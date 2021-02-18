@@ -8,6 +8,7 @@ class Table (
     private val headingColor: String? = null,
     private val headingBackground: String? = null,
     private val headingStyle: String? = null,
+    private val underlineHeadings: Boolean = true,
     private val stripeColors: Iterable<String?>? = null,
         )
 {
@@ -77,27 +78,27 @@ class Table (
 
     fun render(): String {
         val result: MutableList<String> = mutableListOf()
+        val colorIterator = (stripeColors?.anyOrNull()?:listOf("")).cycle().iterator()
         val colSep = " ".repeat(columnSpacing)
         val sortedCols = columns.values.sortedBy{ it.position }
         calculateColumnWidths(sortedCols)
         val headings = sortedCols.map{wrap(it.heading, it.maxWidth.absoluteValue).toMutableList()}
         val headingDepth = headings.maxSize()
         for (h in headings) repeat(headingDepth - h.size){ h.add(0, "")}
-        val colorIterator = (stripeColors?.anyOrNull()?:listOf("")).cycle().iterator()
-        for (i in 0 until headingDepth) {
-            val style = if (i==headingDepth-1) StyledText.addStyle(headingStyle, "underline") else headingStyle
-            result.add(
-                zip(sortedCols, headings).joinToString(colSep) {
-                    StyledText(
-                        it.first.justify(it.second[i]),
-                        headingColor,
-                        headingBackground,
-                        style
-                    ).render()
-                })
+        for (row in headings.transpose()) { }
+        val headingRows = headings.transpose().map {
+            zip(sortedCols, it).map{
+                StyledText(
+                    it.first.justify(it.second),
+                    headingColor,
+                    headingBackground,
+                    headingStyle
+                )
+            }
         }
-        val byRow = sortedCols.map{it.content}.transpose()
-        for (row in byRow) {
+        if (underlineHeadings) for (h in headingRows.last()) h.addStyle("underline")
+        for (h in headingRows) result.add(h.map{it.render()}.joinToString(colSep))
+        for (row in sortedCols.map{it.content}.transpose()) {
             val color = colorIterator.next()
             val rowCells = zip(columns.values, row)
                 .map { wrap(it.second.text, it.first.maxWidth).toMutableList() }
