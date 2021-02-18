@@ -83,3 +83,14 @@ fun<T> Iterable<T>.chain(next: Iterable<T>) = sequence<T> {
         yield(elem)
     }
 }
+
+/**
+ * Append one list to another
+ */
+
+fun<T> MutableList<T>.append(other: Iterable<out T>): MutableList<T> {
+    for (t in other) {
+        add(t)
+    }
+    return this
+}

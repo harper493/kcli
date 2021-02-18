@@ -3,30 +3,26 @@ data class ClassMetadata(
     val jsonMetadata: JsonObject
 ) {
     lateinit var displayName: String
-    private var attributes: MutableMap<String, AttributeMetadata> = mutableMapOf()
-    private var collections: MutableList<AttributeMetadata> = mutableListOf()
-    private var _container: AttributeMetadata? = null
-    val container: AttributeMetadata get() { return _container!! }
-    val parentClass: ClassMetadata get() { return container.myClass }
+    private val attributeMap: Map<String, AttributeMetadata> =
+        (jsonMetadata["metadata"]
+        ?.get("collection")
+        ?.asArray()
+        ?.filter{it?.get("name")!=null}
+        ?.map{Pair(it["name"]!!.asString()!!,
+            AttributeMetadata(it["name"]!!.asString(), this, it!!))} ?: listOf())
+        .toMap()
+    val attributes get() = attributeMap.values
+    val collections: MutableList<AttributeMetadata> =
+        attributeMap.values.filter{it.isCollection}.toMutableList()
+    var container: AttributeMetadata? = null
+                            private set
+    //val container: AttributeMetadata get() { return _container!! }
+    val parentClass: ClassMetadata? get() { return container?.myClass }
 
-    fun getAttribute(aname: String) = attributes[aname]
-    fun getCollections(): List<AttributeMetadata> = collections
+    fun getAttribute(aname: String) = attributeMap[aname]
+    //fun getCollections(): List<AttributeMetadata> = collections
 
     init {
-        val attrMd = jsonMetadata["metadata"]?.get("collection")
-        if (attrMd != null) {
-            for (a in attrMd.asArray()) {
-                val aname = a["name"]?.asString()
-                if (aname != null) {
-                    val attr = AttributeMetadata(aname, this, a)
-                    attributes[aname] = attr
-                    if (attr.isCollection) {
-                        collections.add(attr)
-                    }
-                }
-            }
-        }
-    }
-
+   }
 
 }

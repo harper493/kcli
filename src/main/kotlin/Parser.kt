@@ -121,7 +121,7 @@ class Parser (
         var terminator: Keyword? = null
         var curMd = Metadata.getConfigMd()
         while (true) {
-            val classKeys = KeywordList(curMd.getCollections())
+            val classKeys = KeywordList(curMd.collections)
             if (result.isEmpty) {
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
             }
