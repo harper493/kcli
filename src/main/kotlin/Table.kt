@@ -81,7 +81,7 @@ class Table (
         val sortedCols = columns.values.sortedBy{ it.position }
         calculateColumnWidths(sortedCols)
         val headings = sortedCols.map{wrap(it.heading, it.maxWidth.absoluteValue).toMutableList()}
-        val headingDepth = headings.map{it.size}.maxOrNull() ?: 0
+        val headingDepth = headings.maxSize()
         for (h in headings) repeat(headingDepth - h.size){ h.add(0, "")}
         val colorIterator = (stripeColors?.anyOrNull()?:listOf("")).cycle().iterator()
         for (i in 0 until headingDepth) {
@@ -96,26 +96,22 @@ class Table (
                     ).render()
                 })
         }
-        for (i in 0 until depth) {
+        val byRow = sortedCols.map{it.content}.transpose()
+        for (row in byRow) {
             val color = colorIterator.next()
-            val rowColor = sortedCols[0]?.content[i].getColor()
-            val rowCells = zip(sortedCols, sortedCols.map{it.content[i]})
-                    .map{ wrap(it.second.text, it.first.maxWidth)
-                    .toMutableList() }
-            val rowDepth = rowCells.map{ it.size }.maxOrNull() ?: 0
-            for (rc in rowCells) repeat(rowDepth - rc.size){ rc += "" }
-
-            for (j in 0 until rowDepth) {
-                result.add(
-                    zip(
-                        sortedCols,
-                        rowCells.map { it[j] }).joinToString(colSep) {
-                        it.first.content[i]
-                            .clone(it.first.justify(it.second))
+            val rowCells = zip(columns.values, row)
+                .map { wrap(it.second.text, it.first.maxWidth).toMutableList() }
+            val rowDepth = rowCells.maxSize()
+            for (rc in rowCells) repeat(rowDepth - rc.size) { rc += "" }
+            rowCells.transpose().map {
+                zip(sortedCols, row, it)
+                    .map {
+                        it.second.clone(it.first.justify(it.third))
                             .underride(color)
                             .render()
-                    })
-            }
+                    }
+                    .joinToString(colSep)
+            }.map{it.also{result.add(it)}}
         }
         return result.joinToString("\n")
     }

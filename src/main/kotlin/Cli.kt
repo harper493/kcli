@@ -76,7 +76,7 @@ class Cli () {
         }
         table.setColumns{ name: String, col: Table.Column ->
             col.position = -(if (name=="name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
-            col.heading = classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)
+            col.heading = abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
         }
         return table.render()
     }
@@ -93,4 +93,10 @@ class Cli () {
         }
         return result
     }
+
+    private fun abbreviateHeader(header: String) =
+        header
+            .split(" ")
+            .map{Properties.get("replace", it.toLowerCase()) ?: it}
+            .joinToString(" ")
 }

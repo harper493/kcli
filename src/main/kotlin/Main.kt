@@ -1,21 +1,3 @@
-//import khttp.get
-//import khttp.structures.authorization.Authorization
-//import khttp.structures.authorization.BasicAuthorization
-
-import com.github.kittinunf.fuel.httpGet
-import com.github.kittinunf.result.Result
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.extensions.authentication
-
-import JsonObject
-import Rest
-import Properties
-import Datatype
-
-fun fn(s: String) {
-    println("Hello $s!")
-}
-
 fun main(args: Array<String>) {
     Datatype.load()
     Properties.load("/etc/kcli/objects.properties")
@@ -24,7 +6,7 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        var command = "show flows" //readLine() ?: ""
+        val command = "show flows" //readLine() ?: ""
         try {
             println(command)
             Cli().oneLine(command)

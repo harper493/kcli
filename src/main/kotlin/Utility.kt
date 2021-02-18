@@ -60,6 +60,41 @@ fun <U, V> zip(u: Iterable<U>, v: Iterable<V>): List<Pair<U, V>> {
 }
 
 /**
+ * Take three different collections and zip them together into a list of triples.
+ */
+
+fun <U, V, W> zip(u: Iterable<U>, v: Iterable<V>, w: Iterable<W>): List<Triple<U, V, W>> {
+    val result: MutableList<Triple<U, V, W>> = mutableListOf()
+    val ui = u.iterator()
+    val vi = v.iterator()
+    val wi = w.iterator()
+    while (ui.hasNext() && vi.hasNext() && wi.hasNext()) {
+        result.add(Triple(ui.next(), vi.next(), wi.next()))
+    }
+    return result
+}
+
+/**
+ * Given a list of lists, return a list of lists transposed, i.e. if they
+ * were in column order, they are now in row order
+ */
+
+fun<T> Iterable<Iterable<T>>.transpose() : Iterable<Iterable<T>> {
+    val colIters = map{ it.iterator() }
+    val result: MutableList<List<T>> = mutableListOf()
+    while (colIters.map{it.hasNext()}.all{it}) {
+        result.add(colIters.map{it.next()})
+    }
+    return result
+}
+
+/**
+ * Given a list of lists, return the size of the largest sub-list
+ */
+
+fun<T> Iterable<List<T>>.maxSize() : Int = map{it.size}.maxOrNull() ?: 0
+
+/**
  * Take a string of the form abc_def_ghi and turn it into "Abc Def Ghi"
  */
 
