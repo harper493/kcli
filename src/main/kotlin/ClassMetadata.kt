@@ -54,7 +54,7 @@ data class ClassMetadata(
     }
     fun finalizeClassData() {
         if (container!=null || isRoot) {
-            val derivedAttributes = derivedClasses.chain(listOf(this))
+            val derivedAttributes = derivedClasses.chain(this)
                 .map{it.attributes}
                 .flatten()
                 .distinctBy{it.name}

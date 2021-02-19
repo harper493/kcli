@@ -43,6 +43,7 @@ class Table (
     }
 
     private val columns: MutableMap<String, Column> = mutableMapOf()
+    private var sortedCols: List<Column> = listOf()
 
     val breadth get() = columns.size
     val depth get() = columns.values.map { it.size }.maxOrNull() ?: 0
@@ -75,7 +76,6 @@ class Table (
         for ((name, col) in columns) fn(name, col)
     }
 
-
     private fun calculateColumnWidths(columns: Iterable<Column>) {
         for (c in columns) {
             var w = c.width
@@ -91,10 +91,26 @@ class Table (
         }
     }
 
+    private fun splitCells(row: Iterable<StyledText>): Iterable<Iterable<StyledText>> {
+        val splitRows = zip(sortedCols, row).map { colCell ->
+            wrap(colCell.second.text, colCell.first.maxWidth.absoluteValue).toMutableList()
+        }
+        val depth = splitRows.maxSize()
+        for (subCol in splitRows) {
+            repeat(depth - subCol.size) { subCol.add("") }
+        }
+        return splitRows.transpose().map { subRow ->
+            zip(row, subRow)
+                .map { rowSub ->
+                    rowSub.first.clone(rowSub.second)
+                }
+        }
+    }
+
     fun layout(): Table {
         columns.values.map{it.padTo(depth)}
         val colorIterator = (stripeColors?.anyOrNull() ?: listOf("")).cycle().iterator()
-        val sortedCols = columns.values.sortedBy { it.position }
+        sortedCols = columns.values.sortedBy { it.position }
         calculateColumnWidths(sortedCols)
         val headings = sortedCols.map { wrap(it.heading, it.maxWidth.absoluteValue).toMutableList() }
         val headingDepth = headings.maxSize()
@@ -103,7 +119,7 @@ class Table (
             zip(sortedCols, row)
                 .map {
                     StyledText(
-                        it.first.justify(it.second),
+                        it.second,
                         headingColor,
                         headingBackground,
                         headingStyle
@@ -122,7 +138,7 @@ class Table (
                 rowCells.transpose().map { oneRow ->
                     zip(sortedCols, row, oneRow)
                         .map { colRowLine ->
-                            colRowLine.second.clone(colRowLine.first.justify(colRowLine.third))
+                            colRowLine.second.clone(colRowLine.third)
                                 .underride(color)
                         }
                 }
@@ -130,12 +146,16 @@ class Table (
         return this
     }
 
-    fun renderISO6429() =
+    fun renderText(renderer: (StyledText, Int)->String) =
         listOf(heading, body).flatMap { rows ->
             rows.map { row ->
-                row.joinToString(" ".repeat(columnSpacing)) { cell ->
-                    cell.renderISO6429()
-                }
+                zip(sortedCols, row)
+                    .map { colRow ->
+                        renderer(colRow.second, colRow.first.maxWidth)
+                    }.joinToString(" ".repeat(columnSpacing))
             }
         }.joinToString("\n")
+
+    fun renderISO6429() : String = renderText{ cell, width -> cell.renderISO6429(width) }
+
 }

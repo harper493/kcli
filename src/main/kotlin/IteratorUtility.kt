@@ -86,6 +86,13 @@ fun<T> Iterable<T>.chain(next: Iterable<T>) = sequence<T> {
     }
 }
 
+fun<T> Iterable<T>.chain(last: T) = sequence<T> {
+    for (elem in this@chain) {
+        yield(elem)
+    }
+    yield(last)
+}
+
 /**
  * Append one list to another
  */

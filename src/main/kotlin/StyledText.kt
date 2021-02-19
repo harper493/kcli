@@ -47,7 +47,8 @@ class StyledText (
     val length get() = text.length
     fun getColor() = color
 
-    fun renderISO6429() = "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}$text"
+    fun renderISO6429(width: Int = 0) =
+        "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}${justify(text, width)}"
 
     fun clone (
         newText: String? = null,
@@ -97,6 +98,11 @@ class StyledText (
         }
     }
 
+    private fun justify(text: String, width: Int) = when {
+        width < 0 -> text.padStart(-width)
+        width > 0 -> text.padEnd(width)
+        else -> text // ==0
+    }
     companion object {
         fun addStyle(oldStyle: String?, newStyle: String) = addToTextList(oldStyle, newStyle)
     }
