@@ -60,25 +60,35 @@ class Cli () {
     }
 
     private fun showCollection(classMd: ClassMetadata, json: JsonObject): String {
-        val table = Table(maxColumnWidth=Properties.getInt("parameter", "show_collection_max_field_width"),
-            headingColor=Properties.get("parameter", "heading_color"),
-            headingStyle=Properties.get("parameter", "heading_style"),
-            stripeColors=listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+        val table = Table(
+            maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
+            headingColor = Properties.get("parameter", "heading_color"),
+            headingStyle = Properties.get("parameter", "heading_style"),
+            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
         )
-        for (obj in json.asArray().map{it.asDict()}) {
-            val color = obj["color"]?.asString()
-            for ((name, value) in obj) {
-                val attrMd = classMd.getAttribute(name)
-                if (attrMd != null && (Properties.get("suppress", classMd.name, name)==null || name=="name")) {
-                    table.append(name, makeDisplay(classMd, name, value.asString()), color = color?.ifBlank{null})
+        if (json.asArray().isNotEmpty()) {
+            for (obj in json.asArray().map { it.asDict() }) {
+                val color = obj["color"]?.asString()
+                for ((name, value) in obj) {
+                    val attrMd = classMd.getAttribute(name)
+                    if (attrMd != null && (Properties.get("suppress", classMd.name, name) == null || name == "name")) {
+                        table.append(
+                            name,
+                            makeDisplay(classMd, name, value.asString()),
+                            color = color?.ifBlank { null })
+                    }
                 }
             }
+            table.setColumns { name: String, col: Table.Column ->
+                col.position = -(if (name == "name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
+                col.heading = abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
+            }
+            return table.layout().renderISO6429()
+
+        } else {
+            return StyledText("no matching objects found", color = Properties.get("color", "error"))
+                .renderISO6429()
         }
-        table.setColumns{ name: String, col: Table.Column ->
-            col.position = -(if (name=="name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
-            col.heading = abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
-        }
-        return table.layout().renderISO6429()
     }
 
     private fun makeDisplay(classMd: ClassMetadata, name: String, value: String): String {

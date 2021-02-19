@@ -3,32 +3,30 @@ open class AttributeMetadata(
     val myClass: ClassMetadata,
     private val md: JsonObject
 ) {
-    private val natures: MutableMap<String,String?> = mutableMapOf()
-    private var type: Datatype
-    private var nature: String = md["nature"]?.asString() ?: ""
-    var displayName: String
+    private val type = Datatype[md["type_name"]?.asString() ?: ""]
+    private val nature = md["nature"]?.asArray()?.toList() ?: listOf()
+    private val natures = nature.map {
+                val nn = it.asString()?.split(":")
+                Pair(nn[0], nn.getOrNull(1))
+            }.filter{it.first.isNotEmpty()}.toMap()
+
+    var displayName: String = (Properties.get("attribute", name) ?: makeNameHuman(name))
+        .replace("&.*?;".toRegex(), "")
+    var isSettable = "req" in natures || "mod" in natures || "set" in natures
+    var isRequired = "req" in natures
+    var isModifiable = "mod" in natures
+    var isAlternate = "alternate" in natures
     val defaultValue: String? get() = natures["default"]
     val unit: String get() = (md["unit"]?.asString() ?: "")
-    val filterType: Datatype get() = Datatype[natures["f"] ?: ""] ?: type
+    val filterType: Datatype get() = Datatype[natures["f"] ?: ""]
     val preference: Int get() = (md["preference"]?.asString() ?: "0").toIntOrNull() ?: 0
     val isCollection: Boolean = md["usage_type"]?.asString()?:"" == "collection"
     val relativeUrl: String = md["relative_url"]?.asString()?:""
     val typeName: String = md["type_name"]?.asString()?:""
 
-    init {
-        for (n in nature.split("\\w+".toRegex())) {
-            val nn = n.split(":")
-            natures[nn[0]] = if (nn.size>1) nn[1] else null
-        }
-        type = Datatype[md["type_name"]?.asString() ?: ""]
-        displayName = (Properties.get("attribute", name) ?: makeNameHuman(name))
-                        .replace("&.*?;".toRegex(), "")
-    }
-
-    fun getContainedClass() = Metadata.getClass(typeName)
-    fun getRange() = natures["range"]
-    fun getDefault() = natures["default"]
-    fun getType() = type
+    val containedClass get() = Metadata.getClass(typeName)
+    val range get() = natures["range"]
+    val default get() = natures["default"]
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)
 }

@@ -2,7 +2,7 @@ fun main(args: Array<String>) {
     Datatype.load()
     Properties.load("/etc/kcli/objects.properties")
               .load("/etc/kcli/cli.properties")
-    Rest.connect(server="192.168.1.70", user="kcli", password="FuckYou1!", trace=true)
+    Rest.connect(server="192.168.1.70", user="kcli", password="KcliPw#1", trace=true)
     Metadata.load()
     while (true) {
         print("kcli# ")

@@ -36,8 +36,10 @@ fun <U, V, W> zip(u: Iterable<U>, v: Iterable<V>, w: Iterable<W>): List<Triple<U
 fun<T> Iterable<Iterable<T>>.transpose() : Iterable<Iterable<T>> {
     val colIters = map{ it.iterator() }
     val result: MutableList<List<T>> = mutableListOf()
-    while (colIters.map{it.hasNext()}.all{it}) {
-        result.add(colIters.map{it.next()})
+    if (colIters.isNotEmpty()) {
+        while (colIters.map { it.hasNext() }.all { it }) {
+            result.add(colIters.map { it.next() })
+        }
     }
     return result
 }
@@ -88,9 +90,31 @@ fun<T> Iterable<T>.chain(next: Iterable<T>) = sequence<T> {
  * Append one list to another
  */
 
-fun<T> MutableList<T>.append(other: Iterable<out T>): MutableList<T> {
+fun<T> MutableList<T>.append(other: Iterable<T>): MutableList<T> {
     for (t in other) {
         add(t)
     }
     return this
+}
+
+/**
+ * Append one set to another
+ */
+
+fun<T> MutableSet<T>.append(other: Iterable<T>): MutableSet<T> {
+    for (t in other) {
+        add(t)
+    }
+    return this
+}
+
+/**
+ * Repeatedly run the same function over a collection until all calls return false
+ */
+
+fun<T> Iterable<T>.mapWhile(fn: (T)->Boolean) {
+    var more = true
+    while (more) {
+        more = map(fn).any{it}
+    }
 }

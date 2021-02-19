@@ -12,7 +12,7 @@ class ObjectName {
     }
     private val elements: MutableList<Element> = mutableListOf()
     val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
-    val leafClass get() = elements.lastOrNull()?.attrMd?.getContainedClass()
+    val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isWild }
     val isEmpty get() = elements.isEmpty()
@@ -42,11 +42,11 @@ class ObjectName {
         var curMd = Metadata.getPolicyManagerMd()
         for ((a,n) in attributes.zip(names)) {
             val collMd = curMd.getAttribute(a)
-            if (collMd?.getContainedClass() == null) {
+            if (collMd?.containedClass == null) {
                 throw UrlException("no collection '$a' in class '${curMd.name}")
             }
             elements.add(Element(Metadata.getAttribute("configuration", a)!!, n))
-            curMd = collMd.getContainedClass()!!
+            curMd = collMd.containedClass!!
         }
 
     }
