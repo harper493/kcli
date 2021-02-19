@@ -13,6 +13,7 @@ data class ClassMetadata(
                 Pair(name,
                     AttributeMetadata(name, this, it))} ?: listOf())
             .toMap()
+    private var derivedAttributeMap: Map<String, AttributeMetadata> = mapOf()
     val baseClassNames = jsonMetadata["metadata"]?.asDict()?.get("base_classes")
         ?.asArray()
         ?.map{it.asString()} ?: listOf()
@@ -24,14 +25,17 @@ data class ClassMetadata(
     val parentClass: ClassMetadata? get() { return container?.myClass }
     var allBaseClasses: Set<ClassMetadata> = setOf(); private set
     var derivedClasses: MutableSet<ClassMetadata> = mutableSetOf(); private set
-    var derivedAttributes: Set<AttributeMetadata> = setOf(); private set
     var settableAttributes: List<AttributeMetadata> = listOf(); private set
     var modifiableAttributes: List<AttributeMetadata> = listOf(); private set
+    var isRoot: Boolean = false; private set
 
-    fun getAttribute(aname: String) = attributeMap[aname]
+    fun getAttribute(aname: String) = derivedAttributeMap[aname]
 
     fun setContainer(parentMd: AttributeMetadata?) {
         container = parentMd
+        if (container == null) {
+            isRoot = true
+        }
         for (a in collections.filter{!it.isAlternate}) {
             Metadata.getClass(a.typeName)?.setContainer(a)
         }
@@ -49,12 +53,14 @@ data class ClassMetadata(
         return result
     }
     fun finalizeClassData() {
-        if (container!=null) {
-            derivedAttributes = setOf(*derivedClasses.chain(setOf(this))
+        if (container!=null || isRoot) {
+            val derivedAttributes = derivedClasses.chain(listOf(this))
                 .map{it.attributes}
-                .flatten().toList().toTypedArray())
-            settableAttributes = derivedAttributes.filter{it.isSettable}
-            modifiableAttributes = derivedAttributes.filter{it.isModifiable}
+                .flatten()
+                .distinctBy{it.name}
+            derivedAttributeMap = mapOf(*derivedAttributes.map{Pair(it.name, it)}.toList().toTypedArray())
+            settableAttributes = derivedAttributeMap.values.filter{it.isSettable}
+            modifiableAttributes = derivedAttributeMap.values.filter{it.isModifiable}
         }
     }
     private fun addDerived(classMd: ClassMetadata): Boolean = derivedClasses.add(classMd)

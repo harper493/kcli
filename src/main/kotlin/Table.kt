@@ -47,7 +47,7 @@ class Table (
     val breadth get() = columns.size
     val depth get() = columns.values.map { it.size }.maxOrNull() ?: 0
     private var heading: List<List<StyledText>> = listOf()
-    private var body: MutableList<List<StyledText>> = mutableListOf()
+    private var body: List<List<StyledText>> = listOf()
 
     fun append(
         columnName: String,
@@ -92,6 +92,7 @@ class Table (
     }
 
     fun layout(): Table {
+        columns.values.map{it.padTo(depth)}
         val colorIterator = (stripeColors?.anyOrNull() ?: listOf("")).cycle().iterator()
         val sortedCols = columns.values.sortedBy { it.position }
         calculateColumnWidths(sortedCols)
@@ -108,22 +109,24 @@ class Table (
                         headingStyle
                     )
                 }
-            }
-        if (underlineHeadings) for (h in heading.last()) h.addStyle("underline")
-        for (row in sortedCols.map { col -> col.content }.transpose()) {
-            val color = colorIterator.next()
-            val rowCells = zip(sortedCols, row)
-                .map { wrap(it.second.text, it.first.maxWidth, force = true).toMutableList() }
-            val rowDepth = rowCells.maxSize()
-            for (rc in rowCells) repeat(rowDepth - rc.size) { rc += "" }
-            body.append (rowCells.transpose().map { oneRow ->
-                zip(sortedCols, row, oneRow)
-                    .map { colRowLine ->
-                        colRowLine.second.clone(colRowLine.first.justify(colRowLine.third))
-                            .underride(color)
-                    }
-            })
         }
+        if (underlineHeadings) for (h in heading.last()) h.addStyle("underline")
+        body = sortedCols.map { col -> col.content }
+            .transpose()
+            .map { row ->
+                val color = colorIterator.next()
+                val rowCells = zip(sortedCols, row)
+                    .map { wrap(it.second.text, it.first.maxWidth, force = true).toMutableList() }
+                val rowDepth = rowCells.maxSize()
+                for (rc in rowCells) repeat(rowDepth - rc.size) { rc += "" }
+                rowCells.transpose().map { oneRow ->
+                    zip(sortedCols, row, oneRow)
+                        .map { colRowLine ->
+                            colRowLine.second.clone(colRowLine.first.justify(colRowLine.third))
+                                .underride(color)
+                        }
+                }
+            }.flatten()
         return this
     }
 
