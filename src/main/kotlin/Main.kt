@@ -6,7 +6,7 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        val command = "show interfaces" //readLine() ?: ""
+        val command = "show flows" //readLine() ?: ""
         try {
             println(command)
             Cli().oneLine(command)

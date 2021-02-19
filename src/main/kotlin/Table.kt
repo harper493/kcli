@@ -42,13 +42,14 @@ class Table (
         }
     }
 
-    private val columns: MutableMap<String, Column> = mutableMapOf()
+    private val columns = mutableMapOf<String, Column>()
     private var sortedCols: List<Column> = listOf()
 
     val breadth get() = columns.size
     val depth get() = columns.values.map { it.size }.maxOrNull() ?: 0
-    private var heading: List<List<StyledText>> = listOf()
-    private var body: List<List<StyledText>> = listOf()
+    private var headings = listOf<StyledText>()
+    private var wrappedHeadings = listOf<List<StyledText>>()
+    private var body = listOf<List<StyledText>>()
 
     fun append(
         columnName: String,
@@ -76,28 +77,32 @@ class Table (
         for ((name, col) in columns) fn(name, col)
     }
 
-    private fun calculateColumnWidths(columns: Iterable<Column>) {
-        for (c in columns) {
-            var w = c.width
-            if (c.maxWidth != 0) {
-                w = minOf(w, c.maxWidth.absoluteValue)
-            }
-            w = if (squishHeadings) {
-                maxOf(w, wrap(c.heading, w).map { it.length }.maxOrNull() ?: 0)
-            } else {
-                maxOf(w, c.heading.length)
-            }
-            c.maxWidth = w * c.maxWidth.sign
+    fun finalize(): Table {
+        columns.values.map{it.padTo(depth)}
+        sortedCols = columns.values.sortedBy { it.position }
+        sortedCols.map { col ->
+            val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width) else col.width
+            col.maxWidth = col.maxWidth.sign *
+                    maxOf(w, if (squishHeadings)
+                        wrap(col.heading, w).map { it.length }.maxOrNull() ?: 0
+                    else col.heading.length) }
+        headings = sortedCols.map{
+            StyledText(it.heading, headingColor, headingBackground, headingStyle)
         }
+        sortedCols.map{ col->
+            val colorIterator = (stripeColors?.anyOrNull() ?: listOf(null)).cycle().iterator()
+            col.content.map{ it.underride(newColor=colorIterator.next()) }
+        }
+        return this
     }
 
-    private fun splitCells(row: Iterable<StyledText>): Iterable<Iterable<StyledText>> {
+    private fun splitCells(row: Iterable<StyledText>, padAtEnd: Boolean): List<List<StyledText>> {
         val splitRows = zip(sortedCols, row).map { colCell ->
             wrap(colCell.second.text, colCell.first.maxWidth.absoluteValue).toMutableList()
         }
         val depth = splitRows.maxSize()
         for (subCol in splitRows) {
-            repeat(depth - subCol.size) { subCol.add("") }
+            repeat(depth - subCol.size) { subCol.add((if (padAtEnd) subCol.size else 0), "") }
         }
         return splitRows.transpose().map { subRow ->
             zip(row, subRow)
@@ -107,47 +112,20 @@ class Table (
         }
     }
 
-    fun layout(): Table {
-        columns.values.map{it.padTo(depth)}
-        val colorIterator = (stripeColors?.anyOrNull() ?: listOf("")).cycle().iterator()
-        sortedCols = columns.values.sortedBy { it.position }
-        calculateColumnWidths(sortedCols)
-        val headings = sortedCols.map { wrap(it.heading, it.maxWidth.absoluteValue).toMutableList() }
-        val headingDepth = headings.maxSize()
-        for (h in headings) repeat(headingDepth - h.size) { h.add(0, "") }
-        heading = headings.transpose().map { row ->
-            zip(sortedCols, row)
-                .map {
-                    StyledText(
-                        it.second,
-                        headingColor,
-                        headingBackground,
-                        headingStyle
-                    )
-                }
-        }
-        if (underlineHeadings) for (h in heading.last()) h.addStyle("underline")
-        body = sortedCols.map { col -> col.content }
-            .transpose()
-            .map { row ->
-                val color = colorIterator.next()
-                val rowCells = zip(sortedCols, row)
-                    .map { wrap(it.second.text, it.first.maxWidth, force = true).toMutableList() }
-                val rowDepth = rowCells.maxSize()
-                for (rc in rowCells) repeat(rowDepth - rc.size) { rc += "" }
-                rowCells.transpose().map { oneRow ->
-                    zip(sortedCols, row, oneRow)
-                        .map { colRowLine ->
-                            colRowLine.second.clone(colRowLine.third)
-                                .underride(color)
-                        }
-                }
-            }.flatten()
+    fun layoutText(): Table {
+        finalize()
+        wrappedHeadings = splitCells(headings, padAtEnd=false)
+        if (underlineHeadings) for (h in wrappedHeadings.last()) h.addStyle("underline")
+        body = sortedCols.map {
+            it.content
+        }.transpose().map {
+            splitCells(it, padAtEnd=true)
+        }.flatten()
         return this
     }
 
     fun renderText(renderer: (StyledText, Int)->String) =
-        listOf(heading, body).flatMap { rows ->
+        listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->
                 zip(sortedCols, row)
                     .map { colRow ->

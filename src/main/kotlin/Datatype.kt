@@ -8,7 +8,7 @@ interface Datatype {
     val description: String
     val formatter: (value: Any) -> String
     fun convert(s: String): GenericVariable
-    fun validate(s: String): Boolean { return true }
+    fun validate(value: String): Boolean { return true }
     companion object {
         private var types = mutableMapOf<String, Datatype>()
         operator fun get(index: String): Datatype {
@@ -48,6 +48,7 @@ interface Datatype {
             addType(IntDatatype("counter", properties="counter"))
             addType(IntDatatype("byte_counter", properties="counter"))
             addType(StringDatatype("string"))
+            addType(StringDatatype("text", description="human-readable text"))
             addType(FloatDatatype("rate", description="traffic rate in Kbit/sec",
                             converter={ toFloat(it) * if ((it.lastOrNull()?:' ').isLetter()) 1.0 else 0.001 }))
         }
@@ -56,7 +57,7 @@ interface Datatype {
 
 fun conversionValidator(value: String, dt: Datatype) : Boolean {
     return try {
-        val t = dt.convert(value)
+        dt.convert(value)
         true
     } catch (exc: Exception) {
         false
@@ -71,6 +72,7 @@ open class TypedDatatype<T: Comparable<T>>(
     val properties: String = "",
     val converter: (String)->T,
     val gvFactory: (String)->GenericVariable,
+    val wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : Datatype {
     override fun convert(s: String): GenericVariable {
         return gvFactory(s)
@@ -84,13 +86,15 @@ class StringDatatype(
     formatter: (value: Any) -> String = { it as String },
     validator: ((value: String) -> Boolean)? = null,
     properties: String = "",
+    wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : TypedDatatype<String>(name,
     description,
     formatter,
     validator,
     properties,
     { it },
-    { TypedGenericVariable(it) }
+    { TypedGenericVariable(it) },
+    wrapper,
 )
 
 class IntDatatype(
@@ -100,13 +104,15 @@ class IntDatatype(
     validator: ((value: String) -> Boolean)? = null,
     properties: String = "",
     converter: (String)->Int = { Datatype.toInt(it) },
+    wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : TypedDatatype<Int>(name,
     description,
     formatter,
     validator,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( Datatype.toInt(it), Datatype.toInt(it).toDouble()) }
+    { NumericGenericVariable( Datatype.toInt(it), Datatype.toInt(it).toDouble()) },
+    wrapper,
 ) {
     override fun validate(value: String) =
         if (validator==null) conversionValidator(value, this)
@@ -120,13 +126,15 @@ class FloatDatatype(
     validator: ((value: String) -> Boolean)? = null,
     properties: String = "",
     converter: (String)->Double = { Datatype.toFloat(it) },
+    wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : TypedDatatype<Double>(name,
     description,
     formatter,
     validator,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( Datatype.toFloat(it), Datatype.toFloat(it)) }
+    { NumericGenericVariable( Datatype.toFloat(it), Datatype.toFloat(it)) },
+    wrapper,
 ) {
     override fun validate(value: String) =
         if (validator==null) conversionValidator(value, this)

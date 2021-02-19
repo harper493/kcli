@@ -83,7 +83,7 @@ class Cli () {
                 col.position = -(if (name == "name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
                 col.heading = abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
             }
-            return table.layout().renderISO6429()
+            return table.layoutText().renderISO6429()
 
         } else {
             return StyledText("no matching objects found", color = Properties.get("color", "error"))
