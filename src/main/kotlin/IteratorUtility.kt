@@ -104,6 +104,8 @@ fun<T> MutableList<T>.append(other: Iterable<T>): MutableList<T> {
     return this
 }
 
+fun<T> Iterable<T>.append(other: Iterable<T>) = listOf(this, other).flatten()
+
 /**
  * Append one set to another
  */
@@ -125,3 +127,10 @@ fun<T> Iterable<T>.mapWhile(fn: (T)->Boolean) {
         more = map(fn).any{it}
     }
 }
+
+fun<T> Iterable<T>.splitBy(fn: (Iterable<T>)->Pair<Iterable<T>, Iterable<T>>): List<Iterable<T>> =
+     if (iterator().hasNext()) {
+         fn(this).let {
+             listOf(it.first).append(it.second.splitBy(fn))
+         }
+     } else listOf<List<T>>()

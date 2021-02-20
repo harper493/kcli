@@ -1,54 +1,38 @@
 abstract class GenericVariable {
     open fun less(other: GenericVariable): Boolean { return false }
     open fun equal(other: GenericVariable): Boolean { return false }
-    open fun add(other: GenericVariable): Unit { }
+    open fun add(other: GenericVariable) { }
     override fun toString(): String { return "" }
     open fun toFloat(): Double { return 0.0 }
 }
 
 open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable() {
-    protected var _value: T = initial
-    val value: T get() = _value
+    var value: T = initial; private set
     override fun less(other: GenericVariable): Boolean {
         return try {
-            this._value < (other as TypedGenericVariable<T>)._value
+            this.value < (other as TypedGenericVariable<T>).value
         } catch (e: Exception) {
             false
         }
     }
     override fun equal(other: GenericVariable): Boolean {
         return try {
-            _value == (other as TypedGenericVariable<T>)._value
+            value == (other as TypedGenericVariable<*>).value
         } catch (e: Exception) {
             false
         }
     }
     override fun toString(): String {
-        return _value.toString()
+        return value.toString()
     }
 }
 
 open class NumericGenericVariable<T: Comparable<T>>(initial: T, initial_numeric: Double): TypedGenericVariable<T>(initial) {
-    protected var _num_value: Double = initial_numeric
-    override fun add(other: GenericVariable): Unit {
+    var numValue: Double = initial_numeric; private set
+    override fun add(other: GenericVariable) {
         try {
-            var rhs: Double = (other as NumericGenericVariable<T>)._num_value
-            _num_value += rhs
+            numValue += (other as NumericGenericVariable<*>).numValue
         } catch (e: Exception) {
         }
     }
 }
-
-/*
-fun test(j: GenericVariable): Boolean {
-    var i = TypedGenericVariable<Int>(0)
-    var a = mutableListOf<GenericVariable>(i)
-    var j = NumericGenericVariable<Int>(1, 1.0)
-    a.add(i)
-    a.add(j)
-    for (aa in a) {
-        println(aa.string())
-    }
-    return i.less(j)
-}
-*/
