@@ -191,3 +191,17 @@ fun Iterable<Int>.makeAscending() =
             .filter{ it.first < it.second }
             .map{ it.second })
 
+fun Iterable<Int>.runningReduceLimit(limit: Int): Iterable<Int> {
+    var sum = 0
+    return  map { n ->
+        when {
+            n >= limit && sum > 0 -> listOf(sum, n).also { sum = 0 }
+            n >= limit && sum == 0 -> listOf(n)
+            sum + n > limit -> listOf(sum).also { sum = n }
+            else -> listOf(null).also { sum += n }
+        }
+    }.flatten()
+        .append(if (sum>0) sum else null)
+        .filterNotNull()
+}
+

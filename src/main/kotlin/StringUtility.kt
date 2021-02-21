@@ -42,16 +42,6 @@ fun String.splitAt(indices: Iterable<Int>): List<String> {
         .append(this.drop(prevSplit))
 }
 
-fun hyphenateX(word: String, size: Int): Pair<String,String> {
-    val x99 = Properties.get("hyphenate", word.toLowerCase()) ?: word
-    val x97 = x99?.split("-")
-    val x0a = x97.map{ it.length }
-    if (size<0) return word.splitAt(x0a.firstOrNull() ?: 0)
-    val x1 = x0a.chooseSplit(size, takeFirst=false)
-
-    return word.splitAt(x1)
-}
-
 fun hyphenate(word: String, size: Int): Pair<String,String> =
     word.splitAt(
         (Properties.get("hyphenate", word.toLowerCase()) ?: word)
@@ -71,60 +61,19 @@ fun String.splitBy(fn: (String)->Pair<String,String>): List<String> =
             listOf(it.first).append(if (it.first.length>0) it.second.splitBy(fn) else listOf())
         }
     } else listOf()
-/*
-fun String.divideUsing(rx: String, size: Int): Pair<String, String> {
-    val x0 = this.splitAt(this
-        .splitBy { s1 ->
-            Regex("(.*?)(${rx}.*)?").find(s1)?.groupValues
-                ?.let { match -> Pair(match[1], match[2]) } ?: Pair("", "")
-        }.let { chooseSplit(it, size) })
-    val x1 = x0.swap()
-    return x1
-}
-
- */
-
-fun String.splitUsingX(splitter: (String)->Pair<String,String>, size: Int): List<String> {
-    val substrs = splitBy { s1 ->
-        val p0 = Regex("^([a-zA-Z0-9]*?)(:.*)?$")
-        val xx0 = p0.find(s1)?.groupValues
-        val xx1 = xx0?.let { match -> Pair(match[1], match[2]) } ?: Pair("", "")
-        xx1.let { it.swapIf { it.first.isEmpty() } }
-    }
-    return splitAt(substrs.map{it.length}.runningReduceLimit(size))
-}
 
 fun String.splitUsing(splitter: (String)->Pair<String,String>, size: Int): List<String> {
     val substrs = splitBy { splitter(it) }
-    return splitAt(substrs.map{it.length}.runningReduceLimit(size))
-}
-
-fun Iterable<Int>.runningReduceLimit(limit: Int): Iterable<Int> {
-    var sum = 0
-    val x0 =  map { n ->
-        when {
-            n >= limit && sum > 0 -> listOf(sum, n).also { sum = 0 }
-            n >= limit && sum == 0 -> listOf(n)
-            sum + n > limit -> listOf(sum).also { sum = n }
-            else -> listOf(null).also { sum += n }
-        }
-    }.flatten()
-        val x1 = x0.append(if (sum>0) sum else null)
-    val x2 = x1.filterNotNull()
-    return x2
+    return splitAt(substrs.map{it.length}.runningReduceLimit(size).runningReduce{ a,b -> a+b})
 }
 
 
 fun baseSplitter(text: String): Pair<String, String> {
     val m1 = Regex("^([^a-zA_Z0-9]*)([a-zA-Z0-9]*)(.*)$").find(text)?.groupValues!!
-    if (m1[3].isNotEmpty()) {
-        if (m1[3][0] in ",;-") {
-            return Pair(m1[1]+m1[2]+m1[3][0], m1[3].drop(1))
-        } else {
-            return Pair(m1[1]+m1[2], m1[3])
-        }
-    } else {
-        return Pair(text, "")
+    return when {
+        m1[3].isEmpty() -> Pair(text, "")
+        m1[3][0] in ",;-" -> Pair(m1[1] + m1[2] + m1[3][0], m1[3].drop(1))
+        else -> Pair(m1[1] + m1[2], m1[3])
     }
 }
 

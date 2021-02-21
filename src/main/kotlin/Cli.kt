@@ -61,7 +61,7 @@ class Cli () {
 
     private fun showCollection(classMd: ClassMetadata, json: JsonObject): String {
         val table = Table(
-            maxColumnWidth = 20, // Properties.getInt("parameter", "show_collection_max_field_width"),
+            maxColumnWidth = 15, //Properties.getInt("parameter", "show_collection_max_field_width"),
             headingColor = Properties.get("parameter", "heading_color"),
             headingStyle = Properties.get("parameter", "heading_style"),
             stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
