@@ -12,56 +12,6 @@ fun addToTextList(old: String?, new: String, delimiter: String = ",") =
         .ifBlank { null }
 
 /**
- * Wrap a string to fit within a given width, breaking the text at spaces as
- * necessary. If [force] is true, lines which are still too long are just
- * split at the required length. Otherwise, it does its best but the
- * longest line  may be longer than [width].
- *
- * [splitter] should be a function which will split a string in an
- * an intelligent way. By default a string will be chunked at non-word
- * boundaries.
- */
-
-fun wrap(text: String, width: Int, force: Boolean = false): List<String> {
-    var newWidth = width
-    var line = ""
-    return text.trim().split(" ").map { it.trim() }
-        .map { word ->
-            var thisResult = mutableListOf<String>()
-            val space = if (line.isEmpty()) "" else " "
-            if (line.length + word.length + space.length < newWidth) {
-                line = "$line$space$word"
-            } else {
-                if (!force) {
-                    newWidth = maxOf(newWidth, line.length)
-                }
-                var (w, r) = hyphenate(word, maxOf(0, newWidth - line.length - space.length - 1))
-                if (w.isNotEmpty()) line = "$line$space${w}-"
-                if (line.isNotEmpty()) {
-                    thisResult.add(line)
-                    newWidth = maxOf(newWidth, line.length)
-                    line = ""
-                }
-                if (r.length > newWidth) {
-                    val h2 = hyphenate(r, -1)
-                    if (h2.first.isNotEmpty()) {
-                        thisResult.add("${h2.first}-")
-                    }
-                    r = h2.second
-                    if (force) {
-                        val chunks = r.chunked(newWidth)
-                        thisResult.addAll(chunks.dropLast(1))
-                        r = chunks.last()
-                    }
-                }
-                line = r
-            }
-            thisResult
-        }.flatten()
-        .append(if (line.isNotEmpty()) listOf(line) else listOf())
-}
-
-/**
  * Hyphenate a [word], choosing the longest fragment that will fit in [size],
  * returning a pair corresponding to the split. If there is no suitable hyphenation
  * the result is an empty string followed by the full word.
@@ -76,28 +26,188 @@ fun wrap(text: String, width: Int, force: Boolean = false): List<String> {
  * 4. Split the word at the length of the largest fragment.
  */
 
-fun hyphenate(word: String, size: Int) =
-    word.splitAt((Properties.get("hyphenate", word.toLowerCase())?.split("-") ?: listOf(word))
-        .runningReduce { pfx, _ -> pfx }
-        .let { pfxs ->
-            if (size < 0) pfxs.firstOrNull()
-               else pfxs.lastOrNull { it.length < size }}
-        ?.length ?: 0)
-
 fun String.splitAt(index: Int) =
     if (index < length) Pair(take(index), drop(index)) else Pair(this, "")
+
+fun String.splitAt(indices: Iterable<Int>): List<String> {
+    var prevSplit = 0
+    return indices
+        .filter{it in 1..(this.length)}
+        .makeAscending()
+        .map{ index ->
+            this.drop(prevSplit)
+                .take(index - prevSplit)
+                .also{ prevSplit = index }
+        }
+        .append(this.drop(prevSplit))
+}
+
+fun hyphenateX(word: String, size: Int): Pair<String,String> {
+    val x99 = Properties.get("hyphenate", word.toLowerCase()) ?: word
+    val x97 = x99?.split("-")
+    val x0a = x97.map{ it.length }
+    if (size<0) return word.splitAt(x0a.firstOrNull() ?: 0)
+    val x1 = x0a.chooseSplit(size, takeFirst=false)
+
+    return word.splitAt(x1)
+}
+
+fun hyphenate(word: String, size: Int): Pair<String,String> =
+    word.splitAt(
+        (Properties.get("hyphenate", word.toLowerCase()) ?: word)
+            .split("-")
+            .map{ it.length }
+            .let{
+                when {
+                    size < 0 && it.first() < word.length -> it.first()
+                    size < 0 && it.first() >= word.length -> 0
+                    else ->  it.chooseSplit(size, takeFirst = false)
+                }
+            })
 
 fun String.splitBy(fn: (String)->Pair<String,String>): List<String> =
     if (isNotEmpty()) {
         fn(this).let {
-            listOf(it.first).append(it.second.splitBy(fn))
+            listOf(it.first).append(if (it.first.length>0) it.second.splitBy(fn) else listOf())
         }
     } else listOf()
+/*
+fun String.divideUsing(rx: String, size: Int): Pair<String, String> {
+    val x0 = this.splitAt(this
+        .splitBy { s1 ->
+            Regex("(.*?)(${rx}.*)?").find(s1)?.groupValues
+                ?.let { match -> Pair(match[1], match[2]) } ?: Pair("", "")
+        }.let { chooseSplit(it, size) })
+    val x1 = x0.swap()
+    return x1
+}
 
+ */
+
+fun String.splitUsingX(splitter: (String)->Pair<String,String>, size: Int): List<String> {
+    val substrs = splitBy { s1 ->
+        val p0 = Regex("^([a-zA-Z0-9]*?)(:.*)?$")
+        val xx0 = p0.find(s1)?.groupValues
+        val xx1 = xx0?.let { match -> Pair(match[1], match[2]) } ?: Pair("", "")
+        xx1.let { it.swapIf { it.first.isEmpty() } }
+    }
+    return splitAt(substrs.map{it.length}.runningReduceLimit(size))
+}
+
+fun String.splitUsing(splitter: (String)->Pair<String,String>, size: Int): List<String> {
+    val substrs = splitBy { splitter(it) }
+    return splitAt(substrs.map{it.length}.runningReduceLimit(size))
+}
+
+fun Iterable<Int>.runningReduceLimit(limit: Int): Iterable<Int> {
+    var sum = 0
+    val x0 =  map { n ->
+        when {
+            n >= limit && sum > 0 -> listOf(sum, n).also { sum = 0 }
+            n >= limit && sum == 0 -> listOf(n)
+            sum + n > limit -> listOf(sum).also { sum = n }
+            else -> listOf(null).also { sum += n }
+        }
+    }.flatten()
+        val x1 = x0.append(if (sum>0) sum else null)
+    val x2 = x1.filterNotNull()
+    return x2
+}
+
+
+fun baseSplitter(text: String): Pair<String, String> {
+    val m1 = Regex("^([^a-zA_Z0-9]*)([a-zA-Z0-9]*)(.*)$").find(text)?.groupValues!!
+    if (m1[3].isNotEmpty()) {
+        if (m1[3][0] in ",;-") {
+            return Pair(m1[1]+m1[2]+m1[3][0], m1[3].drop(1))
+        } else {
+            return Pair(m1[1]+m1[2], m1[3])
+        }
+    } else {
+        return Pair(text, "")
+    }
+}
 
 /**
+ * Wrap a string to fit within a given width, breaking the text at spaces as
+ * necessary. If [force] is true, lines which are still too long are just
+ * split at the required length. Otherwise, it does its best but the
+ * longest line  may be longer than [width].
+ *
+ * [splitter] should be a regex which will split a string in an
+ * an intelligent way. By default a string will be chunked at non-word
+ * boundaries.
+ */
+
+fun wrap(text: String, width: Int,
+         force: Boolean = false,
+         splitter: (String)->Pair<String,String> = { baseSplitter(it) }): Iterable<String> {
+    var newWidth = width
+    var line = ""
+    return text.trim().split(" ").map { it.trim() }
+        .map { word ->
+            var thisResult = mutableListOf<String>()
+            val space = if (line.isEmpty()) "" else " "
+            if (line.length + word.length + space.length < newWidth) {
+                line = "$line$space$word"
+            } else {
+                if (!force) {
+                    newWidth = maxOf(newWidth, line.length)
+                }
+                var (w, r) = hyphenate(word, maxOf(0, newWidth - line.length - space.length - 1))
+                if (w.isNotEmpty()) {
+                    if (line.length + w.length + space.length < newWidth - 1) {
+                        line = "$line$space${w}-"
+                    } else {
+                        r = w + r
+                    }
+                }
+                if (line.isNotEmpty()) {
+                    thisResult.add(line)
+                    newWidth = maxOf(newWidth, line.length)
+                    line = ""
+                }
+                if (r.length > newWidth) {
+                    if (force) {
+                        val h2 = hyphenate(r, -1)
+                        if (h2.first.length > newWidth - 1) {
+                            val chunks = h2.first.splitUsing(splitter, newWidth).map{ it.chunked(newWidth) }.flatten()
+                            thisResult.addAll(chunks.dropLast(1))
+                            r = chunks.last()
+                        } else if (h2.first.length > 0) {
+                            thisResult.add("${h2.first}-")
+                            r = h2.second
+                        } else {
+                            r = h2.second
+                        }
+                        if (r.length > newWidth) {
+                            val chunks = r.splitUsing(splitter, newWidth).map{ it.chunked(newWidth) }.flatten()
+                            thisResult.addAll(chunks.dropLast(1))
+                            r = chunks.last()
+                        }
+                    } else {
+                        val h3 = hyphenate(r, -1)
+                        if (h3.first.length > 0 ) {
+                            thisResult.add("${h3.first}-")
+                            r = h3.second
+                        }
+                    }
+                }
+                line = r
+            }
+            thisResult
+        }.flatten()
+        .appendIf(line){line.isNotEmpty()}
+}
+
+fun foo() = 1
+
+//splitBy { it.divideUsing(rx, size) }
+
+            /**
  * Take a string of the form abc_def_ghi and turn it into "Abc Def Ghi"
  */
 
-fun makeNameHuman(name: String) = name.split("_").joinToString(" ") { it.capitalize() }
+fun makeNameHuman(name: String): String =
+    name.split("_").map { it.capitalize() }.joinToString(" ")
 

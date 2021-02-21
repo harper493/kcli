@@ -106,6 +106,14 @@ fun<T> MutableList<T>.append(other: Iterable<T>): MutableList<T> {
 
 fun<T> Iterable<T>.append(other: Iterable<T>) = listOf(this, other).flatten()
 
+fun<T> Iterable<T>.appendIf(other: Iterable<T>, fn: ()->Boolean) =
+    if (fn()) append(other) else this
+
+fun<T> Iterable<T>.append(other: T) = append(listOf(other))
+
+fun<T> Iterable<T>.appendIf(other: T, fn: ()->Boolean) =
+    if (fn()) append(other) else this
+
 /**
  * Append one set to another
  */
@@ -128,9 +136,58 @@ fun<T> Iterable<T>.mapWhile(fn: (T)->Boolean) {
     }
 }
 
+/**
+ * Given  function which will split a sequence into two parts, apply it
+ * repeatedly to the second part of the split, e.g. if the split function
+ * splits at a number greater than 10 then applying it to the sequence
+ * 1 2 11 3 4 12 13 5 => (1,2) (11,2,3) (12) (13,5)
+ */
+
 fun<T> Iterable<T>.splitBy(fn: (Iterable<T>)->Pair<Iterable<T>, Iterable<T>>): List<Iterable<T>> =
      if (iterator().hasNext()) {
          fn(this).let {
              listOf(it.first).append(it.second.splitBy(fn))
          }
      } else listOf<List<T>>()
+
+/**
+ * Swap the two elements of a pair
+ */
+
+fun<T,U> Pair<T,U>.swap() = Pair(second, first)
+
+/**
+ * Swap the two elements of a pair iff the predicate is satisfied
+ */
+
+fun<T> Pair<T,T>.swapIf(pred: (Pair<T,T>)->Boolean) = if (pred(this)) swap() else this
+
+/**
+ * Given a sequence of integers and a limit, return the highest partial
+ * sum starting at the beginning which is less than or equal to the limit.
+ * If the first value is already too large, return either it or 0 depending
+ * on whether takeFirst is true.
+ */
+
+fun Iterable<Int>.chooseSplit(limit: Int, takeFirst: Boolean=false): Int =
+    runningReduce { pfx, sz -> pfx + sz }
+        .let { cumSizes ->
+            when {
+                cumSizes.isEmpty() -> 0
+                takeFirst && cumSizes.first() >= limit -> cumSizes.first()
+                else -> cumSizes.lastOrNull { it <= limit } ?: 0
+            }
+        }
+
+/**
+ * Given a sequence of integers, return only those which are greater
+ * than all previous values.
+ */
+
+fun Iterable<Int>.makeAscending() =
+    take(1)
+        .append(zip(this.runningReduce{a, b -> maxOf(a, b)}.dropLast(1),
+            this.drop(1))
+            .filter{ it.first < it.second }
+            .map{ it.second })
+
