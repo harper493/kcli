@@ -16,6 +16,7 @@ fun main(args: Array<String>) {
             break
         }
     }
+    println(StyledText("").renderISO6429())
 }
 
 fun test() {
