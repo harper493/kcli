@@ -1,18 +1,14 @@
 /**
- * Returns a comma (or other [delimiter]) separated list with the addition of one or more
- * new items. The result is null if it would otherwise be empty.
+ * Split a string into two at the given [index]
  */
-
-fun addToTextList(old: String?, new: String, delimiter: String = ",") =
-    (old ?: "")
-        .split(delimiter)
-        .toMutableList()
-        .also { it.addAll(new.split(delimiter)) }
-        .joinToString(delimiter)
-        .ifBlank { null }
 
 fun String.splitAt(index: Int) =
     if (index < length) Pair(take(index), drop(index)) else Pair(this, "")
+
+/**
+ * Split a string into multiple pieces at the given locations. Any index
+ * which is out of range or out of order is ignored.
+ */
 
 fun String.splitAt(indices: Iterable<Int>): List<String> {
     var prevSplit = 0
@@ -28,22 +24,36 @@ fun String.splitAt(indices: Iterable<Int>): List<String> {
 }
 
 /**
- * Hyphenate a [word], choosing the longest fragment that will fit in [size],
+ * Given a [splitter] function that will divide a string in two, apply it repeatedly
+ * to break the string into multiple pieces wherever the splitter applies.
+ */
+
+fun String.splitBy(splitter: (String)->Pair<String,String>): List<String> =
+    if (isNotEmpty()) {
+        splitter(this).let {
+            listOf(it.first).append(if (it.first.isNotEmpty()) it.second.splitBy(splitter) else listOf())
+        }
+    } else listOf()
+
+/**
+ * Given a splitter function and a target size, split the string into pieces no
+ * larger than the given size, according to the splitter function, if possible.
+ */
+
+fun String.splitUsing(splitter: (String)->Pair<String,String>, size: Int): List<String> {
+    val substrs = splitBy { splitter(it) }
+    return splitAt(substrs.map{it.length}.runningReduceLimit(size).runningReduce{ a,b -> a+b})
+}
+
+/**
+ * Hyphenate [word], choosing the longest fragment that will fit in [size],
  * returning a pair corresponding to the split. If there is no suitable hyphenation
  * the result is an empty string followed by the full word.
  *
  * If [size] is -1, pick the shortest fragment.
- *
- * This doesn't look obvious. The steps are:
- *
- * 1. Find the possible hyphenation of this word, in the form e.g. "app-li-ca-tion"
- * 2. Turn that into all possible prefixes: app, appli, applica, application
- * 3. If [size] is non-negative, pick the largest fragment that fits, else pick the first one
- * 4. Split the word at the length of the largest fragment.
  */
 
 fun hyphenate(word: String, size: Int): Pair<String,String> =
-
     if ("-" in word) Pair("", word)
     else word.splitAt(
         (Properties.get("hyphenate", word.toLowerCase()) ?: word)
@@ -57,27 +67,22 @@ fun hyphenate(word: String, size: Int): Pair<String,String> =
                 }
             })
 
-fun String.splitBy(fn: (String)->Pair<String,String>): List<String> =
-    if (isNotEmpty()) {
-        fn(this).let {
-            listOf(it.first).append(if (it.first.isNotEmpty()) it.second.splitBy(fn) else listOf())
+/**
+ * Default splitter function for wrap. Split the string at the first non-alphanumeric
+ * character, ignoring any such at the beginning. If the character is in ',;-' split
+ * immediately after it. Otherwise, splt before it.
+ */
+
+fun baseSplitter(text: String): Pair<String, String> =
+    Regex("^([^a-zA_Z0-9]*)([a-zA-Z0-9]*)(.*)$").find(text)?.groupValues!!
+        .let{ match ->
+            val (prefix, body, remnant) = Triple(match[1], match[2], match[3])
+            when {
+                remnant.isEmpty() -> Pair(text, "")
+                remnant[0] in ",;-" -> Pair("$prefix$body${remnant[0]}", remnant.drop(1))
+                else -> Pair("$prefix$body", remnant)
+            }
         }
-    } else listOf()
-
-fun String.splitUsing(splitter: (String)->Pair<String,String>, size: Int): List<String> {
-    val substrs = splitBy { splitter(it) }
-    return splitAt(substrs.map{it.length}.runningReduceLimit(size).runningReduce{ a,b -> a+b})
-}
-
-
-fun baseSplitter(text: String): Pair<String, String> {
-    val m1 = Regex("^([^a-zA_Z0-9]*)([a-zA-Z0-9]*)(.*)$").find(text)?.groupValues!!
-    return when {
-        m1[3].isEmpty() -> Pair(text, "")
-        m1[3][0] in ",;-" -> Pair(m1[1] + m1[2] + m1[3][0], m1[3].drop(1))
-        else -> Pair(m1[1] + m1[2], m1[3])
-    }
-}
 
 /**
  * Wrap a string to fit within a given width, breaking the text at spaces as
@@ -156,4 +161,17 @@ fun wrap(text: String, width: Int,
 
 fun makeNameHuman(name: String): String =
     name.split("_").joinToString(" ") { it.capitalize() }
+
+/**
+ * Returns a comma (or other [delimiter]) separated list with the addition of one or more
+ * new items. The result is null if it would otherwise be empty.
+ */
+
+fun addToTextList(old: String?, new: String, delimiter: String = ",") =
+    (old ?: "")
+        .split(delimiter)
+        .toMutableList()
+        .also { it.addAll(new.split(delimiter)) }
+        .joinToString(delimiter)
+        .ifBlank { null }
 

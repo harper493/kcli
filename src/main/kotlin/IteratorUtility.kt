@@ -191,6 +191,14 @@ fun Iterable<Int>.makeAscending() =
             .filter{ it.first < it.second }
             .map{ it.second })
 
+/**
+ * Given a list of integers, return them grouped and summed in
+ * such a way that no total exceeds the given limit, unless an
+ * individual value does. E.g.
+ *
+ * 1 2 3 6 3 2 1 limit=5 => 3 3 6 5 1
+ */
+
 fun Iterable<Int>.runningReduceLimit(limit: Int): Iterable<Int> {
     var sum = 0
     return  map { n ->

@@ -19,6 +19,7 @@ fun main(args: Array<String>) {
 }
 
 fun test() {
+/*
     val x4 = listOf(1,2,3,10,3,2,1).runningReduceLimit(3)
     val x2 = listOf(1,2,3,10,3,2,1).runningReduceLimit(17)
     val x0 = listOf(1,2,3,10,3,2,1).runningReduceLimit(8)
@@ -36,4 +37,6 @@ fun test() {
     val p3 = s1.splitAt(listOf(1))
     val p4 = s1.splitAt(listOf(0,3,3))
     val q0 = wrap("abcdefg-hijkl", 8, true)
+
+*/
 }
