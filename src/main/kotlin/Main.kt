@@ -35,4 +35,5 @@ fun test() {
     val p2 = s1.splitAt(listOf())
     val p3 = s1.splitAt(listOf(1))
     val p4 = s1.splitAt(listOf(0,3,3))
+    val q0 = wrap("abcdefg-hijkl", 8, true)
 }
