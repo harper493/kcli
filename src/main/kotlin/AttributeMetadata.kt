@@ -21,6 +21,7 @@ open class AttributeMetadata(
     val filterType: Datatype get() = Datatype[natures["f"] ?: ""]
     val preference: Int get() = (md["preference"]?.asString() ?: "0").toIntOrNull() ?: 0
     val isCollection: Boolean = md["usage_type"]?.asString()?:"" == "collection"
+    val isRelation: Boolean = md["usage_type"]?.asString()?:"" == "related"
     val relativeUrl: String = md["relative_url"]?.asString()?:""
     val typeName: String = md["type_name"]?.asString()?:""
 

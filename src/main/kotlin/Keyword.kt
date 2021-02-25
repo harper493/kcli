@@ -4,11 +4,16 @@ class Keyword(
     val attribute: AttributeMetadata?=null,
     val function: (()->Unit)? = null)
 
+class KeywordFn(
+    val key: String,
+    val function: ()->Unit)
+
 class KeywordList()
 {
     private val keywords: MutableList<Keyword> = mutableListOf()
 
-    fun addAttributes(attrs: Iterable<AttributeMetadata>): KeywordList {
+    fun addAttributes(attrs: Iterable<AttributeMetadata>,
+                      pred: (AttributeMetadata)->Boolean={ true }): KeywordList {
         for (a in attrs) keywords.add(Keyword(a.name, attribute=a))
         return this
     }
@@ -16,21 +21,26 @@ class KeywordList()
         for (k in keys) keywords.add(Keyword(k, value=k))
         return this
     }
-    fun addAttributes(vararg attrs: AttributeMetadata): KeywordList {
-        addAttributes(attrs.asIterable())
+    fun addAttributes(vararg attrs: AttributeMetadata,
+                      pred: (AttributeMetadata)->Boolean={ true }): KeywordList {
+        addAttributes(attrs.asIterable(), pred)
         return this
     }
     fun addKeys(vararg keys: String): KeywordList {
         for (k in keys) keywords.add(Keyword(k, value = k))
         return this
     }
-    fun addFns(vararg fns: Pair<String, ()->Unit>): KeywordList
+    fun addFns(vararg fns: KeywordFn): KeywordList
     {
-        for (f in fns) keywords.add(Keyword(f.first, function=f.second))
+        for (k in fns) keywords.add(Keyword(k.key, function=k.function))
         return this
     }
     fun add(keys: KeywordList): KeywordList {
         for (k in keys.keywords) keywords += k
+        return this
+    }
+    fun add(vararg keys: Keyword): KeywordList {
+        for (k in keys) keywords += k
         return this
     }
     fun match(key: String): List<Keyword> {
@@ -47,16 +57,21 @@ class KeywordList()
         for (k in keys) result.add(k.key)
         return result
     }
-    constructor(vararg fns: Pair<String, ()->Unit>) : this() {
+    fun copy() =
+        KeywordList().add(this)
+
+    constructor(vararg fns: KeywordFn) : this() {
         addFns(*fns)
     }
     constructor(vararg keys: String) : this() {
         addKeys(*keys)
     }
-    constructor(vararg attrs: AttributeMetadata) : this() {
+    constructor(vararg attrs: AttributeMetadata,
+                pred: (AttributeMetadata)->Boolean={ true }) : this() {
         addAttributes(*attrs)
     }
-    constructor(attrs: Iterable<AttributeMetadata>) : this() {
+    constructor(attrs: Iterable<AttributeMetadata>,
+                pred: (AttributeMetadata)->Boolean={ true }) : this() {
         addAttributes(attrs)
     }
 }

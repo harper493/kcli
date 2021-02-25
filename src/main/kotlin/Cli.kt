@@ -1,52 +1,127 @@
-class CliExitException : Exception("")
+class CliException(text: String="") : Exception(text)
 
 class Cli () {
     private var parser = Parser("")
+    private var options = mutableMapOf<String, String>()
+    private var classMd: ClassMetadata = Metadata.getClass("configuration")!!
+    private val selections = mutableListOf<AttributeMetadata>()
+    private var onlySelect = false
+    private val filters = mutableListOf<String>()
+    private val order = mutableListOf<Pair<Boolean,AttributeMetadata>>()
+    private var limit = 0
+    private var level = ""
+    val levels = listOf("brief", "full", "detail", "debug")
+    val extras = KeywordList(
+        KeywordFn("select", { doSelect() }),
+        KeywordFn("with", { doWith() }),
+        KeywordFn("top", { doTopBottom(true) }),
+        KeywordFn("bottom", { doTopBottom(false) }),
+        KeywordFn("bottom", { doTopBottom(false) }),
+    ).also{ keywords-> levels.map { keywords.add(Keyword(it, function= {doLevel(it)}))}}
 
     fun oneLine(line: String) {
         parser = Parser(line)
-        val commands = KeywordList(Pair("show", { doShow() }),
-                                   Pair("quit", { doQuit() }))
+        val commands = KeywordList(KeywordFn("show", { doShow() }),
+                                   KeywordFn("quit", { doQuit() })
+        )
         parser.nextToken()
         val cmd = parser.findKeyword(commands)
         cmd?.function?.invoke()
     }
 
     private fun doShow() {
-        val levels = listOf("brief", "full", "detail", "debug")
-        val extras = KeywordList("select").addKeys(levels)
-        Metadata.getClass("configuration")
-        val (oname, terminator) = parser.getObjectName(extras=extras)
-        val level = when {
-            terminator?.value ?: "" in levels -> terminator?.value ?: ""
+        val (oname, terminator) = parser.getObjectName(extras = extras)
+        classMd = oname.leafClass!!
+        doShowOptions(terminator)
+        level = when {
+            level.isNotEmpty() -> level
             oname.isWild -> "brief"
             else -> "full"
         }
-        val options =  mapOf("level" to level,
-                             "link" to "name",
-                             "select" to "+color",)
-        val json = Rest.getCollection(oname.url, options=options)
-        val leafClassMd = oname.leafClass!!
+        val colorMd = classMd.getAttribute("color")
+        if (colorMd!=null) {
+            selections.add(colorMd)
+        }
+        val myOptions = mutableMapOf(
+            "level" to level,
+            "link" to "name",
+        )
+        val mySelect = "${if (onlySelect) "" else "+"}${selections.map{it.name}.joinToString(",")}"
+        if (mySelect.isNotEmpty()) {
+            myOptions["select"] = mySelect
+        }
+        val json = Rest.getCollection(oname.url, options = myOptions)
         if (json != null) {
             if (oname.isWild) {
-                println(showCollection(leafClassMd, json))
+                println(showCollection(json))
             } else {
                 for (obj in json.asArray()) {
-                    println(showOne(leafClassMd, obj))
+                    println(showOne(obj))
                 }
             }
         }
     }
 
-    private fun doQuit() {
-        throw CliExitException()
+    private fun doShowOptions(key: Keyword?) {
+        var myKey: Keyword? = key
+        while (true) {
+            if (myKey?.function != null) {
+                (myKey.function!!)()
+            }
+            if (parser.isFinished()) {
+                break
+            }
+            myKey = parser.findKeyword(extras)
+        }
     }
 
-    private fun showOne(classMd: ClassMetadata, obj: JsonObject): String {
+    private fun doSelect() {
+        checkRepeat({ selections.isNotEmpty() }, "select")
+        val myExtras = extras
+            .copy()
+            .addKeys("only")
+        parser.skipToken("select")
+        while (true) {
+            val kw = readAttribute(classMd!!, extras=myExtras)
+            if (kw?.attribute != null) {
+                selections.add(kw.attribute)
+            } else if (kw?.key=="only") {
+                checkRepeat({onlySelect}, "only")
+                onlySelect = true
+            } else {
+                break
+            }
+        }
+        if (selections.isEmpty()) {
+            throw CliException("no valid attributes found after 'select'")
+        }
+    }
+
+    private fun doWith() {
+
+    }
+
+    private fun doTopBottom(descending: Boolean) {
+
+    }
+
+    private fun doLevel(l: String) {
+        checkRepeat({ level.isNotEmpty() }, "level")
+        if (l !in levels) {
+            throw CliException("invalid show level '$l'")
+        }
+        level = l
+    }
+
+    private fun doQuit() {
+        throw CliException()
+    }
+
+    private fun showOne(obj: JsonObject): String {
         val result: MutableList<String> = mutableListOf()
         for ((name, value) in obj.asDict()) {
             val attrMd = classMd.getAttribute(name)
-            if (attrMd!=null) {
+            if (attrMd != null) {
                 result.add(
                     "%30s = %s %s".format(
                         attrMd.displayName,
@@ -59,7 +134,7 @@ class Cli () {
         return result.joinToString("\n")
     }
 
-    private fun showCollection(classMd: ClassMetadata, json: JsonObject): String {
+    private fun showCollection(json: JsonObject): String {
         val table = Table(
             maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
             headingColor = Properties.get("parameter", "heading_color"),
@@ -94,7 +169,7 @@ class Cli () {
     private fun makeDisplay(classMd: ClassMetadata, name: String, value: String): String {
         val attrMd = classMd.getAttribute(name)
         var result = value
-        if (attrMd!=null) {
+        if (attrMd != null) {
             try {
                 val converted = attrMd.convert(value)
                 result = converted.toString()
@@ -104,9 +179,58 @@ class Cli () {
         return result
     }
 
+    private fun checkRepeat(pred: ()->Boolean, keyword: String) {
+        if (pred()) {
+            throw CliException("keyword '$keyword' repeated")
+        }
+    }
+
     private fun abbreviateHeader(header: String) =
         header
             .split(" ")
-            .map{Properties.get("replace", it.toLowerCase()) ?: it}
+            .map { Properties.get("replace", it.toLowerCase()) ?: it }
             .joinToString(" ")
+
+    private fun readAttribute(
+        classMd: ClassMetadata,
+        pred: (AttributeMetadata) -> Boolean = { true },
+        extras: KeywordList = KeywordList(),
+        missOK: Boolean = false
+    ): Keyword? =
+        parser.findKeyword(KeywordList(classMd.attributes, pred).add(extras), missOK)
+
+    private fun readComplexAttribute(
+        classMd: ClassMetadata,
+        pred: (AttributeMetadata) -> Boolean = { true },
+        extras: KeywordList = KeywordList(),
+        missOK: Boolean = false,
+        followLinks: Boolean = true,
+        followOwners: Boolean = true,
+    ): Triple<String, AttributeMetadata?, Keyword?> {
+        var cmd = classMd
+        var string = ""
+        while (true) {
+            val thisExtra = extras
+            val parentClassName = cmd.parentClass?.name
+            if (followOwners and !cmd.isRoot) {
+                thisExtra.addKeys(parentClassName!!)
+            }
+            val a = readAttribute(cmd, pred, thisExtra, missOK)
+            val attrMd = a?.attribute
+            if (attrMd != null) {
+                string = listOf(string, attrMd.name).joinToString(".")
+                if (attrMd.isRelation && followLinks && parser.skipToken(".")) {
+                    cmd = attrMd.myClass
+                } else {
+                    return Triple(string, attrMd, null)
+                }
+            } else if (a?.value == parentClassName && followOwners && parser.skipToken(".")) {
+                string = listOf(string, parentClassName).joinToString(".")
+                cmd = cmd.parentClass!!
+            } else {
+                return Triple(string, attrMd, a)
+            }
+        }
+    }
+
 }

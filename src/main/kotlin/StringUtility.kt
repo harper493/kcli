@@ -103,7 +103,7 @@ fun wrap(text: String, width: Int,
         .map { word ->
             val thisResult = mutableListOf<String>()
             val space = if (line.isEmpty()) "" else " "
-            if (line.length + word.length + space.length < newWidth) {
+            if (line.length + word.length + space.length <= newWidth) {
                 line = "$line$space$word"
             } else {
                 if (!force) {
@@ -111,7 +111,7 @@ fun wrap(text: String, width: Int,
                 }
                 var (prefix, residue) = hyphenate(word, maxOf(0, newWidth - line.length - space.length - 1))
                 if (prefix.isNotEmpty()) {
-                    if (line.length + prefix.length + space.length < newWidth - 1) {
+                    if (line.length + prefix.length + space.length <= newWidth - 1) {
                         line = "$line$space${prefix}-"
                     } else {
                         residue = prefix + residue

@@ -116,6 +116,9 @@ class Parser (
         return result
     }
 
+    fun skipToken(token: String) : Boolean =
+        (curToken==token).also{ if (it) nextToken(); it }
+
     fun getObjectName(extras: KeywordList=KeywordList(), missOK: Boolean=false) : Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
@@ -168,7 +171,7 @@ class Parser (
                 0 -> when {
                     missOK -> return null
                     errFn!=null -> errFn(token)
-                    else -> throw SyntaxException("unknown keyword'${token}'")
+                    else -> throw SyntaxException("unknown keyword '${token}'")
                 }
                 1 -> {
                     nextToken(endOK=true)

@@ -18,8 +18,8 @@ data class ClassMetadata(
         ?.asArray()
         ?.map{it.asString()} ?: listOf()
 
-    val attributes get() = attributeMap.values
-    val collections = attributeMap.values.filter{it.isCollection}.toList()
+    val attributes get() = derivedAttributeMap.values
+    val collections by lazy( {attributeMap.values.filter{it.isCollection}.toList() })
     var container: AttributeMetadata? = null; private set
     var baseClasses: List<ClassMetadata> = listOf(); private set
     val parentClass: ClassMetadata? get() { return container?.myClass }
@@ -55,7 +55,7 @@ data class ClassMetadata(
     fun finalizeClassData() {
         if (container!=null || isRoot) {
             val derivedAttributes = derivedClasses.chain(this)
-                .map{it.attributes}
+                .map{it.attributeMap.values}
                 .flatten()
                 .distinctBy{it.name}
             derivedAttributeMap = mapOf(*derivedAttributes.map{Pair(it.name, it)}.toList().toTypedArray())
