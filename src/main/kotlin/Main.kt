@@ -7,12 +7,15 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        val command = "show flows select flow_type efci" //readLine() ?: ""
+        val command = "show flows select flow_type efci full" //readLine() ?: ""
         try {
             println(command)
             Cli().oneLine(command)
             break //@@@
         } catch (exc: CliException) {
+            if (exc.message ?: "" != null) {
+                println(exc.message)
+            }
             break
         }
     }

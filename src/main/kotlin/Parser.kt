@@ -6,13 +6,15 @@ class AmbiguityException(val values: Iterable<String>) : Exception("")
 class Parser (
     private var line: String
     ) {
-    private var tokens: MutableList<String> = mutableListOf()
+    private var tokens: MutableList<String?> = mutableListOf()
     var tokenStarts: MutableList<Int> = mutableListOf()
     var helpText: String = ""
     private val tokenStart: Int get() = if (tokenStarts.isEmpty()) 0 else tokenStarts.last()
-    private var index = 0
+    private var lineIndex = 0
+    private var tokenIndex = -1
     private var finished = false
-    val curToken: String get() = if (finished) "" else tokens.lastOrNull() ?: ""
+    val curToken: String? get() = tokens[tokenIndex]
+    var lastKeyword: Keyword? = null; private set
 
     private val digraphs = listOf( ">=", "<=", "!=", ">>", "!>>", "<<", "!<<" )
     private val nameChars = listOf( '_' )
@@ -24,7 +26,23 @@ class Parser (
     private val nullCh = 0.toChar()
     val numberRx = Regex("[+-]?.d+(?:\\.\\d+)(?:[Ee]-?\\d+)|0[xX][0-9a-fA-F]+")
 
-    fun nextToken(help: String="", endOK: Boolean=false, extra: String="") : String {
+    fun nextToken(help: String="", endOK: Boolean=false, extra: String="") : String? {
+        if (tokenIndex >= 0 && tokens.size == tokenIndex + 1 && tokens[tokenIndex] == null) {
+            if (endOK) {
+                return null
+            } else {
+                throw SyntaxException("line ends unexpectedly")
+            }
+        } else {
+            ++tokenIndex
+            if (tokens.size < tokenIndex + 1) {
+                readToken(extra=extra)
+            }
+            return tokens[tokenIndex]
+        }
+    }
+
+    private fun readToken(help: String="", extra: String="") {
         var escape = false
         var quote = nullCh
         var token: String? = null
@@ -39,22 +57,22 @@ class Parser (
 
         fun isNumberChar(ch: Char) = ch.isDigit() || ch in numberChars || isExtra(ch)
 
-        fun good() = index < line.length
+        fun good() = lineIndex < line.length
 
-        val startIndex = index
+        val startIndex = lineIndex
         if (!good()) {
             finished = true
         } else {
             while (good()) {
-                var ch = line[index]
+                var ch = line[lineIndex]
                 if (escape) {
                     ch = escChars[ch] ?: ch
                 } else if (ch == '\\') {
                     escape = true
-                    ++index
+                    ++lineIndex
                     ch = nullCh
                 } else if (ch == quote) {
-                    ++index
+                    ++lineIndex
                 } else if (ch in whitespace) {
                     break
                 } else if (isName) {
@@ -69,7 +87,7 @@ class Parser (
                     break
                 }
                 token = (token ?: "") + ch
-                ++index
+                ++lineIndex
                 if (token.length == 1) {
                     if (isNumberChar(ch)) {
                         isNumber = true
@@ -82,23 +100,19 @@ class Parser (
                 }
             }
         }
-        if (token != null) {
-            tokens.add(token)
-            tokenStarts.add(startIndex)
-            while (good() && line[index] in whitespace) {
-                ++index
-            }
-        } else if (!endOK) {
-            throw SyntaxException("line ends unexpectedly")
+        tokens.add(token)
+        tokenStarts.add(startIndex)
+        while (good() && line[lineIndex] in whitespace) {
+            ++lineIndex
         }
-        return token ?: ""
     }
 
     fun backup() {
         if (tokens.isNotEmpty()) {
             tokens.removeLast()
-            index = tokenStarts.last()
+            lineIndex = tokenStarts.last()
             tokenStarts.removeLast()
+            finished = false
         }
     }
 
@@ -136,15 +150,15 @@ class Parser (
                 } else throw Exception("unknown collection '$curToken'")
             val attrMd = classKey.attribute
             if (attrMd != null) {
-                if (curToken!="") {
-                    val extra = extras.exactMatch(curToken)
+                if (curToken ?: "" !="") {
+                    val extra = extras.exactMatch(curToken!!)
                     if (extra != null) {
                         result.append(attrMd, "")
                         terminator = extra
                         break
                     }
                 }
-                result.append(attrMd, curToken)
+                result.append(attrMd, curToken!!)
                 nextToken(endOK=true)
                 curMd = attrMd.myClass
             } else {
@@ -159,27 +173,37 @@ class Parser (
     fun findKeyword(keys: KeywordList,
                      missOK: Boolean=false,
                      errFn: ((String)->Unit)?=null): Keyword? {
-        val token = curToken
+        var result: Keyword? = null
+        val token = curToken ?: ""
         if (token.isNotEmpty()) {
             val exact = keys.exactMatch(token)
             if (exact!=null) {
                 nextToken(endOK=true)
-                return exact
-            }
-            val matches = keys.match(token)
-            when (matches.size) {
-                0 -> when {
-                    missOK -> return null
-                    errFn!=null -> errFn(token)
-                    else -> throw SyntaxException("unknown keyword '${token}'")
+                result = exact
+            } else {
+                val matches = keys.match(token)
+                when (matches.size) {
+                    0 -> {
+                        //backup()
+                        when {
+                            missOK -> return null
+                            errFn != null -> errFn(token)
+                            else -> throw SyntaxException("unknown keyword '${token}'")
+                        }
+                    }
+                    1 -> {
+                        nextToken(endOK = true)
+                        result = matches[0]
+                    }
+                    else -> throw AmbiguityException(keys.toStrings(matches))
                 }
-                1 -> {
-                    nextToken(endOK=true)
-                    return matches[0]
-                }
-                else -> throw AmbiguityException(keys.toStrings(matches))
             }
         }
-        return null
+        lastKeyword = result
+        return result
     }
+
+    fun useKeyword() { lastKeyword = null }
 }
+
+

@@ -31,6 +31,9 @@ class Cli () {
 
     private fun doShow() {
         val (oname, terminator) = parser.getObjectName(extras = extras)
+        if (oname.leafClass==null) {
+            throw CliException("expected object name after 'show'")
+        }
         classMd = oname.leafClass!!
         doShowOptions(terminator)
         level = when {
@@ -68,10 +71,10 @@ class Cli () {
             if (myKey?.function != null) {
                 (myKey.function!!)()
             }
-            if (parser.isFinished()) {
+            myKey = parser.lastKeyword ?: parser.findKeyword(extras)
+            if (myKey==null) {
                 break
             }
-            myKey = parser.findKeyword(extras)
         }
     }
 
@@ -82,7 +85,7 @@ class Cli () {
             .addKeys("only")
         parser.skipToken("select")
         while (true) {
-            val kw = readAttribute(classMd!!, extras=myExtras)
+            val kw = readAttribute(classMd, extras=myExtras)
             if (kw?.attribute != null) {
                 selections.add(kw.attribute)
             } else if (kw?.key=="only") {
@@ -106,10 +109,12 @@ class Cli () {
     }
 
     private fun doLevel(l: String) {
-        checkRepeat({ level.isNotEmpty() }, "level")
+        checkRepeat({ level.isNotEmpty() }, msg="duplicate level keyword '$l'")
         if (l !in levels) {
             throw CliException("invalid show level '$l'")
         }
+        parser.useKeyword()
+        parser.skipToken(l)
         level = l
     }
 
@@ -179,17 +184,15 @@ class Cli () {
         return result
     }
 
-    private fun checkRepeat(pred: ()->Boolean, keyword: String) {
+    private fun checkRepeat(pred: ()->Boolean, keyword: String="", msg: String="") {
         if (pred()) {
-            throw CliException("keyword '$keyword' repeated")
+            throw CliException(if (msg.isEmpty()) "keyword '$keyword' repeated" else msg)
         }
     }
 
     private fun abbreviateHeader(header: String) =
         header
-            .split(" ")
-            .map { Properties.get("replace", it.toLowerCase()) ?: it }
-            .joinToString(" ")
+            .split(" ").joinToString(" ") { Properties.get("replace", it.toLowerCase()) ?: it }
 
     private fun readAttribute(
         classMd: ClassMetadata,

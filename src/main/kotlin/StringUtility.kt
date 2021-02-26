@@ -130,7 +130,6 @@ fun wrap(text: String, width: Int,
                         if (prefix.length > newWidth - 1) {
                             val chunks = prefix.splitUsing(splitter, newWidth).map{ it.chunked(newWidth) }.flatten()
                             thisResult.addAll(chunks.dropLast(1))
-                            chunks.last()
                             residue = chunks.last()
                         } else if (prefix.isNotEmpty()) {
                             thisResult.add("${prefix}-")

@@ -127,10 +127,9 @@ class Table (
     fun renderText(renderer: (StyledText, Int)->String) =
         listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->
-                zip(sortedCols, row)
-                    .map { colRow ->
-                        renderer(colRow.second, colRow.first.maxWidth)
-                    }.joinToString(" ".repeat(columnSpacing))
+                zip(sortedCols, row).joinToString(" ".repeat(columnSpacing)) { colRow ->
+                    renderer(colRow.second, colRow.first.maxWidth)
+                }
             }
         }.joinToString("\n")
 
