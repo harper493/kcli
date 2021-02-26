@@ -7,6 +7,7 @@ class Cli () {
     private val selections = mutableListOf<AttributeMetadata>()
     private var onlySelect = false
     private val filters = mutableListOf<String>()
+    private var filterOr = false
     private val order = mutableListOf<Pair<Boolean,AttributeMetadata>>()
     private var limit = 0
     private var level = ""
@@ -52,6 +53,10 @@ class Cli () {
         val mySelect = "${if (onlySelect) "" else "+"}${selections.map{it.name}.joinToString(",")}"
         if (mySelect.isNotEmpty()) {
             myOptions["select"] = mySelect
+        }
+        val myWith = filters.joinToString(if (filterOr) "|" else ",")
+        if (myWith.isNotEmpty()) {
+            myOptions["with"] = myWith
         }
         val json = Rest.getCollection(oname.url, options = myOptions)
         if (json != null) {
@@ -101,7 +106,35 @@ class Cli () {
     }
 
     private fun doWith() {
-
+        checkRepeat({ filters.isNotEmpty() }, "with")
+        val relops = listOf("=", "!=", "<", ">", "<=", ">=", ">>", "<<", "!>>")
+        parser.skipToken("with")
+        while (true) {
+            val kw = readAttribute(classMd, extras = extras)
+            if (kw?.attribute == null) break
+            parser.useKeyword()
+            val lhsAttr = kw.attribute
+            var thisFilter = lhsAttr.name
+            if (parser.curToken !in relops) {
+                throw CliException("expected relational operator")
+            }
+            thisFilter += parser.curToken
+            val (str, attrMd, _) = readComplexAttribute(classMd, extras = extras, missOK = true)
+            if (attrMd == null) {
+                lhsAttr.type.validateCheck(str)
+                parser.nextToken()
+                thisFilter += parser.curToken
+                parser.nextToken()
+            } else {
+                thisFilter += str
+                parser.nextToken()
+                parser.useKeyword()
+            }
+            filters.add(thisFilter)
+            if (filters.isEmpty()) {
+                throw CliException("no valid filters found after 'with'")
+            }
+        }
     }
 
     private fun doTopBottom(descending: Boolean) {

@@ -9,6 +9,11 @@ interface Datatype {
     val formatter: (value: Any) -> String
     fun convert(s: String): GenericVariable
     fun validate(value: String): Boolean { return true }
+    fun validateCheck(value: String) {
+        if (!validate(value)) {
+            throw CliException("invalid value '$value' for type '$name'")
+        }
+    }
     companion object {
         private var types = mutableMapOf<String, Datatype>()
         operator fun get(index: String): Datatype {

@@ -7,7 +7,7 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        val command = "show flows select flow_type efci full" //readLine() ?: ""
+        val command = "show flows select flow_type efci with ingress_interface = stm3" //readLine() ?: ""
         try {
             println(command)
             Cli().oneLine(command)

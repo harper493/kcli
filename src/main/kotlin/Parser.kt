@@ -16,7 +16,7 @@ class Parser (
     val curToken: String? get() = tokens[tokenIndex]
     var lastKeyword: Keyword? = null; private set
 
-    private val digraphs = listOf( ">=", "<=", "!=", ">>", "!>>", "<<", "!<<" )
+    private val digraphs = listOf( ">=", "<=", "!=", ">>", "!>>", "<<", "!<<", )
     private val nameChars = listOf( '_' )
     private val completerChars = listOf( '~', '?' )
     private val numberChars = listOf( '+', '-', '.' )

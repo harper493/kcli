@@ -3,7 +3,7 @@ open class AttributeMetadata(
     val myClass: ClassMetadata,
     private val md: JsonObject
 ) {
-    private val type = Datatype[md["type_name"]?.asString() ?: ""]
+    val type by lazy( {Datatype[md["type_name"]?.asString() ?: ""]} )
     private val nature = md["nature"]?.asArray()?.toList() ?: listOf()
     private val natures = nature.map {
                 val nn = it.asString()?.split(":")
