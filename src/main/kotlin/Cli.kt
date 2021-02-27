@@ -7,7 +7,7 @@ class Cli () {
     private val selections = mutableListOf<AttributeMetadata>()
     private var onlySelect = false
     private val filters = mutableListOf<String>()
-    private var filterOr = false
+    private var filterConjunction = ""
     private val order = mutableListOf<Pair<Boolean,AttributeMetadata>>()
     private var limit = 0
     private var level = ""
@@ -54,7 +54,7 @@ class Cli () {
         if (mySelect.isNotEmpty()) {
             myOptions["select"] = mySelect
         }
-        val myWith = filters.joinToString(if (filterOr) "|" else ",")
+        val myWith = filters.joinToString(if (filterConjunction=="and") "," else "|")
         if (myWith.isNotEmpty()) {
             myOptions["with"] = myWith
         }
@@ -119,21 +119,44 @@ class Cli () {
                 throw CliException("expected relational operator")
             }
             thisFilter += parser.curToken
-            val (str, attrMd, _) = readComplexAttribute(classMd, extras = extras, missOK = true)
-            if (attrMd == null) {
-                lhsAttr.type.validateCheck(str)
+            var rhs = ""
+            if (lhsAttr.type.isNumeric()) {
                 parser.nextToken()
-                thisFilter += parser.curToken
-                parser.nextToken()
+                val (str, attrMd, _) = readComplexAttribute(classMd, extras = extras, missOK = true)
+                if (attrMd == null) {
+                    rhs = parser.curToken?:""
+                    lhsAttr.type.validateCheck(rhs)
+                } else {
+                    rhs = str
+                }
             } else {
-                thisFilter += str
                 parser.nextToken()
-                parser.useKeyword()
+                rhs = parser.curToken?:""
             }
+            thisFilter += rhs
+            parser.nextToken(endOk = true)
+            parser.useKeyword()
             filters.add(thisFilter)
-            if (filters.isEmpty()) {
-                throw CliException("no valid filters found after 'with'")
+            var conj = ""
+            for (c in listOf("and", "or")) {
+                if (parser.skipToken(c)) {
+                    conj = c
+                    break
+                }
             }
+            if (conj.isNotEmpty()) {
+                if (filterConjunction.isEmpty()) {
+                    filterConjunction = conj
+                } else if (filterConjunction != conj) {
+                    throw CliException("cannot mix 'and' and 'or' in the same command")
+                }
+            }
+        }
+        if (filterConjunction.isEmpty()) {
+            filterConjunction = "and"
+        }
+        if (filters.isEmpty()) {
+            throw CliException("no valid filters found after 'with'")
         }
     }
 
@@ -244,7 +267,7 @@ class Cli () {
         followOwners: Boolean = true,
     ): Triple<String, AttributeMetadata?, Keyword?> {
         var cmd = classMd
-        var string = ""
+        val elements = mutableListOf<String>()
         while (true) {
             val thisExtra = extras
             val parentClassName = cmd.parentClass?.name
@@ -254,17 +277,17 @@ class Cli () {
             val a = readAttribute(cmd, pred, thisExtra, missOK)
             val attrMd = a?.attribute
             if (attrMd != null) {
-                string = listOf(string, attrMd.name).joinToString(".")
+                elements.add(attrMd.name)
                 if (attrMd.isRelation && followLinks && parser.skipToken(".")) {
                     cmd = attrMd.myClass
                 } else {
-                    return Triple(string, attrMd, null)
+                    return Triple(elements.joinToString("."), attrMd, null)
                 }
             } else if (a?.value == parentClassName && followOwners && parser.skipToken(".")) {
-                string = listOf(string, parentClassName).joinToString(".")
+                elements.add(parentClassName!!)
                 cmd = cmd.parentClass!!
             } else {
-                return Triple(string, attrMd, a)
+                return Triple(elements.joinToString("."), attrMd, a)
             }
         }
     }

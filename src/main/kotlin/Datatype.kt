@@ -9,6 +9,7 @@ interface Datatype {
     val formatter: (value: Any) -> String
     fun convert(s: String): GenericVariable
     fun validate(value: String): Boolean { return true }
+    fun isNumeric(): Boolean = false
     fun validateCheck(value: String) {
         if (!validate(value)) {
             throw CliException("invalid value '$value' for type '$name'")
@@ -122,6 +123,8 @@ class IntDatatype(
     override fun validate(value: String) =
         if (validator==null) conversionValidator(value, this)
         else validator!!(value)
+
+    override fun isNumeric(): Boolean = true
 }
 
 class FloatDatatype(
@@ -144,5 +147,7 @@ class FloatDatatype(
     override fun validate(value: String) =
         if (validator==null) conversionValidator(value, this)
         else validator!!(value)
+
+    override fun isNumeric(): Boolean = true
 }
 

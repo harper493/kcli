@@ -26,9 +26,9 @@ class Parser (
     private val nullCh = 0.toChar()
     val numberRx = Regex("[+-]?.d+(?:\\.\\d+)(?:[Ee]-?\\d+)|0[xX][0-9a-fA-F]+")
 
-    fun nextToken(help: String="", endOK: Boolean=false, extra: String="") : String? {
+    fun nextToken(help: String="", endOk: Boolean=false, extra: String="") : String? {
         if (tokenIndex >= 0 && tokens.size == tokenIndex + 1 && tokens[tokenIndex] == null) {
-            if (endOK) {
+            if (endOk) {
                 return null
             } else {
                 throw SyntaxException("line ends unexpectedly")
@@ -159,7 +159,7 @@ class Parser (
                     }
                 }
                 result.append(attrMd, curToken!!)
-                nextToken(endOK=true)
+                nextToken(endOk=true)
                 curMd = attrMd.myClass
             } else {
                 terminator = classKey
@@ -178,7 +178,7 @@ class Parser (
         if (token.isNotEmpty()) {
             val exact = keys.exactMatch(token)
             if (exact!=null) {
-                nextToken(endOK=true)
+                nextToken(endOk=true)
                 result = exact
             } else {
                 val matches = keys.match(token)
@@ -192,7 +192,7 @@ class Parser (
                         }
                     }
                     1 -> {
-                        nextToken(endOK = true)
+                        nextToken(endOk = true)
                         result = matches[0]
                     }
                     else -> throw AmbiguityException(keys.toStrings(matches))
