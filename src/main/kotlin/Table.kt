@@ -10,6 +10,8 @@ class Table (
     private val headingStyle: String? = null,
     private val underlineHeadings: Boolean = true,
     private val stripeColors: Iterable<String?>? = null,
+    private val showHeadings: Boolean = true,
+    private val verticalPadAbove: Boolean = false,
         ) {
     class Column(
         var heading: String,
@@ -73,8 +75,9 @@ class Table (
         for (col in columns.keys) columns[col]!!.heading = fn(col)
     }
 
-    fun setColumns(fn: (String, Column) -> Unit) {
+    fun setColumns(fn: (String, Column) -> Unit): Table {
         for ((name, col) in columns) fn(name, col)
+        return this
     }
 
     fun finalize(): Table {
@@ -114,12 +117,16 @@ class Table (
 
     fun layoutText(): Table {
         finalize()
-        wrappedHeadings = splitCells(headings, padAtEnd=false)
-        if (underlineHeadings) for (h in wrappedHeadings.last()) h.addStyle("underline")
+        if (showHeadings) {
+            wrappedHeadings = splitCells(headings, padAtEnd = false)
+            if (underlineHeadings) for (h in wrappedHeadings.last()) h.addStyle("underline")
+        } else {
+            wrappedHeadings = listOf()
+        }
         body = sortedCols.map {
             it.content
         }.transpose().map {
-            splitCells(it, padAtEnd=true)
+            splitCells(it, padAtEnd=!verticalPadAbove)
         }.flatten()
         return this
     }

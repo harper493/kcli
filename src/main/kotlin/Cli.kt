@@ -54,7 +54,7 @@ class Cli {
         addOption("select", "${if (onlySelect) "" else "+"}${selections.map{it.name}.joinToString(",")}")
         addOption("with", filters.joinToString(if (filterConjunction=="and") "," else "|"))
         addOption("order", when (descending) {
-            null -> ":"
+            null -> ""
             true -> "<$order"
             else -> ">$order"
         })
@@ -190,20 +190,25 @@ class Cli {
     }
 
     private fun showOne(obj: JsonObject): String {
-        val result: MutableList<String> = mutableListOf()
-        for ((name, value) in obj.asDict()) {
-            val attrMd = classMd.getAttribute(name)
-            if (attrMd != null) {
-                result.add(
-                    "%30s = %s %s".format(
-                        attrMd.displayName,
-                        makeDisplay(classMd, name, value.asString()),
-                        attrMd.unit
-                    )
-                )
-            }
+        val display = ColumnLayout(
+            columns=Properties.getInt("parameter", "show_columns"),
+            separator="=",
+            labelColumnWidth=Properties.getInt("parameter", "label_column_width"),
+            valueColumnWidth=Properties.getInt("parameter", "value_column_width"),
+            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+        )
+        val sortedValues = obj.asDict()
+            .filter{ entry ->
+                classMd.getAttribute(entry.key) != null
+                        && Properties.getInt("suppress", classMd.name, entry.key)==0 }
+            .mapValues{ entry -> Pair(classMd.getAttribute(entry.key)!!, entry.value)}
+            .mapKeys{ entry -> entry.value.first.displayName}
+        for ((name, value) in sortedValues) {
+            val attrMd = value.first
+            display.append(name,
+                "${makeDisplay(classMd, attrMd.name, value.second.asString())} ${attrMd.unit}")
         }
-        return result.joinToString("\n")
+        return display.layoutText().renderISO6429()
     }
 
     private fun showCollection(json: JsonObject): String {
