@@ -231,7 +231,7 @@ class Cli {
                     }
                 }
             }
-            table.setColumns { name: String, col: Table.Column ->
+            table.setColumns { name, col ->
                 col.position = -(if (name == "name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
                 col.heading = abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
             }
@@ -263,8 +263,8 @@ class Cli {
     }
 
     private fun abbreviateHeader(header: String) =
-        header
-            .split(" ").joinToString(" ") { Properties.get("replace", it.toLowerCase()) ?: it }
+        header.split(" ")
+            .joinToString(" ") { Properties.get("replace", it.toLowerCase()) ?: it }
 
     private fun readAttribute(
         classMd: ClassMetadata,
@@ -292,16 +292,16 @@ class Cli {
             }
             val a = readAttribute(cmd, pred, thisExtra, missOK)
             val attrMd = a?.attribute
-            if (attrMd != null) {
+            cmd = if (attrMd != null) {
                 elements.add(attrMd.name)
                 if (attrMd.isRelation && followLinks && parser.skipToken(".")) {
-                    cmd = attrMd.type.getClass()!!
+                    attrMd.type.getClass()!!
                 } else {
                     return Triple(elements.joinToString("."), attrMd, null)
                 }
             } else if (a?.value == parentClassName && followOwners && parser.skipToken(".")) {
                 elements.add(parentClassName!!)
-                cmd = cmd.parentClass!!
+                cmd.parentClass!!
             } else {
                 return Triple(elements.joinToString("."), attrMd, a)
             }

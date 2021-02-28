@@ -5,7 +5,7 @@ class ColumnLayout (
         val valueColumnWidth: Int,
         val stripeColors: Iterable<String>? = null,
 ) {
-        val columnNames = (1..columns).cycle().iterator()
+        private val columnNames = (1..columns).cycle().iterator()
         val table = Table(columnSpacing=1,
                 stripeColors=stripeColors,
                 showHeadings = false,
@@ -20,14 +20,14 @@ class ColumnLayout (
 
         fun layoutText(): ColumnLayout {
                 table.setColumns{colName, col ->
-                        val n = colName.dropLast(1).toInt()
-                        val suffix = when (colName.takeLast(1)) {
-                                "L" -> 0
-                                "S" -> 1
-                                else -> 2
-                        }
-                        col.position = n * 10 + suffix
-                        col.maxWidth = when (colName.takeLast(1)) {
+                        val suffix = colName.takeLast(1)
+                        col.position = colName.dropLast(1).toInt() * 10 +
+                                when (suffix) {
+                                        "L" -> 0
+                                        "S" -> 1
+                                        else -> 2
+                                }
+                        col.maxWidth = when (suffix) {
                                 "L" -> labelColumnWidth
                                 "S" -> separator.length
                                 else -> valueColumnWidth
