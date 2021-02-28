@@ -7,13 +7,13 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        val command = "show flows select flow_type efci with rate > 0.1 or application=microsoft" //readLine() ?: ""
+        val command = "show flows select flow_type app_detect efci bottom 10  application.total_rate" //readLine() ?: ""
         try {
             println(command)
             Cli().oneLine(command)
             break //@@@
         } catch (exc: CliException) {
-            if (exc.message ?: "" != null) {
+            if (exc.message ?: "" != "") {
                 println(exc.message)
             }
             break

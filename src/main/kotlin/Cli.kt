@@ -1,6 +1,6 @@
 class CliException(text: String="") : Exception(text)
 
-class Cli () {
+class Cli {
     private var parser = Parser("")
     private var options = mutableMapOf<String, String>()
     private var classMd: ClassMetadata = Metadata.getClass("configuration")!!
@@ -8,15 +8,15 @@ class Cli () {
     private var onlySelect = false
     private val filters = mutableListOf<String>()
     private var filterConjunction = ""
-    private val order = mutableListOf<Pair<Boolean,AttributeMetadata>>()
-    private var limit = 0
+    private var order = ""
+    private var descending: Boolean? = null
+    private var limit = 100
     private var level = ""
     val levels = listOf("brief", "full", "detail", "debug")
     val extras = KeywordList(
         KeywordFn("select", { doSelect() }),
         KeywordFn("with", { doWith() }),
         KeywordFn("top", { doTopBottom(true) }),
-        KeywordFn("bottom", { doTopBottom(false) }),
         KeywordFn("bottom", { doTopBottom(false) }),
     ).also{ keywords-> levels.map { keywords.add(Keyword(it, function= {doLevel(it)}))}}
 
@@ -31,34 +31,35 @@ class Cli () {
     }
 
     private fun doShow() {
+        val optionsMap = mutableMapOf(
+            "link" to "name",
+        )
+        fun addOption(option: String, value:String) {
+            if (value.isNotEmpty()) {
+                optionsMap[option] = value
+            }
+        }
         val (oname, terminator) = parser.getObjectName(extras = extras)
         if (oname.leafClass==null) {
             throw CliException("expected object name after 'show'")
         }
         classMd = oname.leafClass!!
         doShowOptions(terminator)
-        level = when {
+        addOption("level", when {
             level.isNotEmpty() -> level
             oname.isWild -> "brief"
             else -> "full"
-        }
-        val colorMd = classMd.getAttribute("color")
-        if (colorMd!=null) {
-            selections.add(colorMd)
-        }
-        val myOptions = mutableMapOf(
-            "level" to level,
-            "link" to "name",
-        )
-        val mySelect = "${if (onlySelect) "" else "+"}${selections.map{it.name}.joinToString(",")}"
-        if (mySelect.isNotEmpty()) {
-            myOptions["select"] = mySelect
-        }
-        val myWith = filters.joinToString(if (filterConjunction=="and") "," else "|")
-        if (myWith.isNotEmpty()) {
-            myOptions["with"] = myWith
-        }
-        val json = Rest.getCollection(oname.url, options = myOptions)
+        })
+        classMd.getAttribute("color")?.let{ selections.add(it) }
+        addOption("select", "${if (onlySelect) "" else "+"}${selections.map{it.name}.joinToString(",")}")
+        addOption("with", filters.joinToString(if (filterConjunction=="and") "," else "|"))
+        addOption("order", when (descending) {
+            null -> ":"
+            true -> "<$order"
+            else -> ">$order"
+        })
+        addOption("limit", if (limit>0) "$limit" else "")
+        val json = Rest.getCollection(oname.url, options = optionsMap)
         if (json != null) {
             if (oname.isWild) {
                 println(showCollection(json))
@@ -69,6 +70,7 @@ class Cli () {
             }
         }
     }
+
 
     private fun doShowOptions(key: Keyword?) {
         var myKey: Keyword? = key
@@ -119,7 +121,7 @@ class Cli () {
                 throw CliException("expected relational operator")
             }
             thisFilter += parser.curToken
-            var rhs = ""
+            var rhs: String
             if (lhsAttr.type.isNumeric()) {
                 parser.nextToken()
                 val (str, attrMd, _) = readComplexAttribute(classMd, extras = extras, missOK = true)
@@ -160,9 +162,18 @@ class Cli () {
         }
     }
 
-    private fun doTopBottom(descending: Boolean) {
-
-    }
+    private fun doTopBottom(desc: Boolean) {
+        checkRepeat({ descending != null }, msg="cannot repeat 'top' or 'bottom'")
+        limit = parser.getNumber()
+        parser.skipToken("by")
+        val (str, attrMd, _) = readComplexAttribute(classMd)
+        if (attrMd == null) {
+            throw CliException("attribute name expected after 'top' or 'bottom'")
+        }
+        order = str
+        descending = desc
+        parser.useKeyword()
+     }
 
     private fun doLevel(l: String) {
         checkRepeat({ level.isNotEmpty() }, msg="duplicate level keyword '$l'")
@@ -279,7 +290,7 @@ class Cli () {
             if (attrMd != null) {
                 elements.add(attrMd.name)
                 if (attrMd.isRelation && followLinks && parser.skipToken(".")) {
-                    cmd = attrMd.myClass
+                    cmd = attrMd.type.getClass()!!
                 } else {
                     return Triple(elements.joinToString("."), attrMd, null)
                 }

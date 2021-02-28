@@ -116,6 +116,17 @@ class Parser (
         }
     }
 
+    fun getNumber(): Int {
+        var result: Int
+        try {
+            result = (curToken?:"").toInt()
+            nextToken()
+        } catch (exc: Exception) {
+            throw CliException("expected integer not '$curToken'")
+        }
+        return result
+    }
+
     fun isFinished() = finished
 
     fun peek() = if (!isFinished()) line[tokenStarts.last()] else nullCh
@@ -132,6 +143,16 @@ class Parser (
 
     fun skipToken(token: String) : Boolean =
         (curToken==token).also{ if (it) nextToken(); it }
+
+    fun skipTokens(vararg tokens: String): String? {
+        if (curToken in tokens) {
+            val t = curToken
+            nextToken()
+            return t
+        } else {
+            return null
+        }
+    }
 
     fun getObjectName(extras: KeywordList=KeywordList(), missOK: Boolean=false) : Pair<ObjectName, Keyword?> {
         val result = ObjectName()

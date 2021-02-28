@@ -3,13 +3,16 @@ import kotlin.math.pow
 // import com.sun.org.apache.xpath.internal.operations.Bool
 //import kotlin.reflect.full.cast
 
-interface Datatype {
-    val name: String
-    val description: String
-    val formatter: (value: Any) -> String
-    fun convert(s: String): GenericVariable
-    fun validate(value: String): Boolean { return true }
-    fun isNumeric(): Boolean = false
+abstract class Datatype (
+    val name: String,
+    val description: String,
+    val formatter: (value: Any) -> String,
+) {
+    abstract fun convert(s: String): GenericVariable
+    open fun validate(value: String): Boolean { return true }
+    open fun isNumeric(): Boolean = false
+    open fun isClassType(): Boolean = false
+    open fun getClass(): ClassMetadata? = null
     fun validateCheck(value: String) {
         if (!validate(value)) {
             throw CliException("invalid value '$value' for type '$name'")
@@ -19,6 +22,20 @@ interface Datatype {
         private var types = mutableMapOf<String, Datatype>()
         operator fun get(index: String): Datatype {
             return types[index] ?: types["string"]!!
+        }
+        fun makeType(name: String): Datatype {
+            lateinit var result: Datatype
+            if (name in types) {
+                result = types[name]!!
+            } else {
+                if (Metadata.getClass(name)==null) {
+                    result = StringDatatype(name)
+                } else {
+                    result = ClassDatatype(name)
+                }
+                types[name] = result
+            }
+            return result
         }
 
         fun addType(t: Datatype) {
@@ -71,22 +88,22 @@ fun conversionValidator(value: String, dt: Datatype) : Boolean {
 }
 
 open class TypedDatatype<T: Comparable<T>>(
-    override val name: String,
-    override val description: String,
-    override val formatter: (value: Any) -> String = { it.toString() },
+    name: String,
+    description: String,
+    formatter: (value: Any) -> String = { it.toString() },
     val validator: ((value: String) -> Boolean)? = null,
     val properties: String = "",
     val converter: (String)->T,
     val gvFactory: (String)->GenericVariable,
     val wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
-) : Datatype {
+) : Datatype (name, description, formatter)  {
     override fun convert(s: String): GenericVariable {
         return gvFactory(s)
     }
     override fun validate(value: String) = if (validator==null) true else validator!!(value)
 }
 
-class StringDatatype(
+open class StringDatatype(
     name: String,
     description: String = name,
     formatter: (value: Any) -> String = { it as String },
@@ -103,13 +120,13 @@ class StringDatatype(
     wrapper,
 )
 
-class IntDatatype(
+open class IntDatatype(
     name: String,
     description: String = name,
     formatter: (value: Any) -> String = { it.toString() },
     validator: ((value: String) -> Boolean)? = null,
     properties: String = "",
-    converter: (String)->Int = { Datatype.toInt(it) },
+    converter: (String)->Int = { toInt(it) },
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : TypedDatatype<Int>(name,
     description,
@@ -117,7 +134,7 @@ class IntDatatype(
     validator,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( Datatype.toInt(it), Datatype.toInt(it).toDouble()) },
+    { NumericGenericVariable( toInt(it), toInt(it).toDouble()) },
     wrapper,
 ) {
     override fun validate(value: String) =
@@ -127,13 +144,13 @@ class IntDatatype(
     override fun isNumeric(): Boolean = true
 }
 
-class FloatDatatype(
+open class FloatDatatype(
     name: String,
     description: String = name,
     formatter: (value: Any) -> String = { it.toString() },
     validator: ((value: String) -> Boolean)? = null,
     properties: String = "",
-    converter: (String)->Double = { Datatype.toFloat(it) },
+    converter: (String)->Double = { toFloat(it) },
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : TypedDatatype<Double>(name,
     description,
@@ -141,7 +158,7 @@ class FloatDatatype(
     validator,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( Datatype.toFloat(it), Datatype.toFloat(it)) },
+    { NumericGenericVariable( toFloat(it), toFloat(it)) },
     wrapper,
 ) {
     override fun validate(value: String) =
@@ -149,5 +166,12 @@ class FloatDatatype(
         else validator!!(value)
 
     override fun isNumeric(): Boolean = true
+}
+
+class ClassDatatype(
+    name: String,
+): StringDatatype(name) {
+    override fun isClassType(): Boolean = true
+    override fun getClass(): ClassMetadata? = Metadata.getClass(name)
 }
 
