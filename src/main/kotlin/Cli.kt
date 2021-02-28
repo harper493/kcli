@@ -112,32 +112,38 @@ class Cli {
         val relops = listOf("=", "!=", "<", ">", "<=", ">=", ">>", "<<", "!>>")
         parser.skipToken("with")
         while (true) {
+            val negated = parser.skipToken("!")
             val kw = readAttribute(classMd, extras = extras)
             if (kw?.attribute == null) break
             parser.useKeyword()
             val lhsAttr = kw.attribute
             var thisFilter = lhsAttr.name
-            if (parser.curToken !in relops) {
-                throw CliException("expected relational operator")
-            }
-            thisFilter += parser.curToken
-            var rhs: String
-            if (lhsAttr.type.isNumeric()) {
-                parser.nextToken()
-                val (str, attrMd, _) = readComplexAttribute(classMd, extras = extras, missOK = true)
-                if (attrMd == null) {
-                    rhs = parser.curToken?:""
-                    lhsAttr.type.validateCheck(rhs)
-                } else {
-                    rhs = str
+            if (negated || parser.curToken !in relops) {
+                if (!lhsAttr.type.hasNull()) {
+                    throw CliException("cannot use boolean operator with '${lhsAttr.name}'")
+                } else if (negated) {
+                    thisFilter = "!$thisFilter"
                 }
             } else {
-                parser.nextToken()
-                rhs = parser.curToken?:""
+                thisFilter += parser.curToken
+                var rhs: String
+                if (lhsAttr.type.isNumeric()) {
+                    parser.nextToken()
+                    val (str, attrMd, _) = readComplexAttribute(classMd, extras = extras, missOK = true)
+                    if (attrMd == null) {
+                        rhs = parser.curToken ?: ""
+                        lhsAttr.type.validateCheck(rhs)
+                    } else {
+                        rhs = str
+                    }
+                } else {
+                    parser.nextToken()
+                    rhs = parser.curToken ?: ""
+                }
+                thisFilter += rhs
+                parser.nextToken(endOk = true)
+                parser.useKeyword()
             }
-            thisFilter += rhs
-            parser.nextToken(endOk = true)
-            parser.useKeyword()
             filters.add(thisFilter)
             var conj = ""
             for (c in listOf("and", "or")) {

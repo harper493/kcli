@@ -7,8 +7,8 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        //val command = "show flows select flow_type app_detect efci bottom 10  application.total_rate" //readLine() ?: ""
-        val command = "show flow 100354 detail"
+        val command = "show flows  with rate>1 and application" //readLine() ?: ""
+        //val command = "show flow 100354 detail"
         //val command = "show interface stm2 detail"
 
 

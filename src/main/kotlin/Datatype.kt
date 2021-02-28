@@ -12,6 +12,7 @@ abstract class Datatype (
     open fun validate(value: String): Boolean { return true }
     open fun isNumeric(): Boolean = false
     open fun isClassType(): Boolean = false
+    open fun hasNull(): Boolean = false
     open fun getClass(): ClassMetadata? = null
     fun validateCheck(value: String) {
         if (!validate(value)) {
@@ -28,10 +29,20 @@ abstract class Datatype (
             if (name in types) {
                 result = types[name]!!
             } else {
-                if (Metadata.getClass(name)==null) {
-                    result = StringDatatype(name)
+                val ss = name.split(":")
+                if (ss.size > 1) {
+                    when (ss[0]) {
+                        "opt" -> result = OptDatatype(name, makeType(ss[1]))
+                        "set" -> result = SetDatatype(name, makeType(ss[1]))
+                        "list" -> result = ListDatatype(name, makeType(ss[1]))
+                        else -> result = StringDatatype(name)
+                    }
                 } else {
-                    result = ClassDatatype(name)
+                    result = if (Metadata.getClass(name) == null) {
+                        StringDatatype(name)
+                    } else {
+                        ClassDatatype(name)
+                    }
                 }
                 types[name] = result
             }
@@ -118,7 +129,9 @@ open class StringDatatype(
     { it },
     { TypedGenericVariable(it) },
     wrapper,
-)
+) {
+    override fun hasNull(): Boolean = true
+}
 
 open class IntDatatype(
     name: String,
@@ -173,5 +186,36 @@ class ClassDatatype(
 ): StringDatatype(name) {
     override fun isClassType(): Boolean = true
     override fun getClass(): ClassMetadata? = Metadata.getClass(name)
+}
+
+open class CompoundDatatype(
+    name: String,
+    val baseType: Datatype
+): StringDatatype(name)
+
+class OptDatatype(
+    name: String,
+    baseType: Datatype
+): CompoundDatatype(name, baseType) {
+    override fun validate(value: String) = value.isEmpty() || baseType.validate(value)
+}
+
+class SetDatatype(
+    name: String,
+    baseType: Datatype
+): CompoundDatatype(name, baseType) {
+    override fun validate(value: String) =
+        value.isEmpty()
+                || (value.first() in listOf("+", "-") && baseType.validate(value.drop(1)))
+                || (value.split(",").fold(true){acc, v ->acc && baseType.validate(v) })
+}
+
+class ListDatatype(
+    name: String,
+    baseType: Datatype
+): CompoundDatatype(name, baseType) {
+    override fun validate(value: String) =
+        value.isEmpty()
+                || (value.split(",").fold(true){acc, v -> acc && baseType.validate(v) })
 }
 

@@ -2,8 +2,9 @@ abstract class GenericVariable {
     open fun less(other: GenericVariable): Boolean { return false }
     open fun equal(other: GenericVariable): Boolean { return false }
     open fun add(other: GenericVariable) { }
-    override fun toString(): String { return "" }
-    open fun toFloat(): Double { return 0.0 }
+    override fun toString(): String = ""
+    open fun toFloat(): Double = 0.0
+    open fun toBool(): Boolean = false
 }
 
 open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable() {
@@ -27,12 +28,14 @@ open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable()
     }
 }
 
-open class NumericGenericVariable<T: Comparable<T>>(initial: T, initial_numeric: Double): TypedGenericVariable<T>(initial) {
-    var numValue: Double = initial_numeric; private set
+open class NumericGenericVariable<T: Comparable<T>>(initial: T, initialNumeric: Double): TypedGenericVariable<T>(initial) {
+    var numValue: Double = initialNumeric; private set
     override fun add(other: GenericVariable) {
         try {
             numValue += (other as NumericGenericVariable<*>).numValue
         } catch (e: Exception) {
         }
     }
+    override fun toFloat() = numValue
+    override fun toBool() = numValue!=0.0
 }
