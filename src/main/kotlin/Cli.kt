@@ -137,7 +137,8 @@ class Cli {
                         rhs = str
                     }
                 } else {
-                    parser.nextToken()
+                    parser.nextToken(validator=lhsAttr.type.validator)
+                    lhsAttr.type.validateCheck(parser.curToken?:"")
                     rhs = parser.curToken ?: ""
                 }
                 thisFilter += rhs
