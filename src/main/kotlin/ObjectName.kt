@@ -25,6 +25,12 @@ class ObjectName {
         elements.add(Element(attrMd, name))
     }
 
+    fun dropLast(n: Int) =
+        ObjectName()
+            .also{ newOn -> elements
+                .filterIndexed{ i, _ -> i < elements.size-n }
+                .map { newOn.append(it.attrMd, it.name)}}
+
     fun parse(url: String) {
         val split = url.split("/").toMutableList()
         if (split.size %2 != 0) {

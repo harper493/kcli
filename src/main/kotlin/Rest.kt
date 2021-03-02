@@ -1,6 +1,14 @@
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.extensions.authentication
+import com.github.kittinunf.fuel.core.extensions.jsonBody
 import com.github.kittinunf.result.Result
+
+enum class HttpStatus( val status: Int, val text: String) {
+    success(201, "success"),
+    notFound(404, "not found");
+
+    operator fun invoke(s: Int) = s==status
+}
 
 class RestException (
     val status : Int,
@@ -18,7 +26,7 @@ class Rest(
     val trace: Boolean = false
 ) {
     fun get(url: String, options: Map<String,String>?=null) : JsonObject {
-        val u = _makeUrl(url, options)
+        val u = makeUrl(url, options)
         if (trace) {
             println(u)
         }
@@ -26,11 +34,11 @@ class Rest(
                     .authentication().basic(user, password)
                     .response()
         when (result) {
-            is Result.Failure -> {   // seems crazy but this is the only way to get the detailed message
+            is Result.Failure -> {
                 val rx = Regex(".*Body.*:.*?\"message\".*?:.*?\"(.*?)\".*")
                 val resp = response.toString().replace("\n", " ")
                 val m = rx.find(resp)
-                val msg = if (m!=null) m.groupValues[1] else response.responseMessage
+                val msg = if (m != null) m.groupValues[1] else response.responseMessage
                 throw RestException(response.statusCode, msg.toString())
             }
             is Result.Success -> {
@@ -51,7 +59,24 @@ class Rest(
         return getCollection(url, options)?.get(0)
     }
 
-    private fun _makeUrl(url: String, options: Map<String,String>?=null) : String {
+    fun put(url: String, body: String) {
+        val (request, response, result) = Fuel.put(makeUrl(url))
+            .jsonBody(body)
+            .authentication().basic(user, password)
+            .response()
+        when (result) {
+            is Result.Failure -> {
+                val rx = Regex(".*Body.*:.*?\"message\".*?:.*?\"(.*?)\".*")
+                val resp = response.toString().replace("\n", " ")
+                val m = rx.find(resp)
+                val msg = if (m != null) m.groupValues[1] else response.responseMessage
+                throw RestException(response.statusCode, msg.toString())
+            }
+            else -> return
+        }
+    }
+
+    private fun makeUrl(url: String, options: Map<String,String>?=null) : String {
         val elements = url.split("/").toMutableList()
         if (elements[0]!="rest") {
             if (elements[0]!="configurations") {
@@ -79,6 +104,7 @@ class Rest(
                                       .also{ theRest = it }
 
         fun get(url: String, options: Map<String,String>?=null) = theRest?.get(url, options)
+        fun put(url: String, body: String) = theRest?.put(url, body)
         fun getCollection(url: String, options: Map<String,String>?=null) = theRest?.getCollection(url, options)
         fun getObject(url: String, options: Map<String,String>?=null) = theRest?.getObject(url, options)
     }

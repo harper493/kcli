@@ -7,9 +7,9 @@ fun main(args: Array<String>) {
     Metadata.load()
     while (true) {
         print("kcli# ")
-        val command = "show flows  with address=fe80:1257:47a0:58fe::8782" //readLine() ?: ""
+        //val command = "interface stm2 primary_address 10.1.1.5/32 rate 9700" //readLine() ?: ""
         //val command = "show flow 100354 detail"
-        //val command = "show interface stm2 detail"
+        val command = "show flows select dest_mac with byte_count > 100000"
 
 
         try {

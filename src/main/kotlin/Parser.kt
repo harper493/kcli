@@ -13,6 +13,7 @@ class Parser (
     private var lineIndex = 0
     private var tokenIndex = -1
     private var finished = false
+    enum class TokenType { ttName, ttNumber, ttAny, ttExplicit, ttGeneral, ttAll }
     val curToken: String? get() = tokens[tokenIndex]
     var lastKeyword: Keyword? = null; private set
 
@@ -24,9 +25,8 @@ class Parser (
     private val quotes = listOf( '\"', '\'' )
     private val whitespace = listOf( ' ', '\t' )
     private val nullCh = 0.toChar()
-    val numberRx = Regex("[+-]?.d+(?:\\.\\d+)(?:[Ee]-?\\d+)|0[xX][0-9a-fA-F]+")
 
-    fun nextToken(help: String="", endOk: Boolean=false, extra: String="") : String? {
+    fun nextToken(help: String="", endOk: Boolean=false, type: TokenType=TokenType.ttGeneral, validator: Validator=Validator()) : String? {
         if (tokenIndex >= 0 && tokens.size == tokenIndex + 1 && tokens[tokenIndex] == null) {
             if (endOk) {
                 return null
@@ -36,27 +36,31 @@ class Parser (
         } else {
             ++tokenIndex
             if (tokens.size < tokenIndex + 1) {
-                readToken(extra=extra)
+                readToken(type=type, validator=validator)
             }
             return tokens[tokenIndex]
         }
     }
 
-    private fun readToken(help: String="", extra: String="") {
+    fun reparse(help: String="", endOk: Boolean=false, type: TokenType=TokenType.ttGeneral, validator: Validator=Validator()) : String? {
+        backup()
+        return nextToken(help=help, type=type, validator=validator)
+    }
+
+    private fun readToken(help: String="", type: TokenType=TokenType.ttGeneral, validator: Validator=Validator()) {
         var escape = false
         var quote = nullCh
         var token: String? = null
         var isName = false
         var isNumber = false
-
-        fun isExtra(ch: Char) = if (extra.isNotEmpty() && extra[0]=='^')
-                                    !(ch in extra.drop(1)) and (ch !in quotes)
-                                    else ch in extra
-
-        fun isNameChar(ch: Char) = ch.toInt()>=128 || ch.isLetterOrDigit() || ch in nameChars || isExtra(ch)
-
-        fun isNumberChar(ch: Char) = ch.isDigit() || ch in numberChars || isExtra(ch)
-
+        val myValidator = when (if (validator.isNull) type else TokenType.ttExplicit) {
+            TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
+            TokenType.ttNumber -> Validator("""[+-]?\d+(.\d+)?[a-zA-z]*""")
+            TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
+            TokenType.ttAll -> Validator(".*")
+            TokenType.ttExplicit -> validator
+            else -> Validator("""\S+""")
+        }
         fun good() = lineIndex < line.length
 
         val startIndex = lineIndex
@@ -69,35 +73,21 @@ class Parser (
                     ch = escChars[ch] ?: ch
                 } else if (ch == '\\') {
                     escape = true
-                    ++lineIndex
                     ch = nullCh
                 } else if (ch == quote) {
-                    ++lineIndex
-                } else if (ch in whitespace) {
-                    break
-                } else if (isName) {
-                    if (!isNameChar(ch)) {
+                    ch = nullCh
+                } else if (ch in quotes && (token?:"").length==0) {
+                    quote = ch
+                    ch = nullCh
+                } else if ((token?:"").length > 0) {
+                    if (!myValidator.validatePfx(token + ch)) {
                         break
                     }
-                } else if (isNumber) {
-                    if (!isNumberChar(ch)) {
-                        break
-                    }
-                } else if (token != null && !((token + ch) in digraphs)) {
-                    break
                 }
-                token = (token ?: "") + ch
+                if (ch!=nullCh) {
+                    token = (token ?: "") + ch
+                }
                 ++lineIndex
-                if (token.length == 1) {
-                    if (isNumberChar(ch)) {
-                        isNumber = true
-                    } else if (isNameChar(ch)) {
-                        isName = true
-                    } else if (ch in quotes) {
-                        quote = ch
-                        token = null
-                    }
-                }
             }
         }
         tokens.add(token)
@@ -108,10 +98,11 @@ class Parser (
     }
 
     fun backup() {
-        if (tokens.isNotEmpty()) {
-            tokens.removeLast()
-            lineIndex = tokenStarts.last()
-            tokenStarts.removeLast()
+        if (tokenIndex >= 0) {
+            --tokenIndex
+            tokens = tokens.take(tokenIndex+1).toMutableList()
+            lineIndex = tokenStarts[tokenIndex+1]
+            tokenStarts = tokenStarts.take(tokenIndex+1).toMutableList()
             finished = false
         }
     }
@@ -131,16 +122,6 @@ class Parser (
 
     fun peek() = if (!isFinished()) line[tokenStarts.last()] else nullCh
 
-    fun takeAll() : String {
-        var result = ""
-        if (!isFinished()) {
-            result = line.drop(tokenStart)
-            tokenStarts.add(line.length)
-            tokens.add(result)
-        }
-        return result
-    }
-
     fun skipToken(token: String) : Boolean =
         (curToken==token).also{ if (it) nextToken(); it }
 
@@ -154,7 +135,7 @@ class Parser (
         }
     }
 
-    fun getObjectName(extras: KeywordList=KeywordList(), missOK: Boolean=false) : Pair<ObjectName, Keyword?> {
+    fun getObjectName(extras: KeywordList=KeywordList(), missOk: Boolean=false) : Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
         var curMd = Metadata.getConfigMd()
@@ -164,8 +145,8 @@ class Parser (
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
             }
             classKeys.add(extras)
-            val classKey = findKeyword(classKeys, missOK=true)
-                ?: if (missOK) {
+            val classKey = findKeyword(classKeys, missOk=true)
+                ?: if (missOk) {
                     backup()
                     break
                 } else throw Exception("unknown collection '$curToken'")
@@ -179,9 +160,9 @@ class Parser (
                         break
                     }
                 }
-                result.append(attrMd, curToken!!)
+                result.append(attrMd, curToken ?: "")
                 nextToken(endOk=true)
-                curMd = attrMd.myClass
+                curMd = attrMd.containedClass!!
             } else {
                 terminator = classKey
                 break
@@ -192,8 +173,8 @@ class Parser (
     }
 
     fun findKeyword(keys: KeywordList,
-                     missOK: Boolean=false,
-                     errFn: ((String)->Unit)?=null): Keyword? {
+                    missOk: Boolean=false,
+                    errFn: ((String)->Unit)?=null): Keyword? {
         var result: Keyword? = null
         val token = curToken ?: ""
         if (token.isNotEmpty()) {
@@ -207,7 +188,7 @@ class Parser (
                     0 -> {
                         //backup()
                         when {
-                            missOK -> return null
+                            missOk -> return null
                             errFn != null -> errFn(token)
                             else -> throw SyntaxException("unknown keyword '${token}'")
                         }
