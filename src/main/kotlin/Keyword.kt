@@ -43,6 +43,9 @@ class KeywordList()
         for (k in keys) keywords += k
         return this
     }
+    fun remove(key: String) {
+        keywords.remove(key)
+    }
     fun match(key: String): List<Keyword> {
         val result: MutableList<Keyword> = mutableListOf()
         for (k in keywords) if (k.key.startsWith(key)) result.add(k)

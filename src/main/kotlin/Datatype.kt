@@ -109,7 +109,7 @@ abstract class Datatype (
                 "false".startsWith(value, ignoreCase = true) -> false
                 value.toIntOrNull() ?: 1 == 0 -> false
                 value.toIntOrNull() ?: 0 != 0 -> true
-                else -> throw SyntaxException("invalid value for boolean '$value'")
+                else -> throw CliException("invalid value for boolean '$value'")
             }
 
         fun validateIpV4Address(value: String): Boolean =
@@ -351,13 +351,16 @@ class ClassDatatype(
 open class CompoundDatatype(
     name: String,
     val baseType: Datatype
-): StringDatatype(name)
+): StringDatatype(name) {
+    override fun hasNull(): Boolean = true
+}
 
 class OptDatatype(
     name: String,
     baseType: Datatype
 ): CompoundDatatype(name, baseType) {
     override fun validate(value: String) = value.isEmpty() || baseType.validate(value)
+    override fun hasNull(): Boolean = true
 }
 
 class SetDatatype(

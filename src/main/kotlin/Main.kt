@@ -1,5 +1,22 @@
+import org.jline.builtins.Commands
+import org.jline.builtins.Completers
+import org.jline.builtins.Completers.TreeCompleter
+import org.jline.builtins.Options.HelpException
+import org.jline.builtins.TTop
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
+
 fun main(args: Array<String>) {
     test()
+    /*
+    val terminal = TerminalBuilder.builder().build()
+    println("${terminal.getName()}: ${terminal.getType()} ${terminal.getWidth()}")
+    println("\nhelp: list available commands")
+
+     */
+
+    //val terminalWidth = org.jline.terminal.TerminalBuilder. get().getWidth()
+    //println("terminal width = $terminalWidth")
     Datatype.load()
     Properties.load("/etc/kcli/objects.properties")
               .load("/etc/kcli/cli.properties")
@@ -9,7 +26,8 @@ fun main(args: Array<String>) {
         print("kcli# ")
         //val command = "interface stm2 primary_address 10.1.1.5/32 rate 9700" //readLine() ?: ""
         //val command = "show flow 100354 detail"
-        val command = "show flows select dest_mac with byte_count > 100000"
+        //val command = "show flows select dest_mac with byte_count>10000 and packet_count>100"
+        val command = "application youtube desc foo priority 3021"
 
 
         try {

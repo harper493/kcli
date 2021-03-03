@@ -1,5 +1,3 @@
-class SyntaxException(val why: String) : Exception(why)
-
 class AmbiguityException(val values: Iterable<String>) : Exception("")
 
 
@@ -31,7 +29,7 @@ class Parser (
             if (endOk) {
                 return null
             } else {
-                throw SyntaxException("line ends unexpectedly")
+                throw CliException("line ends unexpectedly")
             }
         } else {
             ++tokenIndex
@@ -190,7 +188,7 @@ class Parser (
                         when {
                             missOk -> return null
                             errFn != null -> errFn(token)
-                            else -> throw SyntaxException("unknown keyword '${token}'")
+                            else -> throw CliException("unknown keyword '${token}'")
                         }
                     }
                     1 -> {

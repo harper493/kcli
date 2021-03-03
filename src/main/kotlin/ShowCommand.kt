@@ -1,22 +1,21 @@
 
 class ShowCommand(val cli: Cli) {
-    val parser get() = cli.parser
-    var options = mutableMapOf<String, String>()
-    var classMd: ClassMetadata = Metadata.getClass("configuration")!!
-    val selections = mutableListOf<AttributeMetadata>()
-    var onlySelect = false
-    val filters = mutableListOf<String>()
-    var filterConjunction = ""
-    var order = ""
-    var descending: Boolean? = null
-    var limit = 100
-    var level = ""
-    val levels = listOf("brief", "full", "detail", "debug")
-    val extras = KeywordList(
-        KeywordFn("select", { doSelect() }),
-        KeywordFn("with", { doWith() }),
-        KeywordFn("top", { doTopBottom(true) }),
-        KeywordFn("bottom", { doTopBottom(false) }),
+    private val parser get() = cli.parser
+    private var classMd: ClassMetadata = Metadata.getClass("configuration")!!
+    private val selections = mutableListOf<AttributeMetadata>()
+    private var onlySelect = false
+    private val filters = mutableListOf<String>()
+    private var filterConjunction = ""
+    private var order = ""
+    private var descending: Boolean? = null
+    private var limit = 100
+    private var level = ""
+    private val levels = listOf("brief", "full", "detail", "debug")
+    private val extras = KeywordList(
+        KeywordFn("select") { doSelect() },
+        KeywordFn("with") { doWith() },
+        KeywordFn("top") { doTopBottom(true) },
+        KeywordFn("bottom") { doTopBottom(false) },
     ).also { keywords -> levels.map { keywords.add(Keyword(it, function = { doLevel(it) })) } }
 
 
@@ -24,7 +23,6 @@ class ShowCommand(val cli: Cli) {
         val optionsMap = mutableMapOf(
             "link" to "name",
         )
-
         fun addOption(option: String, value: String) {
             if (value.isNotEmpty()) {
                 optionsMap[option] = value
@@ -35,7 +33,13 @@ class ShowCommand(val cli: Cli) {
             throw CliException("expected object name after 'show'")
         }
         classMd = oname.leafClass!!
-        doShowOptions(terminator)
+        var myKey: Keyword? = terminator
+        while (myKey != null) {
+            if (myKey.function != null) {
+                (myKey.function!!)()
+            }
+            myKey = parser.lastKeyword ?: parser.findKeyword(extras)
+        }
         addOption(
             "level", when {
                 level.isNotEmpty() -> level
@@ -44,7 +48,7 @@ class ShowCommand(val cli: Cli) {
             }
         )
         classMd.getAttribute("color")?.let { selections.add(it) }
-        addOption("select", "${if (onlySelect) "" else "+"}${selections.map { it.name }.joinToString(",")}")
+        addOption("select", "${if (onlySelect) "" else "+"}${selections.joinToString(",") { it.name }}")
         addOption("with", filters.joinToString(if (filterConjunction == "and") "," else "|"))
         addOption(
             "order", when (descending) {
@@ -66,17 +70,10 @@ class ShowCommand(val cli: Cli) {
         }
     }
 
-    fun doShowOptions(key: Keyword?) {
-        var myKey: Keyword? = key
-        while (myKey != null) {
-            if (myKey?.function != null) {
-                (myKey.function!!)()
-            }
-            myKey = parser.lastKeyword ?: parser.findKeyword(extras)
-        }
+    private fun doShowOptions(key: Keyword?) {
     }
 
-    fun doSelect() {
+    private fun doSelect() {
         cli.checkRepeat({ selections.isNotEmpty() }, "select")
         val myExtras = extras
             .copy()
@@ -98,7 +95,7 @@ class ShowCommand(val cli: Cli) {
         }
     }
 
-    fun doWith() {
+    private fun doWith() {
         cli.checkRepeat({ filters.isNotEmpty() }, "with")
         val relops = listOf("=", "!=", "<", ">", "<=", ">=", ">>", "<<", "!>>")
         parser.skipToken("with")
@@ -160,7 +157,7 @@ class ShowCommand(val cli: Cli) {
         }
     }
 
-    fun doTopBottom(desc: Boolean) {
+    private fun doTopBottom(desc: Boolean) {
         cli.checkRepeat({ descending != null }, msg = "cannot repeat 'top' or 'bottom'")
         limit = parser.getNumber()
         parser.skipToken("by")
@@ -173,7 +170,7 @@ class ShowCommand(val cli: Cli) {
         parser.useKeyword()
     }
 
-    fun doLevel(l: String) {
+    private fun doLevel(l: String) {
         cli.checkRepeat({ level.isNotEmpty() }, msg = "duplicate level keyword '$l'")
         if (l !in levels) {
             throw CliException("invalid show level '$l'")
@@ -183,7 +180,7 @@ class ShowCommand(val cli: Cli) {
         level = l
     }
 
-    fun showOne(obj: JsonObject): String {
+    private fun showOne(obj: JsonObject): String {
         val display = ColumnLayout(
             columns = Properties.getInt("parameter", "show_columns"),
             separator = "=",
@@ -208,13 +205,8 @@ class ShowCommand(val cli: Cli) {
         return display.layoutText().renderISO6429()
     }
 
-    fun showCollection(json: JsonObject): String {
-        val table = Table(
-            maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
-            headingColor = Properties.get("parameter", "heading_color"),
-            headingStyle = Properties.get("parameter", "heading_style"),
-            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
-        )
+    private fun showCollection(json: JsonObject): String {
+        val table = cli.makeTable()
         if (json.asArray().isNotEmpty()) {
             for (obj in json.asArray().map { it.asDict() }) {
                 val color = obj["color"]?.asString()
@@ -241,5 +233,4 @@ class ShowCommand(val cli: Cli) {
     }
 }
 
-fun Cli.doShow() = ShowCommand(this).doShow()
 

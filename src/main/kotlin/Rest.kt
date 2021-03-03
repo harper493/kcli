@@ -3,6 +3,7 @@ import com.github.kittinunf.fuel.core.extensions.authentication
 import com.github.kittinunf.fuel.core.extensions.jsonBody
 import com.github.kittinunf.result.Result
 
+
 enum class HttpStatus( val status: Int, val text: String) {
     success(201, "success"),
     notFound(404, "not found");

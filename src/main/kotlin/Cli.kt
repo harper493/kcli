@@ -1,4 +1,13 @@
 class CliException(text: String="") : Exception(text)
+{
+    companion object {
+        fun throwIf(text: String, pred: ()->Boolean) {
+            if (pred()) {
+                throw CliException(text)
+            }
+        }
+    }
+}
 
 class Cli {
     lateinit var parser: Parser
@@ -6,18 +15,20 @@ class Cli {
     fun oneLine(line: String) {
         parser = Parser(line)
         val commands = KeywordList(
-            KeywordFn("show", { doShow() }),
-            KeywordFn("quit", { doQuit() })
+            KeywordFn("show") { doShow() },
+            KeywordFn("quit") { doQuit() }
         )
         parser.nextToken()
         val cmd = parser.findKeyword(commands, missOk=true)
         if (cmd == null) {                // this may be an object name instead
             doModify(parser.getObjectName(missOk=true).first
-                .also{ if (it.isEmpty) throw CliException("unknown command or object class")})
+                .also{ CliException.throwIf("unknown command or object class") { it.isEmpty } })
         } else {
             cmd.function?.invoke()
         }
     }
+
+    private fun doShow() = ShowCommand(this).doShow()
 
     private fun doModify(obj: ObjectName) {
         val exists = try { Rest.get(obj.url, mapOf("select" to "name")); true }
@@ -35,15 +46,39 @@ class Cli {
         val classMd = obj.leafClass!!
         val keywords = KeywordList(if (exists) classMd.modifiableAttributes
                                    else classMd.settableAttributes)
+        keywords.addKeys("no")
         val values = mutableMapOf<String,String>()
+        parser.nextToken()
         while (true) {
-            parser.nextToken()
-            val attrMd = parser.findKeyword(keywords)?.attribute
-            if (attrMd==null) break
-            parser.reparse(validator=attrMd.type.validator)
-            values[attrMd.name] = parser.curToken!!
+            var k = parser.findKeyword(keywords)?: break
+            val noSeen: Boolean = k.key=="no"
+            if (noSeen) {
+                keywords.remove("no")
+                val kk = parser.findKeyword(keywords)
+                CliException.throwIf("attribute expected after 'no'"){ kk==null }
+                k = kk!!
+            }
+            val attrMd = k.attribute ?: break
+            if (noSeen) {
+                if (attrMd.type.name=="bool") {
+                    values[attrMd.name] =  "F"
+                } else {
+                    CliException.throwIf("'no' cannot be used with attribute '${attrMd.name}'")
+                        { !attrMd.type.hasNull() }
+                    values[attrMd.name] = ""
+                }
+            } else if (attrMd.type.name=="bool") {
+                values[attrMd.name]= "T"
+            } else {
+                parser.reparse(validator = attrMd.type.validator)
+                CliException.throwIf("value expected for attribute '${attrMd.name}'") { parser.curToken == null }
+                values[attrMd.name] = parser.curToken!!
+                parser.nextToken(endOk=true)
+            }
         }
+        CliException.throwIf("unexpected text at end of line '${parser.curToken}'"){ parser.curToken!=null }
         val body = values.map{ (key, value) -> "\"$key\":\"$value\""}.joinToString(",")
+        println(body)
         Rest.put(obj.url, "{$body}")
     }
 
@@ -65,9 +100,7 @@ class Cli {
     }
 
     fun checkRepeat(pred: ()->Boolean, keyword: String="", msg: String="") {
-        if (pred()) {
-            throw CliException(if (msg.isEmpty()) "keyword '$keyword' repeated" else msg)
-        }
+            CliException.throwIf(if (msg.isEmpty()) "keyword '$keyword' repeated" else msg, pred)
     }
 
     fun abbreviateHeader(header: String) =
@@ -93,12 +126,11 @@ class Cli {
         var cmd = classMd
         val elements = mutableListOf<String>()
         while (true) {
-            val thisExtra = extras
             val parentClassName = cmd.parentClass?.name
             if (followOwners and !cmd.isRoot) {
-                thisExtra.addKeys(parentClassName!!)
+                extras.addKeys(parentClassName!!)
             }
-            val a = readAttribute(cmd, pred, thisExtra, missOK)
+            val a = readAttribute(cmd, pred, extras, missOK)
             val attrMd = a?.attribute
             cmd = if (attrMd != null) {
                 elements.add(attrMd.name)
@@ -116,4 +148,10 @@ class Cli {
         }
     }
 
+    fun makeTable() = Table(
+            maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
+            headingColor = Properties.get("parameter", "heading_color"),
+            headingStyle = Properties.get("parameter", "heading_style"),
+            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+        )
 }
