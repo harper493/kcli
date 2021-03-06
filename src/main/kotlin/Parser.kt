@@ -1,6 +1,5 @@
 class AmbiguityException(val values: Iterable<String>) : Exception("")
 
-
 class Parser (
     private var line: String
     ) {
@@ -24,7 +23,11 @@ class Parser (
     private val whitespace = listOf( ' ', '\t' )
     private val nullCh = 0.toChar()
 
-    fun nextToken(help: String="", endOk: Boolean=false, type: TokenType=TokenType.ttGeneral, validator: Validator=Validator()) : String? {
+    fun nextToken(help: String="",
+                  endOk: Boolean=false,
+                  type: TokenType=TokenType.ttGeneral,
+                  validator: Validator=Validator(),
+                  completer: CliCompleter=CliCompleter()) : String? {
         if (tokenIndex >= 0 && tokens.size == tokenIndex + 1 && tokens[tokenIndex] == null) {
             if (endOk) {
                 return null
@@ -34,23 +37,31 @@ class Parser (
         } else {
             ++tokenIndex
             if (tokens.size < tokenIndex + 1) {
-                readToken(type=type, validator=validator)
+                readToken(type=type, validator=validator, completer=completer)
             }
             return tokens[tokenIndex]
         }
     }
 
-    fun reparse(help: String="", endOk: Boolean=false, type: TokenType=TokenType.ttGeneral, validator: Validator=Validator()) : String? {
+    fun reparse(help: String="",
+                endOk: Boolean=false,
+                type: TokenType=TokenType.ttGeneral,
+                validator: Validator=Validator(),
+                completer: CliCompleter=CliCompleter()) : String? {
         backup()
-        return nextToken(help=help, type=type, validator=validator)
+        return nextToken(help=help, type=type, validator=validator, completer=completer)
     }
 
-    private fun readToken(help: String="", type: TokenType=TokenType.ttGeneral, validator: Validator=Validator()) {
+    private fun readToken(help: String="",
+                          type: TokenType=TokenType.ttGeneral,
+                          validator: Validator=Validator(),
+                          completer: CliCompleter=CliCompleter()) {
         var escape = false
         var quote = nullCh
         var token: String? = null
         var isName = false
         var isNumber = false
+        var ch = nullCh
         val myValidator = when (if (validator.isNull) type else TokenType.ttExplicit) {
             TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
             TokenType.ttNumber -> Validator("""[+-]?\d+(.\d+)?[a-zA-z]*""")
@@ -66,7 +77,7 @@ class Parser (
             finished = true
         } else {
             while (good()) {
-                var ch = line[lineIndex]
+                ch = line[lineIndex]
                 if (escape) {
                     ch = escChars[ch] ?: ch
                 } else if (ch == '\\') {
@@ -77,15 +88,18 @@ class Parser (
                 } else if (ch in quotes && (token?:"").length==0) {
                     quote = ch
                     ch = nullCh
-                } else if ((token?:"").length > 0) {
+                } else if ((token?:"").length > 0 && ch!=completerCh) {
                     if (!myValidator.validatePfx(token + ch)) {
                         break
                     }
                 }
                 if (ch!=nullCh) {
                     token = (token ?: "") + ch
+                    if (ch == completerCh) {
+                        break
+                    }
+                    ++lineIndex
                 }
-                ++lineIndex
             }
         }
         tokens.add(token)
@@ -93,9 +107,18 @@ class Parser (
         while (good() && line[lineIndex] in whitespace) {
             ++lineIndex
         }
+        if (ch==completerCh){
+            throw CompletionException(
+                completer.complete(
+                    line.take(if (tokenIndex < 0) 0 else tokenStarts[tokenIndex]),
+                    token!!.dropLast(1)
+                )
+            )
+        }
     }
 
-    fun backup() {
+
+fun backup() {
         if (tokenIndex >= 0) {
             --tokenIndex
             tokens = tokens.take(tokenIndex+1).toMutableList()
@@ -143,6 +166,7 @@ class Parser (
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
             }
             classKeys.add(extras)
+            reparse(completer=KeywordCompleter(classKeys))
             val classKey = findKeyword(classKeys, missOk=true)
                 ?: if (missOk) {
                     backup()
@@ -204,6 +228,9 @@ class Parser (
     }
 
     fun useKeyword() { lastKeyword = null }
+    companion object {
+        val completerCh = '~'
+    }
 }
 
 

@@ -10,11 +10,11 @@ class KeywordFn(
 
 class KeywordList()
 {
-    private val keywords: MutableList<Keyword> = mutableListOf()
+    val keywords: MutableList<Keyword> = mutableListOf()
 
     fun addAttributes(attrs: Iterable<AttributeMetadata>,
                       pred: (AttributeMetadata)->Boolean={ true }): KeywordList {
-        for (a in attrs) keywords.add(Keyword(a.name, attribute=a))
+        attrs.filter{ pred(it) }.map{ keywords.add(Keyword(it.name, attribute=it)) }
         return this
     }
     fun addKeys(keys: Iterable<String>): KeywordList {
@@ -44,7 +44,7 @@ class KeywordList()
         return this
     }
     fun remove(key: String) {
-        keywords.remove(key)
+        keywords.find{ it.key==key }.also{ keywords.remove(it) }
     }
     fun match(key: String): List<Keyword> {
         val result: MutableList<Keyword> = mutableListOf()
@@ -62,6 +62,8 @@ class KeywordList()
     }
     fun copy() =
         KeywordList().add(this)
+
+
 
     constructor(vararg fns: KeywordFn) : this() {
         addFns(*fns)

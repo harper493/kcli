@@ -9,10 +9,12 @@ class CliException(text: String="") : Exception(text)
     }
 }
 
-class Cli {
+class Cli(val line: String) {
+
     lateinit var parser: Parser
 
-    fun oneLine(line: String) {
+    init {
+        println(line)
         parser = Parser(line)
         val commands = KeywordList(
             KeywordFn("show") { doShow() },
@@ -61,7 +63,7 @@ class Cli {
             val attrMd = k.attribute ?: break
             if (noSeen) {
                 if (attrMd.type.name=="bool") {
-                    values[attrMd.name] =  "F"
+                    values[attrMd.name] = "F"
                 } else {
                     CliException.throwIf("'no' cannot be used with attribute '${attrMd.name}'")
                         { !attrMd.type.hasNull() }
