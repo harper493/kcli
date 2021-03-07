@@ -28,17 +28,15 @@ class ShowCommand(val cli: Cli) {
                 optionsMap[option] = value
             }
         }
-        val (oname, terminator) = this.parser.getObjectName(extras = extras)
+        val (oname, terminator) = this.parser.getObjectName(finalExtras = extras)
         if (oname.leafClass == null) {
             throw CliException("expected object name after 'show'")
         }
         classMd = oname.leafClass!!
         var myKey: Keyword? = terminator
         while (myKey != null) {
-            if (myKey.function != null) {
-                (myKey.function!!)()
-            }
-            myKey = parser.lastKeyword ?: parser.findKeyword(extras)
+            myKey.function!!.invoke()
+            myKey = extras.exactMatch(parser.curToken ?: "")
         }
         addOption(
             "level", when {
@@ -47,8 +45,8 @@ class ShowCommand(val cli: Cli) {
                 else -> "full"
             }
         )
-        classMd.getAttribute("color")?.let { selections.add(it) }
-        addOption("select", "${if (onlySelect) "" else "+"}${selections.joinToString(",") { it.name }}")
+        addOption("select",
+            "${if (onlySelect || selections.isEmpty()) "" else "+"}${selections.joinToString(",") { it.name }}")
         addOption("with", filters.joinToString(if (filterConjunction == "and") "," else "|"))
         addOption(
             "order", when (descending) {
@@ -58,6 +56,7 @@ class ShowCommand(val cli: Cli) {
             }
         )
         addOption("limit", if (limit > 0) "$limit" else "")
+        classMd.getAttribute("color")?.let { selections.add(it) }
         val json = Rest.getCollection(oname.url, options = optionsMap)
         if (json != null) {
             if (oname.isWild) {
@@ -70,17 +69,13 @@ class ShowCommand(val cli: Cli) {
         }
     }
 
-    private fun doShowOptions(key: Keyword?) {
-    }
-
     private fun doSelect() {
         cli.checkRepeat({ selections.isNotEmpty() }, "select")
         val myExtras = extras
             .copy()
             .addKeys("only")
-        parser.skipToken("select")
         while (true) {
-            val kw = cli.readAttribute(classMd, extras = myExtras)
+            val kw = cli.readAttribute(classMd, extras = myExtras, endOk=selections.isNotEmpty())
             if (kw?.attribute != null) {
                 selections.add(kw.attribute)
             } else if (kw?.key == "only") {
@@ -90,84 +85,76 @@ class ShowCommand(val cli: Cli) {
                 break
             }
         }
-        if (selections.isEmpty()) {
-            throw CliException("no valid attributes found after 'select'")
-        }
+        CliException.throwIf("no attributes found after 'select'"){ selections.isEmpty() }
     }
 
     private fun doWith() {
         cli.checkRepeat({ filters.isNotEmpty() }, "with")
         val relops = listOf("=", "!=", "<", ">", "<=", ">=", ">>", "<<", "!>>")
-        parser.skipToken("with")
+        val myExtras = extras
         while (true) {
             val negated = parser.skipToken("!")
-            val kw = cli.readAttribute(classMd, extras = extras)
+            val kw = cli.readAttribute(classMd, extras = myExtras)
+            if (kw?.value in listOf("and", "or")) {
+                if (filterConjunction.isNotEmpty() && filterConjunction != kw!!.asString()) {
+                    throw CliException("cannot mix 'and' and 'or' in the same command")
+                }
+                filterConjunction = kw!!.asString()
+                continue
+            }
             if (kw?.attribute == null) break
-            parser.useKeyword()
             val lhsAttr = kw.attribute
             var thisFilter = lhsAttr.name
-            if (negated || parser.curToken !in relops) {
+            if (negated || !parser.peekAnyOf(relops)) {
                 if (!lhsAttr.type.hasNull()) {
                     throw CliException("cannot use boolean operator with '${lhsAttr.name}'")
                 } else if (negated) {
                     thisFilter = "!$thisFilter"
                 }
             } else {
-                thisFilter += parser.curToken
-                var rhs: String
-                if (lhsAttr.type.isNumeric()) {
-                    parser.nextToken()
-                    val (str, attrMd, _) = cli.readComplexAttribute(classMd, extras = extras, missOK = true)
-                    if (attrMd == null) {
-                        rhs = parser.curToken ?: ""
-                        lhsAttr.type.validateCheck(rhs)
+                thisFilter += parser.nextToken() ?: ""
+                val rhs: String = if (lhsAttr.type.isNumeric()) {
+                    if (parser.peekRx("[-+0-9]")) {
+                        lhsAttr.type.validateCheck(parser.nextToken(validator = lhsAttr.type.validator)!!)
                     } else {
-                        rhs = str
+                        val (str, _, _) = cli.readComplexAttribute(classMd, extras = myExtras)
+                        str
                     }
                 } else {
-                    parser.nextToken(validator = lhsAttr.type.validator)
-                    lhsAttr.type.validateCheck(parser.curToken ?: "")
-                    rhs = parser.curToken ?: ""
+                    lhsAttr.type.validateCheck(parser.nextToken(validator = lhsAttr.type.validator)!!)
                 }
                 thisFilter += rhs
-                parser.nextToken(endOk = true)
-                parser.useKeyword()
             }
             filters.add(thisFilter)
-            var conj = ""
-            for (c in listOf("and", "or")) {
-                if (parser.skipToken(c)) {
-                    conj = c
-                    break
-                }
-            }
-            if (conj.isNotEmpty()) {
-                if (filterConjunction.isEmpty()) {
-                    filterConjunction = conj
-                } else if (filterConjunction != conj) {
-                    throw CliException("cannot mix 'and' and 'or' in the same command")
-                }
+            myExtras.addKeys("and", "or")
+            if (filters.isEmpty()) {
+                throw CliException("no valid filters found after 'with'")
             }
         }
         if (filterConjunction.isEmpty()) {
             filterConjunction = "and"
         }
-        if (filters.isEmpty()) {
-            throw CliException("no valid filters found after 'with'")
-        }
     }
 
     private fun doTopBottom(desc: Boolean) {
         cli.checkRepeat({ descending != null }, msg = "cannot repeat 'top' or 'bottom'")
-        limit = parser.getNumber()
-        parser.skipToken("by")
-        val (str, attrMd, _) = cli.readComplexAttribute(classMd)
-        if (attrMd == null) {
-            throw CliException("attribute name expected after 'top' or 'bottom'")
+        limit = parser.getInt()
+        val myExtras = KeywordList("by")
+        while (true) {
+            val (str, attrMd, kw) = cli.readComplexAttribute(classMd, extras=myExtras)
+            if (attrMd == null) {
+                if (kw?.asString() == "by") {
+                    extras.remove("by")
+                    continue
+                } else {
+                    throw CliException("attribute name expected after 'top' or 'bottom'")
+                }
+            }
+            order = str
+            descending = desc
+            break
         }
-        order = str
-        descending = desc
-        parser.useKeyword()
+        parser.findKeyword(extras, endOk=true)
     }
 
     private fun doLevel(l: String) {
@@ -175,9 +162,8 @@ class ShowCommand(val cli: Cli) {
         if (l !in levels) {
             throw CliException("invalid show level '$l'")
         }
-        parser.useKeyword()
-        parser.skipToken(l)
         level = l
+        parser.findKeyword(extras, endOk=true)
     }
 
     private fun showOne(obj: JsonObject): String {

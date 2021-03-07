@@ -13,23 +13,30 @@ class ObjectName {
     private val elements: MutableList<Element> = mutableListOf()
     val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
     val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
+    val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isWild }
     val isEmpty get() = elements.isEmpty()
 
-    fun append(attrMd: AttributeMetadata, name: String) {
+    fun append(attrMd: AttributeMetadata, name: String): ObjectName {
         if (isEmpty && attrMd.myClass != Metadata.getPolicyManagerMd()) {
             elements.add(Element(Metadata.getAttribute("policy_manager", "configurations")!!,
                 "running"))
         }
         elements.add(Element(attrMd, name))
+        return this
     }
 
-    fun dropLast(n: Int) =
+    fun copy() = ObjectName().also{ oname -> elements.map{oname.elements.append(it) } }
+
+    fun dropLast(n: Int=1) =
         ObjectName()
             .also{ newOn -> elements
                 .filterIndexed{ i, _ -> i < elements.size-n }
                 .map { newOn.append(it.attrMd, it.name)}}
+
+    fun wipeLeafName() =
+        if (isEmpty) ObjectName() else dropLast().append(leafAttribute!!, "")
 
     fun parse(url: String) {
         val split = url.split("/").toMutableList()

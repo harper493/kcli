@@ -40,7 +40,7 @@ class Rest(
                 val resp = response.toString().replace("\n", " ")
                 val m = rx.find(resp)
                 val msg = if (m != null) m.groupValues[1] else response.responseMessage
-                throw RestException(response.statusCode, msg.toString())
+                throw RestException(response.statusCode, msg)
             }
             is Result.Success -> {
                 try {
@@ -61,7 +61,7 @@ class Rest(
     }
 
     fun put(url: String, body: String) {
-        val (request, response, result) = Fuel.put(makeUrl(url))
+        val (_, response, result) = Fuel.put(makeUrl(url))
             .jsonBody(body)
             .authentication().basic(user, password)
             .response()
@@ -71,7 +71,7 @@ class Rest(
                 val resp = response.toString().replace("\n", " ")
                 val m = rx.find(resp)
                 val msg = if (m != null) m.groupValues[1] else response.responseMessage
-                throw RestException(response.statusCode, msg.toString())
+                throw RestException(response.statusCode, msg)
             }
             else -> return
         }
@@ -89,8 +89,8 @@ class Rest(
         }
         val p = if (port!=0) ":${port}" else ""
         val e = elements.joinToString("/")
-        val opts = if (options!=null) "?" + options?.keys.joinToString("&")
-                    { "${it}=${options!![it]}"} else ""
+        val opts = if (options!=null) "?" + options.keys.joinToString("&")
+                    { "${it}=${options[it]}"} else ""
         return "http://${server}${p}/${e}${opts}"
     }
     companion object {

@@ -36,11 +36,8 @@ abstract class Datatype (
     open fun hasNull(): Boolean = false
     open fun getClass(): ClassMetadata? = null
     open fun isNumeric(): Boolean = false
-    fun validateCheck(value: String) {
-        if (!validate(value)) {
-            throw CliException("invalid value '$value' for type '$name'")
-        }
-    }
+    fun validateCheck(value: String) =
+        if (validate(value)) value else throw CliException("invalid value '$value' for type '$name'")
     companion object {
         private var types = mutableMapOf<String, Datatype>()
         operator fun get(index: String): Datatype {

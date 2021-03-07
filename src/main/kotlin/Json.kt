@@ -40,11 +40,7 @@ class JsonObjectImpl : JsonObject {
             }
             return if (good()) string[index] else null
         }
-        fun backup() {
-            if (index>0) {
-                --index
-            }
-        }
+
         private fun getChar(): Char? {
             ++index
             return skipWs()
@@ -103,7 +99,7 @@ class JsonObjectImpl : JsonObject {
     private var arrayVal : MutableList<JsonObject>? = null
     private var dictVal : MutableMap<String, JsonObject>? = null
     override fun asString() = stringVal ?: ""
-    override fun asInt() = intVal ?: 0
+    override fun asInt() = intVal ?: stringVal?.toIntOrNull() ?: 0
     override fun asBoolean() = boolVal ?: false
     override fun asFloat() = floatVal ?: 0.0
     override fun asArray() = arrayVal ?: listOf()
@@ -140,8 +136,8 @@ class JsonObjectImpl : JsonObject {
             else -> "null"
         }
     }
-    override fun parse(value: String): JsonObjectImpl {
-        val reader = Reader(value)
+    override fun parse(string: String): JsonObjectImpl {
+        val reader = Reader(string)
         parseOne(reader)
         if (reader.good()) {
             reader.throwJson("unexpected trailing characters")
@@ -224,3 +220,5 @@ class JsonObjectImpl : JsonObject {
         return this
     }
 }
+
+fun Map<String,String>.toJson() = map{ (key, value) -> "\"$key\":\"$value\""}.joinToString(",")

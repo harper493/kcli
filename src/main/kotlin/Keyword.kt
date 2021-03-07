@@ -2,7 +2,10 @@ class Keyword(
     val key: String,
     val value: String?=null,
     val attribute: AttributeMetadata?=null,
-    val function: (()->Unit)? = null)
+    val function: (()->Unit)? = null) {
+    operator fun invoke() = function?.invoke()
+    fun asString() = value ?: ""
+}
 
 class KeywordFn(
     val key: String,
@@ -13,57 +16,23 @@ class KeywordList()
     val keywords: MutableList<Keyword> = mutableListOf()
 
     fun addAttributes(attrs: Iterable<AttributeMetadata>,
-                      pred: (AttributeMetadata)->Boolean={ true }): KeywordList {
-        attrs.filter{ pred(it) }.map{ keywords.add(Keyword(it.name, attribute=it)) }
-        return this
-    }
-    fun addKeys(keys: Iterable<String>): KeywordList {
-        for (k in keys) keywords.add(Keyword(k, value=k))
-        return this
-    }
+                      pred: (AttributeMetadata)->Boolean={ true }) =
+        also {attrs.filter{ pred(it) }.map{ add(Keyword(it.name, attribute=it)) } }
     fun addAttributes(vararg attrs: AttributeMetadata,
-                      pred: (AttributeMetadata)->Boolean={ true }): KeywordList {
-        addAttributes(attrs.asIterable(), pred)
-        return this
-    }
-    fun addKeys(vararg keys: String): KeywordList {
-        for (k in keys) keywords.add(Keyword(k, value = k))
-        return this
-    }
-    fun addFns(vararg fns: KeywordFn): KeywordList
-    {
-        for (k in fns) keywords.add(Keyword(k.key, function=k.function))
-        return this
-    }
-    fun add(keys: KeywordList): KeywordList {
-        for (k in keys.keywords) keywords += k
-        return this
-    }
-    fun add(vararg keys: Keyword): KeywordList {
-        for (k in keys) keywords += k
-        return this
-    }
-    fun remove(key: String) {
-        keywords.find{ it.key==key }.also{ keywords.remove(it) }
-    }
-    fun match(key: String): List<Keyword> {
-        val result: MutableList<Keyword> = mutableListOf()
-        for (k in keywords) if (k.key.startsWith(key)) result.add(k)
-        return result
-    }
-    fun exactMatch(key: String): Keyword? {
-        for (k in keywords) if (k.key==key) return k
-        return null
-    }
-    fun toStrings(keys: Iterable<Keyword>): List<String> {
-        val result: MutableList<String> = mutableListOf()
-        for (k in keys) result.add(k.key)
-        return result
-    }
-    fun copy() =
-        KeywordList().add(this)
-
-
+                      pred: (AttributeMetadata)->Boolean={ true }) =
+        also{ addAttributes(attrs.asIterable(), pred) }
+    fun addKeys(keys: Iterable<String>) = also{ keys.map{ add(Keyword(it, value=it))}}
+    fun addKeys(vararg keys: String) = also{ keys.map{ add(Keyword(it, value=it))}}
+    fun addFns(vararg fns: KeywordFn) = also{ fns.map{ add(Keyword(it.key, function=it.function))}}
+    fun add(keys: KeywordList) = also{ keys.keywords.map{ add(it) }}
+    fun add(vararg keys: Keyword) = also{ keys.map{ add(it) }}
+    fun remove(key: String) = also{ keywords.find{ it.key==key }.also{ keywords.remove(it) } }
+    fun present(key: String) = keywords.find{it.key==key}!=null
+    fun add(key: Keyword) = also{ if (!present(key.key)) keywords.add(key) }
+    fun match(key: String) = keywords.map{ if (it.key.startsWith(key)) it else null }.filterNotNull()
+    fun exactMatch(key: String) = keywords.find{ it.key==key }
+    fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
+    fun copy() = KeywordList().add(this)
 
     constructor(vararg fns: KeywordFn) : this() {
         addFns(*fns)

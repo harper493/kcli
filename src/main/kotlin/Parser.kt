@@ -1,70 +1,32 @@
-class AmbiguityException(val values: Iterable<String>) : Exception("")
-
 class Parser (
     private var line: String
     ) {
     private var tokens: MutableList<String?> = mutableListOf()
-    var tokenStarts: MutableList<Int> = mutableListOf()
+    private var tokenStarts: MutableList<Int> = mutableListOf()
     var helpText: String = ""
-    private val tokenStart: Int get() = if (tokenStarts.isEmpty()) 0 else tokenStarts.last()
     private var lineIndex = 0
     private var tokenIndex = -1
     private var finished = false
     enum class TokenType { ttName, ttNumber, ttAny, ttExplicit, ttGeneral, ttAll }
-    val curToken: String? get() = tokens[tokenIndex]
-    var lastKeyword: Keyword? = null; private set
+    var curToken: String? = null
 
-    private val digraphs = listOf( ">=", "<=", "!=", ">>", "!>>", "<<", "!<<", )
-    private val nameChars = listOf( '_' )
-    private val completerChars = listOf( '~', '?' )
-    private val numberChars = listOf( '+', '-', '.' )
     private val escChars = mapOf( 'n' to '\n', 'r' to '\r', 't' to '\t' )
     private val quotes = listOf( '\"', '\'' )
     private val whitespace = listOf( ' ', '\t' )
     private val nullCh = 0.toChar()
 
     fun nextToken(help: String="",
-                  endOk: Boolean=false,
-                  type: TokenType=TokenType.ttGeneral,
-                  validator: Validator=Validator(),
-                  completer: CliCompleter=CliCompleter()) : String? {
-        if (tokenIndex >= 0 && tokens.size == tokenIndex + 1 && tokens[tokenIndex] == null) {
-            if (endOk) {
-                return null
-            } else {
-                throw CliException("line ends unexpectedly")
-            }
-        } else {
-            ++tokenIndex
-            if (tokens.size < tokenIndex + 1) {
-                readToken(type=type, validator=validator, completer=completer)
-            }
-            return tokens[tokenIndex]
-        }
-    }
-
-    fun reparse(help: String="",
-                endOk: Boolean=false,
-                type: TokenType=TokenType.ttGeneral,
-                validator: Validator=Validator(),
-                completer: CliCompleter=CliCompleter()) : String? {
-        backup()
-        return nextToken(help=help, type=type, validator=validator, completer=completer)
-    }
-
-    private fun readToken(help: String="",
                           type: TokenType=TokenType.ttGeneral,
                           validator: Validator=Validator(),
-                          completer: CliCompleter=CliCompleter()) {
+                          completer: CliCompleter=CliCompleter(),
+                          endOk: Boolean=false): String? {
         var escape = false
         var quote = nullCh
         var token: String? = null
-        var isName = false
-        var isNumber = false
         var ch = nullCh
         val myValidator = when (if (validator.isNull) type else TokenType.ttExplicit) {
             TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
-            TokenType.ttNumber -> Validator("""[+-]?\d+(.\d+)?[a-zA-z]*""")
+            TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
             TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
             TokenType.ttAll -> Validator(".*")
             TokenType.ttExplicit -> validator
@@ -85,10 +47,10 @@ class Parser (
                     ch = nullCh
                 } else if (ch == quote) {
                     ch = nullCh
-                } else if (ch in quotes && (token?:"").length==0) {
+                } else if (ch in quotes && (token ?: "").isEmpty()) {
                     quote = ch
                     ch = nullCh
-                } else if ((token?:"").length > 0 && ch!=completerCh) {
+                } else if ((token ?: "").isNotEmpty() && ch!=completerCh) {
                     if (!myValidator.validatePfx(token + ch)) {
                         break
                     }
@@ -103,6 +65,7 @@ class Parser (
             }
         }
         tokens.add(token)
+        curToken = token
         tokenStarts.add(startIndex)
         while (good() && line[lineIndex] in whitespace) {
             ++lineIndex
@@ -115,75 +78,57 @@ class Parser (
                 )
             )
         }
+        CliException.throwIf("unexpected end of line"){ !endOk && curToken==null }
+        return curToken
     }
 
 
-fun backup() {
-        if (tokenIndex >= 0) {
-            --tokenIndex
-            tokens = tokens.take(tokenIndex+1).toMutableList()
-            lineIndex = tokenStarts[tokenIndex+1]
-            tokenStarts = tokenStarts.take(tokenIndex+1).toMutableList()
-            finished = false
-        }
-    }
-
-    fun getNumber(): Int {
+    fun getInt(): Int {
         var result: Int
         try {
-            result = (curToken?:"").toInt()
-            nextToken()
+            result = (nextToken(type=TokenType.ttNumber)?:"").toInt()
         } catch (exc: Exception) {
             throw CliException("expected integer not '$curToken'")
         }
         return result
     }
 
-    fun isFinished() = finished
+    fun isFinished() = lineIndex >= line.length
 
-    fun peek() = if (!isFinished()) line[tokenStarts.last()] else nullCh
+    fun peek() = line.drop(lineIndex).take(1)
+
+    fun peekAnyOf(tokens: Iterable<String>) = tokens.fold(false){ b,s -> b || s.take(1)==peek() }
+
+    fun peekRx(rx: String) = Regex("^$rx.*").matches(peek())
 
     fun skipToken(token: String) : Boolean =
-        (curToken==token).also{ if (it) nextToken(); it }
+        (peek()==token.take(1)).also{ if (it) nextToken() }
 
-    fun skipTokens(vararg tokens: String): String? {
-        if (curToken in tokens) {
-            val t = curToken
-            nextToken()
-            return t
-        } else {
-            return null
-        }
-    }
-
-    fun getObjectName(extras: KeywordList=KeywordList(), missOk: Boolean=false) : Pair<ObjectName, Keyword?> {
+    fun getObjectName(initialExtras: KeywordList=KeywordList(),
+                      finalExtras: KeywordList=KeywordList(),
+                      missOk: Boolean=false) : Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
         var curMd = Metadata.getConfigMd()
         while (true) {
             val classKeys = KeywordList(curMd.collections)
             if (result.isEmpty) {
+                classKeys.add(initialExtras)
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
+            } else {
+                classKeys.add(finalExtras)
             }
-            classKeys.add(extras)
-            reparse(completer=KeywordCompleter(classKeys))
             val classKey = findKeyword(classKeys, missOk=true)
-                ?: if (missOk) {
-                    backup()
-                    break
-                } else throw Exception("unknown collection '$curToken'")
+                ?: if (missOk) break else throw Exception("unknown collection or keyword '$curToken'")
             val attrMd = classKey.attribute
             if (attrMd != null) {
-                if (curToken ?: "" !="") {
-                    val extra = extras.exactMatch(curToken!!)
-                    if (extra != null) {
-                        result.append(attrMd, "")
-                        terminator = extra
-                        break
-                    }
+                val name = nextToken(endOk=true, completer=ObjectCompleter(result.copy().append(attrMd, ""), finalExtras))
+                val key = finalExtras.exactMatch(name?:"")
+                result.append(attrMd, if (key==null) name?:"" else "")
+                if (key!=null) {
+                    terminator = key
+                    break
                 }
-                result.append(attrMd, curToken ?: "")
-                nextToken(endOk=true)
                 curMd = attrMd.containedClass!!
             } else {
                 terminator = classKey
@@ -196,13 +141,13 @@ fun backup() {
 
     fun findKeyword(keys: KeywordList,
                     missOk: Boolean=false,
+                    endOk: Boolean=false,
                     errFn: ((String)->Unit)?=null): Keyword? {
         var result: Keyword? = null
-        val token = curToken ?: ""
-        if (token.isNotEmpty()) {
-            val exact = keys.exactMatch(token)
+        val token = nextToken(completer=KeywordCompleter(keys), endOk=missOk || endOk)
+        if ((token?:"").isNotEmpty()) {
+            val exact = keys.exactMatch(token!!)
             if (exact!=null) {
-                nextToken(endOk=true)
                 result = exact
             } else {
                 val matches = keys.match(token)
@@ -216,18 +161,14 @@ fun backup() {
                         }
                     }
                     1 -> {
-                        nextToken(endOk = true)
                         result = matches[0]
                     }
-                    else -> throw AmbiguityException(keys.toStrings(matches))
+                    else -> throw CliException("keyword '$token' matches all of: ${keys.toStrings(matches).joinToString(", ")}")
                 }
             }
         }
-        lastKeyword = result
         return result
     }
-
-    fun useKeyword() { lastKeyword = null }
     companion object {
         val completerCh = '~'
     }

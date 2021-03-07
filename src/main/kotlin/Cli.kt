@@ -14,19 +14,18 @@ class Cli(val line: String) {
     lateinit var parser: Parser
 
     init {
-        println(line)
-        parser = Parser(line)
-        val commands = KeywordList(
-            KeywordFn("show") { doShow() },
-            KeywordFn("quit") { doQuit() }
-        )
-        parser.nextToken()
-        val cmd = parser.findKeyword(commands, missOk=true)
-        if (cmd == null) {                // this may be an object name instead
-            doModify(parser.getObjectName(missOk=true).first
-                .also{ CliException.throwIf("unknown command or object class") { it.isEmpty } })
-        } else {
-            cmd.function?.invoke()
+        if (line.isNotEmpty()) {
+            parser = Parser(line)
+            val extras = KeywordList(
+                KeywordFn("show") { doShow() },
+                KeywordFn("quit") { doQuit() }
+            )
+            val (objName, key) = parser.getObjectName(initialExtras = extras)
+            if (objName.isEmpty) {
+                key?.invoke()
+            } else {
+                doModify(objName)
+            }
         }
     }
 
@@ -50,7 +49,6 @@ class Cli(val line: String) {
                                    else classMd.settableAttributes)
         keywords.addKeys("no")
         val values = mutableMapOf<String,String>()
-        parser.nextToken()
         while (true) {
             var k = parser.findKeyword(keywords)?: break
             val noSeen: Boolean = k.key=="no"
@@ -72,16 +70,15 @@ class Cli(val line: String) {
             } else if (attrMd.type.name=="bool") {
                 values[attrMd.name]= "T"
             } else {
-                parser.reparse(validator = attrMd.type.validator)
+                parser.nextToken(validator = attrMd.type.validator)
                 CliException.throwIf("value expected for attribute '${attrMd.name}'") { parser.curToken == null }
                 values[attrMd.name] = parser.curToken!!
-                parser.nextToken(endOk=true)
             }
         }
         CliException.throwIf("unexpected text at end of line '${parser.curToken}'"){ parser.curToken!=null }
-        val body = values.map{ (key, value) -> "\"$key\":\"$value\""}.joinToString(",")
+        val body = values.toJson()
         println(body)
-        Rest.put(obj.url, "{$body}")
+        Rest.put(obj.url, body)
     }
 
     private fun doQuit() {
@@ -113,15 +110,17 @@ class Cli(val line: String) {
         classMd: ClassMetadata,
         pred: (AttributeMetadata) -> Boolean = { true },
         extras: KeywordList = KeywordList(),
-        missOK: Boolean = false
+        missOk: Boolean = false,
+        endOk: Boolean = false
+
     ): Keyword? =
-        parser.findKeyword(KeywordList(classMd.attributes, pred).add(extras), missOK)
+        parser.findKeyword(KeywordList(classMd.attributes, pred).add(extras), missOk=missOk, endOk=endOk)
 
     fun readComplexAttribute(
         classMd: ClassMetadata,
         pred: (AttributeMetadata) -> Boolean = { true },
         extras: KeywordList = KeywordList(),
-        missOK: Boolean = false,
+        missOk: Boolean = false,
         followLinks: Boolean = true,
         followOwners: Boolean = true,
     ): Triple<String, AttributeMetadata?, Keyword?> {
@@ -132,7 +131,7 @@ class Cli(val line: String) {
             if (followOwners and !cmd.isRoot) {
                 extras.addKeys(parentClassName!!)
             }
-            val a = readAttribute(cmd, pred, extras, missOK)
+            val a = readAttribute(cmd, pred, extras, missOk)
             val attrMd = a?.attribute
             cmd = if (attrMd != null) {
                 elements.add(attrMd.name)
