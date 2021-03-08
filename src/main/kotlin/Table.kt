@@ -131,15 +131,13 @@ class Table (
         return this
     }
 
-    fun renderText(renderer: (StyledText, Int)->String) =
+    fun render() =
         listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->
                 zip(sortedCols, row).joinToString(" ".repeat(columnSpacing)) { colRow ->
-                    renderer(colRow.second, colRow.first.maxWidth)
+                    colRow.second.render(colRow.first.maxWidth)
                 }
             }
         }.joinToString("\n")
-
-    fun renderISO6429() : String = renderText{ cell, width -> cell.renderISO6429(width) }
 
 }

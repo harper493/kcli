@@ -3,8 +3,7 @@ class StyledText (
     private var color: String? = null,
     private var background: String? = null,
     private var style: String? = null
-        )
-{
+        ) {
     private val colors = mapOf(
         "black" to 232,
         "red" to 9,
@@ -38,7 +37,7 @@ class StyledText (
         "underline" to 4,
         "crossed" to 9,
         "inverted" to 7,
-        )
+    )
 
     private val escape = "\u001b"
     private val fgOp = 38
@@ -47,24 +46,25 @@ class StyledText (
     val length get() = text.length
     fun getColor() = color
 
-    fun renderISO6429(width: Int = 0) =
-        "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}${justify(text, width)}"
+    fun render(width: Int = 0) = renderer(this, width)
 
-    fun clone (
+    fun clone(
         newText: String? = null,
         newColor: String? = null,
         newBackground: String? = null,
         newStyle: String? = null
-    ) = StyledText(newText ?: text,
+    ) = StyledText(
+        newText ?: text,
         newColor ?: color,
         newBackground ?: background,
-        newStyle ?: style)
+        newStyle ?: style
+    )
 
     fun underride(
         newColor: String? = null,
         newBackground: String? = null,
         newStyle: String? = null
-    ) : StyledText {
+    ): StyledText {
         color = color ?: newColor
         background = background ?: newBackground
         style = style ?: newStyle
@@ -75,26 +75,28 @@ class StyledText (
         newColor: String? = null,
         newBackground: String? = null,
         newStyle: String? = null
-    ) : StyledText {
+    ): StyledText {
         color = newColor ?: color
         background = newBackground ?: background
         style = newStyle ?: style
         return this
     }
 
-    fun addStyle(newStyle: String) { style = addStyle(style, newStyle) }
-
-    private fun renderColor(op: Int, color: String?) : String {
-        val code = colors[color?:""]
-        return if (code==null) "${escape}[${op+1}m"
-               else "${escape}[${op}:5:${code}m"
+    fun addStyle(newStyle: String) {
+        style = addStyle(style, newStyle)
     }
 
-    private fun renderStyle() : String {
+    private fun renderColor(op: Int, color: String?): String {
+        val code = colors[color ?: ""]
+        return if (code == null) "${escape}[${op + 1}m"
+        else "${escape}[${op}:5:${code}m"
+    }
+
+    private fun renderStyle(): String {
         return when (style) {
             null, "" -> "${escape}[0m"
             else -> return style!!.split(",")
-                                .joinToString("", transform = { "${escape}[${styles[it] ?: 0}m" })
+                .joinToString("", transform = { "${escape}[${styles[it] ?: 0}m" })
         }
     }
 
@@ -103,7 +105,21 @@ class StyledText (
         width > 0 -> text.padEnd(width)
         else -> text // ==0
     }
+
+    private fun renderISO6429(width: Int = 0) =
+        "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}${justify(text, width)}"
+
     companion object {
+        private lateinit var renderer: (StyledText, Int) -> String
         fun addStyle(oldStyle: String?, newStyle: String) = addToTextList(oldStyle, newStyle)
+        fun setRenderer(style: String) {
+            renderer = when (style) {
+                "ISO6429" -> { text, width -> text.renderISO6429(width) }
+                "plain"   -> { text, _ -> text.text }
+                else      -> { text, _ -> text.text }
+
+            }
+        }
+        init { setRenderer("plain") }
     }
 }

@@ -1,3 +1,6 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+
 /**
  * Split a string into two at the given [index]
  */
@@ -174,3 +177,8 @@ fun addToTextList(old: String?, new: String, delimiter: String = ",") =
         .joinToString(delimiter)
         .ifBlank { null }
 
+/**
+ * Return time/date in format yyyy-mm-dd hh:mm:ss
+ */
+
+fun getDateTime() = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(Date())

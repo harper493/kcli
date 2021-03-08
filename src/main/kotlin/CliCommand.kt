@@ -9,7 +9,7 @@ class CliException(text: String="") : Exception(text)
     }
 }
 
-class Cli(val line: String) {
+class CliCommand(val line: String) {
 
     lateinit var parser: Parser
 

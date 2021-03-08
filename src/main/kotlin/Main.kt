@@ -1,37 +1,40 @@
-import org.jline.builtins.Commands
-import org.jline.builtins.Completers
-import org.jline.builtins.Completers.TreeCompleter
-import org.jline.builtins.Options.HelpException
-import org.jline.builtins.TTop
-import org.jline.terminal.Terminal
-import org.jline.terminal.TerminalBuilder
+class Cli(val args: Array<String>) {
+
+}
 
 fun main(args: Array<String>) {
     Datatype.load()
     Properties.load("/etc/kcli/objects.properties")
         .load("/etc/kcli/cli.properties")
-    Rest.connect(server = "192.168.1.70", user = "kcli", password = "KcliPw#1", trace = false)
+    Rest.connect(server = "kcli:KcliPw#1@192.168.1.70", trace = false)
     Metadata.load()
+    StyledText.setRenderer("ISO6429")
     if (true) {
         val commandReader = CommandReader("stm# ")
         while (true) {
+            var error = ""
             try {
-                Cli(commandReader.read())
+                CliCommand(commandReader.read())
             } catch (exc: CliException) {
                 if (exc.message ?: "" != "") {
-                    println(exc.message)
+                    error = exc.message ?: ""
                 } else {
                     break
                 }
+            } catch (exc: RestException) {
+                error = exc.message ?: ""
             }
-            print(StyledText("").renderISO6429())
+            if (error.isNotEmpty()) {
+                println(StyledText(error, color=Properties.get("color", "error")).render())
+            }
+            print(StyledText("").render())
         }
     } else {
         val command = "show flow with port=443 top 10 by byte_count select rtt_s"
         //val command = "application youtube no desc priority 3021"
         try {
             println(command)
-            Cli(command)
+            CliCommand(command)
         } catch (exc: CliException) {
             if (exc.message ?: "" != "") {
                 println(exc.message)

@@ -16,7 +16,7 @@ import org.jline.terminal.TerminalBuilder
 class CommandCompleter : Completer {
     override fun complete(reader: LineReader, line: ParsedLine, candidates: MutableList<Candidate>) {
         try {
-            Cli("${line.line()}${Parser.completerCh}")
+            CliCommand("${line.line()}${Parser.completerCh}")
         } catch (exc: CompletionException) {
             exc.completions.map{ candidates.add(Candidate(it))}
         }

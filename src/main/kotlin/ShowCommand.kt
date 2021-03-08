@@ -1,5 +1,4 @@
-
-class ShowCommand(val cli: Cli) {
+class ShowCommand(val cli: CliCommand) {
     private val parser get() = cli.parser
     private var classMd: ClassMetadata = Metadata.getClass("configuration")!!
     private val selections = mutableListOf<AttributeMetadata>()
@@ -94,7 +93,7 @@ class ShowCommand(val cli: Cli) {
         val myExtras = extras
         while (true) {
             val negated = parser.skipToken("!")
-            val kw = cli.readAttribute(classMd, extras = myExtras)
+            val kw = cli.readAttribute(classMd, extras = myExtras, endOk=true)
             if (kw?.value in listOf("and", "or")) {
                 if (filterConjunction.isNotEmpty() && filterConjunction != kw!!.asString()) {
                     throw CliException("cannot mix 'and' and 'or' in the same command")
@@ -174,7 +173,13 @@ class ShowCommand(val cli: Cli) {
             valueColumnWidth = Properties.getInt("parameter", "value_column_width"),
             stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
         )
-        val sortedValues = obj.asDict()
+        val objDict = obj.asDict()!!
+        val objClass = objDict["class"]?.asString() ?: ""
+        val objName = objDict["name"]?.asString() ?: ""
+        val heading = StyledText("${Properties.get("class", objClass)} '${objName}' at ${getDateTime()}",
+            color=Properties.get("parameter", "heading_color"),
+            style="underline")
+        val sortedValues = objDict
             .filter { entry ->
                 classMd.getAttribute(entry.key) != null
                         && Properties.getInt("suppress", classMd.name, entry.key) == 0
@@ -188,7 +193,7 @@ class ShowCommand(val cli: Cli) {
                 "${cli.makeDisplayName(classMd, attrMd.name, value.second.asString())} ${attrMd.unit}"
             )
         }
-        return display.layoutText().renderISO6429()
+        return "${heading.render()}\n${display.layoutText().render()}"
     }
 
     private fun showCollection(json: JsonObject): String {
@@ -210,11 +215,10 @@ class ShowCommand(val cli: Cli) {
                 col.position = -(if (name == "name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
                 col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
             }
-            return table.layoutText().renderISO6429()
+            return table.layoutText().render()
 
         } else {
-            return StyledText("no matching objects found", color = Properties.get("color", "error"))
-                .renderISO6429()
+            throw CliException("no matching objects found")
         }
     }
 }

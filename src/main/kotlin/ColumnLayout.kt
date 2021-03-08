@@ -36,5 +36,5 @@ class ColumnLayout (
                 return this
         }
 
-        fun renderISO6429() = table.renderISO6429()
+        fun render() = table.render()
 }
