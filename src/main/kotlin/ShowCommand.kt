@@ -10,13 +10,21 @@ class ShowCommand(val cli: CliCommand) {
     private var limit = 100
     private var level = ""
     private val levels = listOf("brief", "full", "detail", "debug")
-    private val extras = KeywordList(
+    private var result: String = ""
+    private val initialExtras = KeywordList(
+        KeywordFn("health"){ result = showHealth() },
+        KeywordFn("license"){ result = showLicense() },
+        KeywordFn("metadata"){ result = showMetadata() },
+        KeywordFn("parameters"){ result = showParameters() },
+        KeywordFn("system"){ result = showSystem() },
+        KeywordFn("version"){ result = showVersion() },
+    )
+    private val finalExtras = KeywordList(
         KeywordFn("select") { doSelect() },
         KeywordFn("with") { doWith() },
         KeywordFn("top") { doTopBottom(true) },
         KeywordFn("bottom") { doTopBottom(false) },
     ).also { keywords -> levels.map { keywords.add(Keyword(it, function = { doLevel(it) })) } }
-
 
     fun doShow() {
         val optionsMap = mutableMapOf(
@@ -27,15 +35,19 @@ class ShowCommand(val cli: CliCommand) {
                 optionsMap[option] = value
             }
         }
-        val (oname, terminator) = this.parser.getObjectName(finalExtras = extras)
-        if (oname.leafClass == null) {
-            throw CliException("expected object name after 'show'")
-        }
-        classMd = oname.leafClass!!
+        val (oname, terminator) = this.parser.getObjectName(initialExtras=initialExtras, finalExtras=finalExtras)
+        classMd = oname.leafClass ?: Metadata.getClass("configuration")!!
         var myKey: Keyword? = terminator
         while (myKey != null) {
             myKey.function!!.invoke()
-            myKey = extras.exactMatch(parser.curToken ?: "")
+            if (result.isNotEmpty()) {
+                println(StyledText(result).render())
+                return
+            }
+            if (oname.leafClass == null) {
+                throw CliException("expected object name after 'show'")
+            }
+             myKey = finalExtras.exactMatch(parser.curToken ?: "")
         }
         addOption(
             "level", when {
@@ -70,7 +82,7 @@ class ShowCommand(val cli: CliCommand) {
 
     private fun doSelect() {
         cli.checkRepeat({ selections.isNotEmpty() }, "select")
-        val myExtras = extras
+        val myExtras = finalExtras
             .copy()
             .addKeys("only")
         while (true) {
@@ -90,7 +102,7 @@ class ShowCommand(val cli: CliCommand) {
     private fun doWith() {
         cli.checkRepeat({ filters.isNotEmpty() }, "with")
         val relops = listOf("=", "!=", "<", ">", "<=", ">=", ">>", "<<", "!>>")
-        val myExtras = extras
+        val myExtras = finalExtras
         while (true) {
             val negated = parser.skipToken("!")
             val kw = cli.readAttribute(classMd, extras = myExtras, endOk=true)
@@ -143,7 +155,7 @@ class ShowCommand(val cli: CliCommand) {
             val (str, attrMd, kw) = cli.readComplexAttribute(classMd, extras=myExtras)
             if (attrMd == null) {
                 if (kw?.asString() == "by") {
-                    extras.remove("by")
+                    finalExtras.remove("by")
                     continue
                 } else {
                     throw CliException("attribute name expected after 'top' or 'bottom'")
@@ -153,7 +165,7 @@ class ShowCommand(val cli: CliCommand) {
             descending = desc
             break
         }
-        parser.findKeyword(extras, endOk=true)
+        parser.findKeyword(finalExtras, endOk=true)
     }
 
     private fun doLevel(l: String) {
@@ -162,7 +174,7 @@ class ShowCommand(val cli: CliCommand) {
             throw CliException("invalid show level '$l'")
         }
         level = l
-        parser.findKeyword(extras, endOk=true)
+        parser.findKeyword(finalExtras, endOk=true)
     }
 
     private fun showOne(obj: JsonObject): String {
@@ -221,6 +233,31 @@ class ShowCommand(val cli: CliCommand) {
             throw CliException("no matching objects found")
         }
     }
-}
 
+    private fun showHealth(): String {
+        return ""
+    }
+
+    private fun showLicense(): String {
+        return ""
+    }
+
+    private fun showMetadata(): String {
+        return ""
+    }
+
+    private fun showParameters(): String {
+        return ""
+    }
+
+    private fun showSystem(): String {
+        return ""
+    }
+
+    private fun showVersion(): String {
+        return Rest.getObject("configurations/running",
+            options=mapOf("select" to "build_version"))
+            ?.asDict()?.get("build_version")?.asString() ?: "unknown"
+    }
+}
 

@@ -29,10 +29,12 @@ class KeywordList()
     fun remove(key: String) = also{ keywords.find{ it.key==key }.also{ keywords.remove(it) } }
     fun present(key: String) = keywords.find{it.key==key}!=null
     fun add(key: Keyword) = also{ if (!present(key.key)) keywords.add(key) }
-    fun match(key: String) = keywords.map{ if (it.key.startsWith(key)) it else null }.filterNotNull()
+    fun match(key: String) = keywords.mapNotNull { if (it.key.startsWith(key)) it else null }
     fun exactMatch(key: String) = keywords.find{ it.key==key }
     fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
     fun copy() = KeywordList().add(this)
+    operator fun contains(key: Keyword): Boolean =
+        keywords.fold(false){b, p -> b || p.key==key.key }
 
     constructor(vararg fns: KeywordFn) : this() {
         addFns(*fns)
@@ -42,10 +44,10 @@ class KeywordList()
     }
     constructor(vararg attrs: AttributeMetadata,
                 pred: (AttributeMetadata)->Boolean={ true }) : this() {
-        addAttributes(*attrs)
+        addAttributes(*attrs, pred=pred)
     }
     constructor(attrs: Iterable<AttributeMetadata>,
                 pred: (AttributeMetadata)->Boolean={ true }) : this() {
-        addAttributes(attrs)
+        addAttributes(attrs, pred=pred)
     }
 }

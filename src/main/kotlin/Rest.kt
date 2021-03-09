@@ -48,7 +48,7 @@ data class ServerInfo(
 }
 
 class Rest(
-    val server: String = "localhost",
+    var server: String = "localhost",
     val config: String = "running",
     val trace: Boolean = false
 ) {
@@ -120,6 +120,9 @@ class Rest(
         val opts = if (options!=null) "?" + options.keys.joinToString("&")
                     { "${it}=${options[it]}"} else ""
         return "http://${serverInfo.server}${p}/${e}${opts}"
+    }
+    constructor(serverInfo: ServerInfo): this() {
+        server = serverInfo.toString()
     }
     companion object {
         private var theRest: Rest? = null

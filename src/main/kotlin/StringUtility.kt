@@ -182,3 +182,18 @@ fun addToTextList(old: String?, new: String, delimiter: String = ",") =
  */
 
 fun getDateTime() = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(Date())
+
+/*
+* Convert just the first character of a string to uppercase
+ */
+
+fun String.uppercaseFirst() = take(1).toUpperCase() + drop(1)
+
+/**
+ * Get a line of input from the user, with prompt
+ */
+
+fun getUserInput(prompt: String): String {
+    print(prompt)
+    return readLine() ?: ""
+}

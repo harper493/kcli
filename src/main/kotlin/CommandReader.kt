@@ -26,11 +26,9 @@ class CommandCompleter : Completer {
 class CompletionException(val completions: List<String>): Exception("")
 
 class CommandReader (val prompt: String) {
-    val width = "tput cols".runCommand(File(".")) ?: "0".toInt()
-    val foo = 0.also { println("width = $width") }
+    //val width = "tput cols".runCommand(File(".")) ?: "0".toInt()
     val builder: TerminalBuilder = TerminalBuilder.builder()
     val terminal: Terminal = builder.build()
-    //val completer = StringsCompleter("abc", "def", "deg", "ghi")
     val completer = CommandCompleter()
 
     val reader: LineReader = LineReaderBuilder.builder()
@@ -40,14 +38,7 @@ class CommandReader (val prompt: String) {
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
         .build()
 
-    init{
-        println("${terminal.getName()}: ${terminal.getType()}")
-        println("\nhelp: list available commands")
-    }
-
-    fun read(): String {
-        return reader.readLine(prompt)
-    }
+    fun read(): String = reader.readLine(prompt)
 }
 
 
