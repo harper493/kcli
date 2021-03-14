@@ -1,6 +1,6 @@
 class Metadata (
 ) {
-    val classMap: Map<String, ClassMetadata> = Rest.get("rest/top/metadata/",
+    val classMap: Map<String, ClassMetadata> = Rest.getRaw("rest/top/metadata/",
                                                          mapOf("level" to "full"))
             ?.get("metadata")
             ?.get("collection")

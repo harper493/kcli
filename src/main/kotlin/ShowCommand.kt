@@ -47,7 +47,7 @@ class ShowCommand(val cli: CliCommand) {
             if (oname.leafClass == null) {
                 throw CliException("expected object name after 'show'")
             }
-             myKey = finalExtras.exactMatch(parser.curToken ?: "")
+            myKey = finalExtras.exactMatch(parser.curToken ?: "")
         }
         addOption(
             "level", when {
@@ -68,15 +68,13 @@ class ShowCommand(val cli: CliCommand) {
         )
         addOption("limit", if (limit > 0) "$limit" else "")
         classMd.getAttribute("color")?.let { selections.add(it) }
-        val json = Rest.getCollection(oname.url, options = optionsMap)
-        if (json != null) {
-            if (oname.isWild) {
-                println(showCollection(json))
-            } else {
-                for (obj in json.asArray()) {
-                    println(showOne(obj))
-                }
-            }
+        val coll = Rest.getCollection(oname, options = optionsMap)
+        if (coll.size == 0) {
+            throw CliException("no matching objects found")
+        } else if (oname.isWild || coll.size>1) {
+            println(showCollection(coll))
+        } else {
+            println(showOne(coll.first()!!))
         }
     }
 
@@ -177,7 +175,7 @@ class ShowCommand(val cli: CliCommand) {
         parser.findKeyword(finalExtras, endOk=true)
     }
 
-    private fun showOne(obj: JsonObject): String {
+    private fun showOne(obj: ObjectData): String {
         val display = ColumnLayout(
             columns = Properties.getInt("parameter", "show_columns"),
             separator = "=",
@@ -185,40 +183,37 @@ class ShowCommand(val cli: CliCommand) {
             valueColumnWidth = Properties.getInt("parameter", "value_column_width"),
             stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
         )
-        val objDict = obj.asDict()!!
-        val objClass = objDict["class"]?.asString() ?: ""
-        val objName = objDict["name"]?.asString() ?: ""
+        val objClass = obj["class"].value
+        val objName = obj["name"].value
         val heading = StyledText("${Properties.get("class", objClass)} '${objName}' at ${getDateTime()}",
             color=Properties.get("parameter", "heading_color"),
             style="underline")
-        val sortedValues = objDict
+        val sortedValues = obj.attributes
             .filter { entry ->
-                classMd.getAttribute(entry.key) != null
-                        && Properties.getInt("suppress", classMd.name, entry.key) == 0
+                Properties.getInt("suppress", classMd.name, entry.value.name) == 0
             }
-            .mapValues { entry -> Pair(classMd.getAttribute(entry.key)!!, entry.value) }
-            .mapKeys { entry -> entry.value.first.displayName }
-        for ((name, value) in sortedValues) {
-            val attrMd = value.first
+            .mapKeys { entry -> entry.value.attributeMd.displayName }
+        for ((name, attributeData) in sortedValues) {
             display.append(
                 name,
-                "${cli.makeDisplayName(classMd, attrMd.name, value.second.asString())} ${attrMd.unit}"
+                "${cli.makeDisplayName(classMd, 
+                    attributeData.name, 
+                    attributeData.value)} ${attributeData.attributeMd.unit}"
             )
         }
         return "${heading.render()}\n${display.layoutText().render()}"
     }
 
-    private fun showCollection(json: JsonObject): String {
+    private fun showCollection(coll: CollectionData): String {
         val table = cli.makeTable()
-        if (json.asArray().isNotEmpty()) {
-            for (obj in json.asArray().map { it.asDict() }) {
-                val color = obj["color"]?.asString()
-                for ((name, value) in obj) {
-                    val attrMd = classMd.getAttribute(name)
-                    if (attrMd != null && (Properties.get("suppress", classMd.name, name) == null || name == "name")) {
+        if (coll.isNotEmpty()) {
+            for (obj in coll.objects.values) {
+                val color = obj.getOr("color")?.value
+                for ((name, attributeData) in obj) {
+                    if (Properties.get("suppress", classMd.name, name) == null || name == "name") {
                         table.append(
                             name,
-                            cli.makeDisplayName(classMd, name, value.asString()),
+                            attributeData.value,
                             color = color?.ifBlank { null })
                     }
                 }

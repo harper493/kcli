@@ -17,7 +17,7 @@ class ObjectCompleter(
 ): CliCompleter() {
     override fun complete(line: String, token: String): List<String> {
         return try {
-            val envelope = Rest.get(
+            val envelope = Rest.getRaw(
                 objName.wipeLeafName().url,
                 options = mapOf("completion" to token, "limit" to "10")
             )?.asDict()

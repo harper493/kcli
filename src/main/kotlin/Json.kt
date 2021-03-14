@@ -18,9 +18,8 @@ interface JsonObject {
     operator fun get(key: String): JsonObject?
     operator fun get(index: Int): JsonObject?
     companion object {
-        fun load(value: String): JsonObject {
-            return JsonObjectImpl().parse(value)
-        }
+        fun load(value: String) = JsonObjectImpl().parse(value)
+        fun make() = JsonObjectImpl()
     }
 }
 

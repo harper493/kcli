@@ -3,6 +3,7 @@ class ObjectData(val classMd: ClassMetadata) {
 
     operator fun get(attributeName: String): AttributeData = attributes[attributeName]
         ?: throw CliException("unknown attribute '$attributeName' for class '${classMd.name}")
+    fun getOr(attributeName: String) = attributes[attributeName]
     fun add(attribute: AttributeData) { attributes[attribute.name] = attribute}
 
     fun load(json: JsonObject): ObjectData {
@@ -21,4 +22,7 @@ class ObjectData(val classMd: ClassMetadata) {
         }
         return this
     }
+
+    operator fun iterator() = attributes.iterator()
+    fun filter(pred: (AttributeData)->Boolean) = attributes.values.filter(pred)
 }

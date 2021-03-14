@@ -54,7 +54,7 @@ class Rest(
 ) {
     val serverInfo = ServerInfo(server)
 
-    fun get(url: String, options: Map<String,String>?=null) : JsonObject {
+    fun getRaw(url: String, options: Map<String,String>?=null) : JsonObject {
         val u = makeUrl(url, options)
         if (trace) {
             println(u)
@@ -81,12 +81,21 @@ class Rest(
     }
 
     fun getCollection(url: String, options: Map<String,String>?=null) : JsonObject? {
-        return get(url, options)["collection"]
+        return getRaw(url, options)["collection"]
     }
 
-    fun getObject(url: String, options: Map<String,String>?=null) : JsonObject? {
-        return getCollection(url, options)?.get(0)
+    fun getCollection(oname: ObjectName, options: Map<String,String>?=null) : CollectionData {
+        val response = getRaw(oname.url, options)
+        val result = CollectionData(oname.leafClass!!)
+            .load(response["collection"] ?: JsonObject.make())
+        return result
     }
+
+    fun getObject(url: String, options: Map<String,String>?=null) =
+        getCollection(url, options)?.get(0)
+
+    fun getObject(oname: ObjectName, options: Map<String,String>?=null) =
+        getCollection(oname, options).first()
 
     fun put(url: String, body: String) {
         val (_, response, result) = Fuel.put(makeUrl(url))
@@ -132,9 +141,14 @@ class Rest(
             trace: Boolean = false) = Rest(server=server, config=config, trace=trace)
                                       .also{ theRest = it }
 
-        fun get(url: String, options: Map<String,String>?=null) = theRest?.get(url, options)
+        fun getRaw(url: String, options: Map<String,String>?=null) =
+            theRest!!.getRaw(url, options)
         fun put(url: String, body: String) = theRest?.put(url, body)
-        fun getCollection(url: String, options: Map<String,String>?=null) = theRest?.getCollection(url, options)
-        fun getObject(url: String, options: Map<String,String>?=null) = theRest?.getObject(url, options)
+        fun getCollection(url: String, options: Map<String,String>?=null) =
+            theRest!!.getCollection(url, options)
+        fun getCollection(oname: ObjectName, options: Map<String,String>?=null) =
+            theRest!!.getCollection(oname, options)
+        fun getObject(url: String, options: Map<String,String>?=null) =
+            theRest!!.getObject(url, options)
     }
 }

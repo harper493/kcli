@@ -32,12 +32,12 @@ class CliCommand(val line: String) {
     private fun doShow() = ShowCommand(this).doShow()
 
     private fun doModify(obj: ObjectName) {
-        val exists = try { Rest.get(obj.url, mapOf("select" to "name")); true }
+        val exists = try { Rest.getRaw(obj.url, mapOf("select" to "name")); true }
         catch (exc: RestException) {
             if (HttpStatus.notFound(exc.status)) false else throw exc
         }
         if (!exists) {
-            try { Rest.get(obj.dropLast(1).url) }
+            try { Rest.getRaw(obj.dropLast(1).url) }
             catch (exc: RestException) {
                 if (HttpStatus.notFound(exc.status)) {
                     throw CliException("parent object '${obj.dropLast(1).leafName}' does not exist")
