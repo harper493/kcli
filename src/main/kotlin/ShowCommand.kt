@@ -207,7 +207,7 @@ class ShowCommand(val cli: CliCommand) {
     private fun showCollection(coll: CollectionData): String {
         val table = cli.makeTable()
         if (coll.isNotEmpty()) {
-            for (obj in coll.objects.values) {
+            for (obj in coll) {
                 val color = obj.getOr("color")?.value
                 for ((name, attributeData) in obj) {
                     if (Properties.get("suppress", classMd.name, name) == null || name == "name") {

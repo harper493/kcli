@@ -20,5 +20,15 @@ class CollectionData(val classMd: ClassMetadata) {
         return this
     }
 
-    operator fun iterator() = objects.iterator()
+    operator fun iterator() = objects.values.iterator()
+
+    fun<T,U> map(tfm: (Pair<String,ObjectData>) -> Pair<T,U>): Map<T,U> =
+        objects.map{it -> tfm(Pair(it.key, it.value))}.toMap()
+
+    fun<T> mapKeys(tfm: (String) -> T): Map<T,ObjectData> =
+        objects.map{it -> Pair(tfm(it.key), it.value)}.toMap()
+
+    fun<T> mapValues(tfm: (ObjectData) -> T): Map<String,T> =
+        objects.map{it -> Pair(it.key, tfm(it.value))}.toMap()
+
 }

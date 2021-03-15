@@ -14,9 +14,12 @@ interface JsonObject {
     fun isArray(): Boolean
     fun isDict(): Boolean
     fun parse(string: String): JsonObject
+    fun toMap(): Map<String, String>
     fun toString(indent:Int = 2, prefix:String = ""): String
     operator fun get(key: String): JsonObject?
     operator fun get(index: Int): JsonObject?
+    fun toSimpleString(): String
+
     companion object {
         fun load(value: String) = JsonObjectImpl().parse(value)
         fun make() = JsonObjectImpl()
@@ -113,6 +116,20 @@ class JsonObjectImpl : JsonObject {
     override fun isNull() = (stringVal==null && arrayVal==null && dictVal==null)
     override fun get(key: String): JsonObject? = if (isDict()) dictVal!![key] else null
     override fun get(index: Int): JsonObject? = if (isArray()) arrayVal!![index] else null
+    override fun toMap(): Map<String, String> =
+        if (isDict()) {
+            dictVal!!.map{Pair(it.key, it.value.toSimpleString())}.toMap()
+        } else {
+            mapOf()
+        }
+    override fun toSimpleString() =
+        when {
+            isFloat() -> floatVal!!.toString()
+            isInt() -> intVal!!.toString()
+            isBoolean() -> boolVal!!.toString()
+            isString() -> stringVal!!
+            else -> ""
+        }
     override fun toString() = toString(2, "")
     override fun toString(indent: Int, prefix: String): String {
         fun nl() = if (indent>0) "\n" else ""
@@ -123,7 +140,9 @@ class JsonObjectImpl : JsonObject {
             isFloat() -> floatVal!!.toString()
             isInt() -> intVal!!.toString()
             isBoolean() -> boolVal!!.toString()
-            isString() -> "\"${stringVal!!.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+            isString() -> "\"${stringVal!!
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")}\""
             isArray() -> {
                 val content = arrayVal!!.joinToString(",${nl()}${myPrefix}") { toStr(it) }
                 "[${nl()}${myPrefix}${content}${nl()}${prefix}]"

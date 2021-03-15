@@ -32,8 +32,7 @@ data class ServerInfo(
             val (u, p, s) = m.groupValues.let { Triple(it[1], it[2], it[3]) }
             this.username = u
             this.password = p
-            val colons = s.filter { it == ':' }.count()
-            when (colons) {
+            when (s.filter { it == ':' }.count()) {
                 0 -> { this.server = s; this.port = defaultPort }
                 1 -> s.split(":").let { this.server = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
                 2 -> s.split("@").let { this.server = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
@@ -52,7 +51,7 @@ class Rest(
     val config: String = "running",
     val trace: Boolean = false
 ) {
-    val serverInfo = ServerInfo(server)
+    private val serverInfo = ServerInfo(server)
 
     fun getRaw(url: String, options: Map<String,String>?=null) : JsonObject {
         val u = makeUrl(url, options)
@@ -80,16 +79,18 @@ class Rest(
         }
     }
 
-    fun getCollection(url: String, options: Map<String,String>?=null) : JsonObject? {
-        return getRaw(url, options)["collection"]
-    }
+    fun get(oname: ObjectName, options: Map<String,String>?=null):
+            Pair<Map<String,String>,CollectionData> =
+        getRaw(oname.url, options).let{Pair(it.toMap(), makeCollection(oname, it))}
 
-    fun getCollection(oname: ObjectName, options: Map<String,String>?=null) : CollectionData {
-        val response = getRaw(oname.url, options)
-        val result = CollectionData(oname.leafClass!!)
-            .load(response["collection"] ?: JsonObject.make())
-        return result
-    }
+    fun getCollection(url: String, options: Map<String,String>?=null) =
+        getRaw(url, options)["collection"]
+
+    fun getCollection(oname: ObjectName, options: Map<String,String>?=null) =
+        makeCollection(oname, getRaw(oname.url, options))
+
+    private fun makeCollection(oname: ObjectName, json: JsonObject): CollectionData =
+        CollectionData(oname.leafClass!!).load(json["collection"] ?: JsonObject.make())
 
     fun getObject(url: String, options: Map<String,String>?=null) =
         getCollection(url, options)?.get(0)
@@ -134,7 +135,7 @@ class Rest(
         server = serverInfo.toString()
     }
     companion object {
-        private var theRest: Rest? = null
+        private lateinit var theRest: Rest
         fun connect(
             server: String = "localhost:5000",
             config: String = "running",
@@ -142,13 +143,15 @@ class Rest(
                                       .also{ theRest = it }
 
         fun getRaw(url: String, options: Map<String,String>?=null) =
-            theRest!!.getRaw(url, options)
-        fun put(url: String, body: String) = theRest?.put(url, body)
+            theRest.getRaw(url, options)
+        fun put(url: String, body: String) = theRest.put(url, body)
+        fun get(oname: ObjectName, options: Map<String,String>?=null) =
+            theRest.get(oname, options)
         fun getCollection(url: String, options: Map<String,String>?=null) =
-            theRest!!.getCollection(url, options)
+            theRest.getCollection(url, options)
         fun getCollection(oname: ObjectName, options: Map<String,String>?=null) =
-            theRest!!.getCollection(oname, options)
+            theRest.getCollection(oname, options)
         fun getObject(url: String, options: Map<String,String>?=null) =
-            theRest!!.getObject(url, options)
+            theRest.getObject(url, options)
     }
 }

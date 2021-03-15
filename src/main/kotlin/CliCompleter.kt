@@ -17,14 +17,13 @@ class ObjectCompleter(
 ): CliCompleter() {
     override fun complete(line: String, token: String): List<String> {
         return try {
-            val envelope = Rest.getRaw(
-                objName.wipeLeafName().url,
-                options = mapOf("completion" to token, "limit" to "10")
-            )?.asDict()
-            val size = envelope?.get("size")?.asInt() ?: -1
-            val completions = envelope?.get("collection")?.asArray()
-                ?.map{it.asDict()?.get("name")?.asString()}?.filterNotNull() ?: listOf()
-            val completion = envelope?.get("completion")?.asString() ?: ""
+            val (envelope, collection) = Rest.get(
+                objName.wipeLeafName(),
+                mapOf("completion" to token, "limit" to "10")
+            )
+            val size = envelope["size"]?.toIntOrNull() ?: -1
+            val completions = collection.objects.keys.toList()
+            val completion = envelope["completion"] ?: ""
             val keywords = extras.keywords.map{it.key}.filter{it.startsWith(token)}
             when(size) {
                 0 -> keywords
