@@ -9,7 +9,7 @@ class CliException(text: String="") : Exception(text)
     }
 }
 
-class CliCommand(val line: String) {
+class CliCommand(line: String) {
 
     lateinit var parser: Parser
 
@@ -155,4 +155,7 @@ class CliCommand(val line: String) {
             headingStyle = Properties.get("parameter", "heading_style"),
             stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
         )
+
+    fun output(text: String) = Cli.output(text)
+    fun outputln(text: String) = Cli.outputln(text)
 }

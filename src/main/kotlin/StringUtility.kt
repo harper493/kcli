@@ -197,3 +197,6 @@ fun getUserInput(prompt: String): String {
     print(prompt)
     return readLine() ?: ""
 }
+
+fun String.containsAnyOf(chars: String) =
+    chars.fold(false) { b, c -> b || c in this }

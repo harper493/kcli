@@ -1,25 +1,36 @@
-import java.io.BufferedReader
-import java.io.FileReader
+import java.io.File
 
-
-class Cli(val args: Array<String>) {
+class Cli(val cmdargs: Array<String>) {
     val homeDir = java.lang.System.getProperty("user.home")
     val targets = Properties("${homeDir}/.kcli")
+    lateinit var outFile: File; private set
+    lateinit var args: Args; private set
+
+    init {
+        theCli = this
+    }
 
     fun run() {
         Datatype.load()
         Properties.load("/etc/kcli/objects.properties")
             .load("/etc/kcli/cli.properties")
-        val target = findTarget(if (args.size > 0) args[0] else null)
-        Rest.connect(server = target.toString(), trace=true)
+        args = Args(cmdargs)
+        val target = findTarget(args.server)
+        Rest.connect(server = target.toString(), trace=args.trace)
         Metadata.load()
-        StyledText.setRenderer("ISO6429")
+        if (args.output.isBlank()) {
+            StyledText.setRenderer("ISO6429")
+        } else {
+            StyledText.setRenderer("plain")
+            outFile = File(args.output)
+        }
         if (true) {
-            val commandReader = CommandReader("stm# ")
+            val commandReader = if (args.command.isEmpty()) CommandReader("stm# ")
+                                else null
             while (true) {
                 var error = ""
                 try {
-                    CliCommand(commandReader.read())
+                    CliCommand(commandReader?.read() ?: args.command)
                 } catch (exc: CliException) {
                     if (exc.message ?: "" != "") {
                         error = exc.message ?: ""
@@ -30,28 +41,31 @@ class Cli(val args: Array<String>) {
                     error = exc.message ?: ""
                 }
                 if (error.isNotEmpty()) {
-                    println(StyledText(error.uppercaseFirst(), color = Properties.get("color", "error")).render())
+                    outputln(StyledText(error.uppercaseFirst(),
+                        color = Properties.get("color", "error"))
+                        .render())
                 }
-                print(StyledText("").render())
+                output(StyledText("").render())
+                if (commandReader==null) break
             }
         } else {
             val command = "show flow with port=443 top 10 by byte_count select rtt_s"
             //val command = "application youtube no desc priority 3021"
             try {
-                println(command)
+                outputln(command)
                 CliCommand(command)
             } catch (exc: CliException) {
                 if (exc.message ?: "" != "") {
-                    println(exc.message)
+                    outputln(exc.message ?: "")
                 }
             }
         }
     }
 
-    fun findTarget(tname: String?): ServerInfo {
+    fun findTarget(tname: String): ServerInfo {
         var result: String? = null
         targets.load()
-        if (":.@".fold(false){ b,s -> b || (s in tname?:"") }) {
+        if ((tname?:"").containsAnyOf(":.@")) {
             result = tname
             targets.addValue(tname!!, listOf("target", "_last"))
             targets.write()
@@ -74,6 +88,23 @@ class Cli(val args: Array<String>) {
             si.password = getUserInput("Password? ")
         }
         return si
+    }
+
+    fun outputln(text: String) {
+        output(text + "\n")
+    }
+
+    fun output(text: String) {
+        if (args.output.isBlank()) {
+            print(text)
+        } else {
+            outFile.writeText(text)
+        }
+    }
+    companion object {
+        lateinit var theCli: Cli
+        fun outputln(text: String) = theCli.outputln(text)
+        fun output(text: String) = theCli.output(text)
     }
 }
 

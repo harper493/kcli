@@ -72,9 +72,9 @@ class ShowCommand(val cli: CliCommand) {
         if (coll.size == 0) {
             throw CliException("no matching objects found")
         } else if (oname.isWild || coll.size>1) {
-            println(showCollection(coll))
+            cli.outputln(showCollection(coll))
         } else {
-            println(showOne(coll.first()!!))
+            cli.outputln(showOne(coll.first()!!))
         }
     }
 
