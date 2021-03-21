@@ -6,6 +6,7 @@ import com.github.kittinunf.result.Result
 
 enum class HttpStatus( val status: Int, val text: String) {
     success(201, "success"),
+Specfi    unauthorized(403, "unauthorized"),
     notFound(404, "not found"),
     timeout(-1, "request timed out");
 

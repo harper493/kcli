@@ -28,7 +28,9 @@ class Cli(val cmdargs: Array<String>) {
             Metadata.load()
         } catch (exc: RestException) {
             if (exc.status==HttpStatus.timeout.status) {
-                outputError("failed to connect to STM")
+                outputError("failed to connect to STM - connection timeout")
+            } else if (exc.status==HttpStatus.unauthorized.status) {
+                outputError("incorrect username or password")
             } else {
                 outputError("error connecting to STM: ${exc.text}")
             }
