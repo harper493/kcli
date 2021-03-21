@@ -84,7 +84,8 @@ class Table (
         columns.values.map{it.padTo(depth)}
         sortedCols = columns.values.sortedBy { it.position }
         sortedCols.map { col ->
-            val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width) else col.width
+            val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width)
+                    else col.width
             col.maxWidth = col.maxWidth.sign *
                     maxOf(w, if (squishHeadings)
                         wrap(col.heading, w).map { it.length }.maxOrNull() ?: 0

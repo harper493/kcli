@@ -6,7 +6,8 @@ import com.github.kittinunf.result.Result
 
 enum class HttpStatus( val status: Int, val text: String) {
     success(201, "success"),
-    notFound(404, "not found");
+    notFound(404, "not found"),
+    timeout(-1, "request timed out");
 
     operator fun invoke(s: Int) = s==status
 }

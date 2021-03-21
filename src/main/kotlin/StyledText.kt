@@ -100,14 +100,14 @@ class StyledText (
         }
     }
 
-    private fun justify(text: String, width: Int) = when {
+    private fun justify(width: Int) = when {
         width < 0 -> text.padStart(-width)
         width > 0 -> text.padEnd(width)
         else -> text // ==0
     }
 
     private fun renderISO6429(width: Int = 0) =
-        "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}${justify(text, width)}"
+        "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}${justify(width)}"
 
     companion object {
         private lateinit var renderer: (StyledText, Int) -> String
@@ -115,9 +115,7 @@ class StyledText (
         fun setRenderer(style: String) {
             renderer = when (style) {
                 "ISO6429" -> { text, width -> text.renderISO6429(width) }
-                "plain"   -> { text, _ -> text.text }
-                else      -> { text, _ -> text.text }
-
+                else      -> { text, width -> text.justify(width) }
             }
         }
         init { setRenderer("plain") }

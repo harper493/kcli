@@ -1,9 +1,10 @@
 import java.io.File
+import java.io.PrintWriter
 
 class Cli(val cmdargs: Array<String>) {
     val homeDir = java.lang.System.getProperty("user.home")
     val targets = Properties("${homeDir}/.kcli")
-    lateinit var outFile: File; private set
+    lateinit var outFile: PrintWriter; private set
     lateinit var args: Args; private set
 
     init {
@@ -17,12 +18,21 @@ class Cli(val cmdargs: Array<String>) {
         args = Args(cmdargs)
         val target = findTarget(args.server)
         Rest.connect(server = target.toString(), trace=args.trace)
-        Metadata.load()
         if (args.output.isBlank()) {
             StyledText.setRenderer("ISO6429")
         } else {
             StyledText.setRenderer("plain")
-            outFile = File(args.output)
+            outFile = PrintWriter(args.output)
+        }
+        try {
+            Metadata.load()
+        } catch (exc: RestException) {
+            if (exc.status==HttpStatus.timeout.status) {
+                outputError("failed to connect to STM")
+            } else {
+                outputError("error connecting to STM: ${exc.text}")
+            }
+            return
         }
         if (true) {
             val commandReader = if (args.command.isEmpty()) CommandReader("stm# ")
@@ -41,9 +51,7 @@ class Cli(val cmdargs: Array<String>) {
                     error = exc.message ?: ""
                 }
                 if (error.isNotEmpty()) {
-                    outputln(StyledText(error.uppercaseFirst(),
-                        color = Properties.get("color", "error"))
-                        .render())
+                    outputError(error)
                 }
                 output(StyledText("").render())
                 if (commandReader==null) break
@@ -60,19 +68,20 @@ class Cli(val cmdargs: Array<String>) {
                 }
             }
         }
+        if (args.output.isNotBlank()) {
+            outFile.close()
+        }
     }
 
     fun findTarget(tname: String): ServerInfo {
-        var result: String? = null
+        var result: String?
         targets.load()
-        if ((tname?:"").containsAnyOf(":.@")) {
+        if ((tname).containsAnyOf(":.@")) {
             result = tname
-            targets.addValue(tname!!, listOf("target", "_last"))
+            targets.addValue(tname, listOf("target", "_last"))
             targets.write()
         } else {
-            if (tname != null) {
-                result = targets.get("target", tname)
-            }
+            result = targets.get("target", tname)
             if (result == null) {
                 result = targets.get("target", "_last")
             }
@@ -98,13 +107,23 @@ class Cli(val cmdargs: Array<String>) {
         if (args.output.isBlank()) {
             print(text)
         } else {
-            outFile.writeText(text)
+            outFile.append(text)
         }
     }
     companion object {
         lateinit var theCli: Cli
         fun outputln(text: String) = theCli.outputln(text)
         fun output(text: String) = theCli.output(text)
+        fun outputError(text: String) {
+            outputln(
+                StyledText(
+                    text.uppercaseFirst(),
+                    color = Properties.get("color", "error")
+                )
+                    .render()
+            )
+            output(StyledText("").render())
+        }
     }
 }
 
