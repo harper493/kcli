@@ -16,22 +16,27 @@ class Parser (
     private val nullCh = 0.toChar()
 
     fun nextToken(help: String="",
-                          type: TokenType=TokenType.ttGeneral,
-                          validator: Validator=Validator(),
-                          completer: CliCompleter=CliCompleter(),
-                          endOk: Boolean=false): String? {
+                  tokenType: TokenType=TokenType.ttGeneral,
+                  validator: Validator=Validator(),
+                  completer: CliCompleter=CliCompleter(),
+                  type: Datatype?=null,
+                  attribute: AttributeMetadata?=null,
+                  endOk: Boolean=false): String? {
+        var myDatatype = if (attribute!=null) attribute.type else type
         var escape = false
         var quote = nullCh
         var token: String? = null
         var ch = nullCh
-        val myValidator = when (if (validator.isNull) type else TokenType.ttExplicit) {
-            TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
-            TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
-            TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
-            TokenType.ttAll -> Validator(".*")
-            TokenType.ttExplicit -> validator
-            else -> Validator("""\S+""")
-        }
+        val myValidator =
+            if (myDatatype!=null) myDatatype.validator else
+                when (if (validator.isNull) tokenType else TokenType.ttExplicit) {
+                    TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
+                    TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
+                    TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
+                    TokenType.ttAll -> Validator(".*")
+                    TokenType.ttExplicit -> validator
+                    else -> Validator("""\S+""")
+                }
         fun good() = lineIndex < line.length
 
         val startIndex = lineIndex
@@ -86,7 +91,7 @@ class Parser (
     fun getInt(): Int {
         var result: Int
         try {
-            result = (nextToken(type=TokenType.ttNumber)?:"").toInt()
+            result = (nextToken(tokenType=TokenType.ttNumber)?:"").toInt()
         } catch (exc: Exception) {
             throw CliException("expected integer not '$curToken'")
         }
@@ -94,6 +99,10 @@ class Parser (
     }
 
     fun isFinished() = lineIndex >= line.length
+
+    fun checkFinished() = if (nextToken()!=null)
+        throw CliException("unexpected text at end of command '$curToken'")
+        else null
 
     fun peek() = line.drop(lineIndex).take(1)
 
@@ -106,12 +115,13 @@ class Parser (
 
     fun getObjectName(initialExtras: KeywordList=KeywordList(),
                       finalExtras: KeywordList=KeywordList(),
-                      missOk: Boolean=false) : Pair<ObjectName, Keyword?> {
+                      missOk: Boolean=false,
+                      initialPred: (AttributeMetadata)->Boolean={ true }) : Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
         var curMd = Metadata.getConfigMd()
         while (true) {
-            val classKeys = KeywordList(curMd.collections)
+            val classKeys = KeywordList(curMd.collections.filter{initialPred(it)})
             if (result.isEmpty) {
                 classKeys.add(initialExtras)
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)

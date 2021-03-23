@@ -27,12 +27,13 @@ class Cli(val cmdargs: Array<String>) {
         try {
             Metadata.load()
         } catch (exc: RestException) {
-            if (exc.status==HttpStatus.timeout.status) {
-                outputError("failed to connect to STM - connection timeout")
-            } else if (exc.status==HttpStatus.unauthorized.status) {
-                outputError("incorrect username or password")
-            } else {
-                outputError("error connecting to STM: ${exc.text}")
+            when {
+                HttpStatus.timeout(exc.status) ->
+                    outputError("failed to connect to STM - connection timeout")
+                HttpStatus.unauthorized(exc.status) ->
+                    outputError("incorrect username or password")
+                else ->
+                    outputError("error connecting to STM: ${exc.text}")
             }
             return
         }
@@ -75,7 +76,7 @@ class Cli(val cmdargs: Array<String>) {
         }
     }
 
-    fun findTarget(tname: String): ServerInfo {
+    private fun findTarget(tname: String): ServerInfo {
         var result: String?
         targets.load()
         if ((tname).containsAnyOf(":.@")) {

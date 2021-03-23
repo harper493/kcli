@@ -1,6 +1,6 @@
 class UrlException(why: String) : Exception(why)
 
-class ObjectName {
+class ObjectName(val newUrl: String="") {
     class Element(
         val attrMd: AttributeMetadata,
         var name: String
@@ -8,7 +8,9 @@ class ObjectName {
         val urlName get() = if(name.isEmpty()) "*" else name
         val url: String get() = "${attrMd.relativeUrl}${urlName}"
         val isWild get() = name.isEmpty()
-        init { if (name=="*") name = "" }
+        init {
+            if (name=="*") name = ""
+        }
     }
     private val elements: MutableList<Element> = mutableListOf()
     val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
@@ -17,6 +19,10 @@ class ObjectName {
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isWild }
     val isEmpty get() = elements.isEmpty()
+
+    init {
+        if (newUrl.isNotEmpty()) parse(newUrl)
+    }
 
     fun append(attrMd: AttributeMetadata, name: String): ObjectName {
         if (isEmpty && attrMd.myClass != Metadata.getPolicyManagerMd()) {
@@ -49,8 +55,8 @@ class ObjectName {
         } else if (split[0]!="configurations") {
             split.addAll(0, listOf("configurations", "running"))
         }
-        val attributes = split.filterIndexed{ index, _ -> index % 2 == 1 }
-        val names = split.filterIndexed{ index, _ -> index % 2 == 0 }
+        val attributes = split.filterIndexed{ index, _ -> index % 2 == 0 }
+        val names = split.filterIndexed{ index, _ -> index % 2 == 1 }
         elements.clear()
         var curMd = Metadata.getPolicyManagerMd()
         for ((a,n) in attributes.zip(names)) {
@@ -58,9 +64,8 @@ class ObjectName {
             if (collMd?.containedClass == null) {
                 throw UrlException("no collection '$a' in class '${curMd.name}")
             }
-            elements.add(Element(Metadata.getAttribute("configuration", a)!!, n))
+            elements.add(Element(curMd.getAttribute(a)!!, n))
             curMd = collMd.containedClass!!
         }
-
     }
 }

@@ -9,7 +9,7 @@ class ColumnLayout (
         val table = Table(columnSpacing=1,
                 stripeColors=stripeColors,
                 showHeadings = false,
-                verticalPadAbove= true)
+                verticalPadAbove= false)
 
         fun append(label: String, value: String) {
                 val prefix = columnNames.next()

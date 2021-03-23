@@ -6,6 +6,8 @@ class CollectionData(val classMd: ClassMetadata) {
     fun isEmpty() = objects.isEmpty()
     fun isNotEmpty() = objects.isNotEmpty()
     fun first() = objects[objects.keys.first()]
+    val keys get() = objects.keys
+    val values get() = objects.values
     fun add(obj: ObjectData) {
         objects[obj["name"].value] = obj
     }

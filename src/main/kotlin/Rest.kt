@@ -85,9 +85,6 @@ class Rest(
             Pair<Map<String,String>,CollectionData> =
         getRaw(oname.url, options).let{Pair(it.toMap(), makeCollection(oname, it))}
 
-    fun getCollection(url: String, options: Map<String,String>?=null) =
-        getRaw(url, options)["collection"]
-
     fun getCollection(oname: ObjectName, options: Map<String,String>?=null) =
         makeCollection(oname, getRaw(oname.url, options))
 
@@ -95,7 +92,7 @@ class Rest(
         CollectionData(oname.leafClass!!).load(json["collection"] ?: JsonObject.make())
 
     fun getObject(url: String, options: Map<String,String>?=null) =
-        getCollection(url, options)?.get(0)
+        getCollection(url, options).first()
 
     fun getObject(oname: ObjectName, options: Map<String,String>?=null) =
         getCollection(oname, options).first()
@@ -150,10 +147,10 @@ class Rest(
         fun get(oname: ObjectName, options: Map<String,String>?=null) =
             theRest.get(oname, options)
         fun getCollection(url: String, options: Map<String,String>?=null) =
-            theRest.getCollection(url, options)
+            theRest.getCollection(ObjectName(url), options)
         fun getCollection(oname: ObjectName, options: Map<String,String>?=null) =
             theRest.getCollection(oname, options)
         fun getObject(url: String, options: Map<String,String>?=null) =
-            theRest.getObject(url, options)
+            theRest.getObject(ObjectName(url), options)
     }
 }

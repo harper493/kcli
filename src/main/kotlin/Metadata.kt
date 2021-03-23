@@ -23,11 +23,12 @@ class Metadata (
     fun getAttribute(className: String, aname: String) = getClass(className)?.getAttribute(aname)
 
     companion object {
-        private var theMetadata: Metadata? = null
-        val classes get() = theMetadata!!.classes
+        private lateinit var theMetadata: Metadata
+        val classes get() = theMetadata.classes
+        operator fun get(className: String) = theMetadata.classMap[className]
         fun load() = Metadata().also { theMetadata = it }
-        fun getClass(className: String) = theMetadata!!.getClass(className)
-        fun getAttribute(className: String, aname: String) = theMetadata!!.getAttribute(className, aname)
+        fun getClass(className: String) = theMetadata.getClass(className)
+        fun getAttribute(className: String, aname: String) = theMetadata.getAttribute(className, aname)
         fun getConfigMd() = getClass("configuration")!!
         fun getPolicyManagerMd() = getClass("policy_manager")!!
     }

@@ -35,7 +35,9 @@ class ShowCommand(val cli: CliCommand) {
                 optionsMap[option] = value
             }
         }
-        val (oname, terminator) = this.parser.getObjectName(initialExtras=initialExtras, finalExtras=finalExtras)
+        val (oname, terminator) = this.parser.getObjectName(initialExtras=initialExtras,
+            finalExtras=finalExtras,
+        initialPred={ !it.name.startsWith("parameter")})
         classMd = oname.leafClass ?: Metadata.getClass("configuration")!!
         var myKey: Keyword? = terminator
         while (myKey != null) {
@@ -242,7 +244,27 @@ class ShowCommand(val cli: CliCommand) {
     }
 
     private fun showParameters(): String {
-        return ""
+        val param = parser.findKeyword(
+            KeywordList(
+                Metadata.getClass("parameter_info")!!.attributes), endOk=true)
+        val raw = Rest.getRaw("parameters")
+        val params = raw.asDict().get("collection")?.asArray()?.get(0)
+        if (param==null) {
+            val display = ColumnLayout(
+                columns = Properties.getInt("parameter", "parameter_columns"),
+                separator = "=",
+                labelColumnWidth = Properties.getInt("parameter", "parameter_label_width"),
+                valueColumnWidth = Properties.getInt("parameter", "parameter_value_width"),
+                stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+            )
+            for((name, value) in params!!.asDict()) {
+                display.append(name, value.asString())
+            }
+            result = display.layoutText().render()
+        } else {
+            result = "${param.attribute?.name} = ${params?.asDict()?.get(param.attribute?.name)}"
+        }
+        return result
     }
 
     private fun showSystem(): String {
@@ -252,7 +274,110 @@ class ShowCommand(val cli: CliCommand) {
     private fun showVersion(): String {
         return Rest.getObject("configurations/running",
             options=mapOf("select" to "build_version"))
-            ?.asDict()?.get("build_version")?.asString() ?: "unknown"
+            ?.get("build_version")?.value ?: "unknown"
     }
 }
 
+/*
+#
+# show_system - create an object corresponding to the top level rest item,
+# and show its attributes
+#
+    def show_system(self, reader) :
+        obj = self.api.metadata.get_object(object_name(), name_list=['top'],
+                                          options={"level":"full"})
+        self.show_one(obj)
+#
+# show_parameters - implement show parameters {parameter}
+#
+
+    def show_parameters(self, reader) :
+        params = self.api.rest_get_object(url='parameters')
+        names, values = [], []
+        if reader.is_finished() :
+            for p in sorted(params.keys()) :
+                names += [p]
+                values += [params[p]]
+            names = ['name'] + names
+            values = ['value'] + values
+            print format_columns([names, values])
+        else :
+            commands = { str(p) : str(p) for p in params.keys() }
+            param = reader.next_keyword(commands)
+            print '%s = %s' % (param, params[param])
+
+#
+# show_health - show the health report
+#
+
+    def show_health(self, reader) :
+        health = self.api.rest_get_object(url='rest/top',
+                                          options={"select":"last_log_entry"})[u'last_log_entry']
+        print health
+
+#
+# show_version - show the version string
+#
+
+    def show_version(self, reader) :
+        version = self.api.get_attribute_value(object_name('configurations/running'), 'build_version')
+        print version
+#
+# show_license - show the currently installed license, if there is one
+#
+
+    def show_license(self, reader) :
+        licenses = self.api.rest_get_collection(url='rest/top/licenses/',
+                                                options={'order':'<issue_time', 'limit':'1'})
+        if licenses :
+            license = self.api.get_object('rest/top/licenses/' + licenses[0][u'name'],
+                                          options={'level':'full'})
+            self.show_one(license)
+        else :
+            print "No license installed"
+
+#
+# show_metadata - show the metadata for a class
+#
+    def show_metadata(self, reader) :
+        class_name = reader.next_keyword({ c:c for c in self.api.metadata.get_classes()}, missOK=True, endOK=True) or \
+            reader.get_curtoken()
+        if class_name :
+            try :
+                the_class = self.api.get_class_metadata(class_name)
+            except NameError :
+                raise SemanticException, "no such class '%s'" % (class_name,)
+            print format_columns([["Metadata for class '%s'" % (class_name,)]], underline=True)
+            parent, parent_coll = the_class.parent_class, the_class.parent_collection
+            if parent is None :
+                for b in the_class.all_base_classes :
+                    bc = self.api.get_class_metadata(b)
+                    if bc.parent_class :
+                        parent,parent_coll = bc.parent_class, bc.parent_collection
+                        break
+            if parent :
+                print "Parent: %s.%s" % (parent.class_name, parent_coll.name)
+            else :
+                print "Parent: <None>"
+            if the_class.subclasses :
+                print "Subclasses:", ', '.join([ "'%s'" % (str(c),) for c in the_class.subclasses])
+            print "Base Classes:", ', '.join([ "'%s'" % (str(c),) for c in the_class.base_classes])
+            print "All Base Classes:", ', '.join([ "'%s'" % (str(c),) for c in the_class.all_base_classes])
+            if the_class.parent_class :
+                print "Container: %s.%s" % (str(the_class.parent_class), str(the_class.parent_collection))
+            rows = [['name', 'kind', 'level', 'nature', 'type', 'filter_type', 'unit', 'range']]
+            values = {}
+            for a in the_class.attributes.itervalues() :
+                a_or_c = 'coll' if a.is_collection() else 'attr'
+                values[a.name] = [a.name, a_or_c, a.level, ','.join(a.nature), \
+                                  a.type.type_name if a.type else a.type_name, \
+                                  a.filter_type or '', a.unit or '', \
+                                  a.range or '']
+            rows += [values[k] for k in sorted(values.keys())]
+            cols = [[e for e in r] for r in zip(*rows)]
+            print format_columns(cols, underline=True)
+        else :
+            print format_columns([["Known Object Classes"]], underline=True)
+            print column_layout(sorted(self.api.metadata.get_classes()), columns=4)
+
+ */
