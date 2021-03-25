@@ -10,7 +10,7 @@ class ShowCommand(val cli: CliCommand) {
     private var limit = 100
     private var level = ""
     private val levels = listOf("brief", "full", "detail", "debug")
-    private var result: String = ""
+    private var result = StyledText("")
     private val initialExtras = KeywordList(
         KeywordFn("health"){ result = showHealth() },
         KeywordFn("license"){ result = showLicense() },
@@ -43,7 +43,7 @@ class ShowCommand(val cli: CliCommand) {
         while (myKey != null) {
             myKey.function!!.invoke()
             if (result.isNotEmpty()) {
-                println(StyledText(result).render())
+                println(result.render())
                 return
             }
             if (oname.leafClass == null) {
@@ -231,24 +231,24 @@ class ShowCommand(val cli: CliCommand) {
         }
     }
 
-    private fun showHealth(): String {
-        return ""
+    private fun showHealth(): StyledText {
+        return StyledText("")
     }
 
-    private fun showLicense(): String {
-        return ""
+    private fun showLicense(): StyledText {
+        return StyledText("")
     }
 
-    private fun showMetadata(): String {
-        return ""
+    private fun showMetadata(): StyledText {
+        return StyledText("")
     }
 
-    private fun showParameters(): String {
+    private fun showParameters(): StyledText {
         val param = parser.findKeyword(
             KeywordList(
                 Metadata.getClass("parameter_info")!!.attributes), endOk=true)
         val raw = Rest.getRaw("parameters")
-        val params = raw.asDict().get("collection")?.asArray()?.get(0)
+        val params = raw.asDict()["collection"]?.asArray()?.get(0)
         if (param==null) {
             val display = ColumnLayout(
                 columns = Properties.getInt("parameter", "parameter_columns"),
@@ -260,21 +260,24 @@ class ShowCommand(val cli: CliCommand) {
             for((name, value) in params!!.asDict()) {
                 display.append(name, value.asString())
             }
-            result = display.layoutText().render()
+            result = display.layoutText().renderStyled()
         } else {
-            result = "${param.attribute?.name} = ${params?.asDict()?.get(param.attribute?.name)}"
+            val name = param.attribute?.name
+            val value = params?.asDict()?.get(name)?.asString()
+            result = StyledText("$name = $value", color=Properties.get("color", "even_row"))
         }
         return result
     }
 
-    private fun showSystem(): String {
-        return ""
+    private fun showSystem(): StyledText {
+        return StyledText()
     }
 
-    private fun showVersion(): String {
-        return Rest.getObject("configurations/running",
+    private fun showVersion(): StyledText {
+        return StyledText(Rest.getObject("configurations/running",
             options=mapOf("select" to "build_version"))
-            ?.get("build_version")?.value ?: "unknown"
+            ?.get("build_version")?.value ?: "unknown",
+            color = Properties.get("color", "even_row"))
     }
 }
 

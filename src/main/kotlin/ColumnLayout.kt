@@ -37,4 +37,6 @@ class ColumnLayout (
         }
 
         fun render() = table.render()
+
+        fun renderStyled() = table.renderStyled()
 }

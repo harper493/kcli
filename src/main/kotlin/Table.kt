@@ -102,7 +102,7 @@ class Table (
 
     private fun splitCells(row: Iterable<StyledText>, padAtEnd: Boolean): List<List<StyledText>> {
         val splitRows = zip(sortedCols, row).map { colCell ->
-            wrap(colCell.second.text, colCell.first.maxWidth.absoluteValue, force=true).toMutableList()
+            wrap(colCell.second.getText(), colCell.first.maxWidth.absoluteValue, force=true).toMutableList()
         }
         val depth = splitRows.maxSize()
         for (subCol in splitRows) {
@@ -136,9 +136,37 @@ class Table (
         listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->
                 zip(sortedCols, row).joinToString(" ".repeat(columnSpacing)) { colRow ->
-                    colRow.second.render(colRow.first.maxWidth)
+                    colRow.second.justify(colRow.first.maxWidth).render()
                 }
             }
         }.joinToString("\n")
+
+    fun renderStyled(): StyledText {
+        val spacer = StyledText(" ".repeat(columnSpacing))
+        val rows2 = listOf(wrappedHeadings, body).flatMap { rows ->
+            rows.map { row ->
+                zip(sortedCols, row).map { colRow ->
+                    colRow.second.justify(colRow.first.maxWidth)
+                }
+            }
+        }
+        val joinedRows = rows2.map{it.join(spacer)}
+        val result = joinedRows.join("\n")
+        return result
+        /*
+        val result = listOf(wrappedHeadings, body).flatMap { rows ->
+            rows.map { row ->
+                zip(sortedCols, row).map { colRow ->
+                    colRow.second.justify(colRow.first.maxWidth)
+                }
+            }
+        }.map{it.join(spacer)}
+            .join("\n")
+        //val joinedRows = rows.map{it.join(spacer)}
+        //val result = joinedRows.join("\n")
+        return result
+        */
+
+    }
 
 }

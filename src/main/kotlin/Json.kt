@@ -239,4 +239,5 @@ class JsonObjectImpl : JsonObject {
     }
 }
 
-fun Map<String,String>.toJson() = map{ (key, value) -> "\"$key\":\"$value\""}.joinToString(",")
+fun Map<String,String>.toJson() =
+    "{" + map{ (key, value) -> "\"$key\":\"$value\""}.joinToString(",") + "}"

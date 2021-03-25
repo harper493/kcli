@@ -86,7 +86,7 @@ fun<T> Iterable<T>.chain(next: Iterable<T>) = sequence<T> {
     }
 }
 
-fun<T> Iterable<T>.chain(last: T) = sequence<T> {
+fun<T> Iterable<T>.chain(last: T) = sequence {
     for (elem in this@chain) {
         yield(elem)
     }
@@ -143,7 +143,7 @@ fun<T> Iterable<T>.mapWhile(fn: (T)->Boolean) {
  * 1 2 11 3 4 12 13 5 => (1,2) (11,2,3) (12) (13,5)
  */
 
-fun<T> Iterable<T>.splitBy(fn: (Iterable<T>)->Pair<Iterable<T>, Iterable<T>>): List<Iterable<T>> =
+fun<T> Iterable<T>.splitBy(fn: (Iterable<T>)->Pair<Iterable<T>, Iterable<T>>): Iterable<Iterable<T>> =
      if (iterator().hasNext()) {
          fn(this).let {
              listOf(it.first).append(it.second.splitBy(fn))
@@ -212,4 +212,14 @@ fun Iterable<Int>.runningReduceLimit(limit: Int): Iterable<Int> {
         .append(if (sum>0) sum else null)
         .filterNotNull()
 }
+
+fun<T> MutableList<T>.removeLast(n: Int=1) {
+    for (i in 1..n) {
+        removeAt(size - 1)
+    }
+}
+
+fun<T> Iterable<T>.joinWith(separator: T) =
+    map{ listOf(it, separator) }.flatten().dropLast(1)
+
 

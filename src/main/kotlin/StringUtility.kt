@@ -198,5 +198,21 @@ fun getUserInput(prompt: String): String {
     return readLine() ?: ""
 }
 
+/**
+ * Return true iff any of the given characters are present in the string
+ */
+
 fun String.containsAnyOf(chars: String) =
     chars.fold(false) { b, c -> b || c in this }
+
+/**
+ * Pad a sting to fit the given [width]. If [width] is negative, left jusify,
+ * otherwise right justify. If [width] is zero, do nothing.
+ */
+
+fun String.justify(width: Int) = when {
+    width < 0 -> padStart(-width)
+    width > 0 -> padEnd(width)
+    else      -> this // ==0
+}
+

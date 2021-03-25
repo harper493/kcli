@@ -100,9 +100,17 @@ class Parser (
 
     fun isFinished() = lineIndex >= line.length
 
-    fun checkFinished() = if (nextToken()!=null)
+    fun checkFinished() = if (nextToken(endOk=true)!=null)
         throw CliException("unexpected text at end of command '$curToken'")
         else null
+
+    fun backup() {
+        if (tokens.size>0) {
+            lineIndex = tokenStarts[tokenStarts.size - 1]
+            tokens.removeLast()
+            tokenStarts.removeLast()
+        }
+    }
 
     fun peek() = line.drop(lineIndex).take(1)
 
@@ -163,7 +171,7 @@ class Parser (
                 val matches = keys.match(token)
                 when (matches.size) {
                     0 -> {
-                        //backup()
+                        backup()
                         when {
                             missOk -> return null
                             errFn != null -> errFn(token)

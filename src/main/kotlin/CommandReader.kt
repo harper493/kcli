@@ -38,7 +38,12 @@ class CommandReader (val prompt: String) {
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
         .build()
 
-    fun read(): String = reader.readLine(prompt)
+    fun read(): String =
+        try {
+            reader.readLine(prompt)
+        } catch (exc: Exception) {
+            throw CliException("")
+        }
 }
 
 

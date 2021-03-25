@@ -18,9 +18,11 @@ class CliCommand(line: String) {
             parser = Parser(line)
             val extras = KeywordList(
                 KeywordFn("show") { doShow() },
-                KeywordFn("quit") { doQuit() }
+                KeywordFn("quit") { doQuit() },
+                KeywordFn("set") { doSet() },
             )
-            val (objName, key) = parser.getObjectName(initialExtras = extras)
+            val (objName, key) = parser.getObjectName(initialExtras = extras,
+            missOk=true)
             if (objName.isEmpty) {
                 key?.invoke()
             } else {
@@ -30,6 +32,8 @@ class CliCommand(line: String) {
     }
 
     private fun doShow() = ShowCommand(this).doShow()
+
+    private fun doSet() = SetCommand(this).doSet()
 
     private fun doModify(obj: ObjectName) {
         val exists = try { Rest.getRaw(obj.url, mapOf("select" to "name")); true }
@@ -50,7 +54,7 @@ class CliCommand(line: String) {
         keywords.addKeys("no")
         val values = mutableMapOf<String,String>()
         while (true) {
-            var k = parser.findKeyword(keywords)?: break
+            var k = parser.findKeyword(keywords, endOk=true)?: break
             val noSeen: Boolean = k.key=="no"
             if (noSeen) {
                 keywords.remove("no")
@@ -75,7 +79,7 @@ class CliCommand(line: String) {
                 values[attrMd.name] = parser.curToken!!
             }
         }
-        CliException.throwIf("unexpected text at end of line '${parser.curToken}'"){ parser.curToken!=null }
+        parser.checkFinished()
         val body = values.toJson()
         println(body)
         Rest.put(obj.url, body)

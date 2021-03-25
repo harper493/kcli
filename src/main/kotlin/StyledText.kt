@@ -1,52 +1,30 @@
 class StyledText (
-    val text: String,
+    private var text: String = "",
     private var color: String? = null,
     private var background: String? = null,
     private var style: String? = null
         ) {
-    private val colors = mapOf(
-        "black" to 232,
-        "red" to 9,
-        "even_red" to 124,
-        "green" to 40,
-        "even_green" to 28,
-        "yellow" to 11,
-        "blue" to 20,
-        "magenta" to 90,
-        "cyan" to 14,
-        "white" to 15,
-        "grey" to 244,
-        "even_grey" to 239,
-        "orange" to 208,
-        "pink" to 201,
-        "brown" to 1,
-        "yucky_green" to 52,
-        "yucky_brown" to 22,
-        "label" to 124,
-        "even_label" to 28,
-        "value" to 52,
-        "even_value" to 22,
-        "heading" to 232
-    )
-
-    private val styles = mapOf(
-        "none" to 0,
-        "bold" to 1,
-        "italic" to 3,
-        "blink" to 5,
-        "underline" to 4,
-        "crossed" to 9,
-        "inverted" to 7,
-    )
-
-    private val escape = "\u001b"
-    private val fgOp = 38
-    private val bgOp = 48
-
+    constructor(input: Iterable<StyledText>): this() {
+        input.map{ append(it) }
+    }
+    private val nestedText = mutableListOf<StyledText>()
+    private val isNested get() = nestedText.isNotEmpty()
     val length get() = text.length
     fun getColor() = color
+    fun getText() = text
 
-    fun render(width: Int = 0) = renderer(this, width)
+    fun render() = renderer(this)
+
+    private fun append(st: StyledText) {
+        if (st.isNested) {
+            st.nestedText.map{ nestedText.add(it) }
+        } else {
+            nestedText.add(st.clone())
+        }
+    }
+
+    fun isEmpty() = text.isEmpty() && nestedText.isEmpty()
+    fun isNotEmpty() = text.isNotEmpty() || nestedText.isNotEmpty()
 
     fun clone(
         newText: String? = null,
@@ -86,6 +64,11 @@ class StyledText (
         style = addStyle(style, newStyle)
     }
 
+    fun justify(width: Int): StyledText {
+        text = text.justify(width)
+        return this
+    }
+
     private fun renderColor(op: Int, color: String?): String {
         val code = colors[color ?: ""]
         return if (code == null) "${escape}[${op + 1}m"
@@ -100,24 +83,75 @@ class StyledText (
         }
     }
 
-    private fun justify(width: Int) = when {
-        width < 0 -> text.padStart(-width)
-        width > 0 -> text.padEnd(width)
-        else -> text // ==0
-    }
+    private fun renderPlain(): String =
+        if (nestedText.isEmpty()) {
+            text
+        } else {
+            nestedText.map{ it.renderPlain() }.joinToString("")
+        }
 
-    private fun renderISO6429(width: Int = 0) =
-        "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}${justify(width)}"
+    private fun renderISO6429(): String =
+        if (nestedText.isEmpty()) {
+            "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}$text"
+        } else {
+            nestedText.map{ it.renderISO6429() }.joinToString("")
+        }
 
     companion object {
-        private lateinit var renderer: (StyledText, Int) -> String
-        fun addStyle(oldStyle: String?, newStyle: String) = addToTextList(oldStyle, newStyle)
+        private val colors = mapOf(
+            "black" to 232,
+            "red" to 9,
+            "even_red" to 124,
+            "green" to 40,
+            "even_green" to 28,
+            "yellow" to 11,
+            "blue" to 20,
+            "magenta" to 90,
+            "cyan" to 14,
+            "white" to 15,
+            "grey" to 244,
+            "even_grey" to 239,
+            "orange" to 208,
+            "pink" to 201,
+            "brown" to 1,
+            "yucky_green" to 52,
+            "yucky_brown" to 22,
+            "label" to 124,
+            "even_label" to 28,
+            "value" to 52,
+            "even_value" to 22,
+            "heading" to 232
+        )
+
+        private val styles = mapOf(
+            "none" to 0,
+            "bold" to 1,
+            "italic" to 3,
+            "blink" to 5,
+            "underline" to 4,
+            "crossed" to 9,
+            "inverted" to 7,
+        )
+
+        private const val escape = "\u001b"
+        private const val fgOp = 38
+        private const val bgOp = 48
+
+        private lateinit var renderer: (StyledText) -> String
+        fun addStyle(oldStyle: String?, newStyle: String) =
+            addToTextList(oldStyle, newStyle)
         fun setRenderer(style: String) {
             renderer = when (style) {
-                "ISO6429" -> { text, width -> text.renderISO6429(width) }
-                else      -> { text, width -> text.justify(width) }
+                "ISO6429" -> { text -> text.renderISO6429() }
+                else      -> { text -> text.renderPlain() }
             }
         }
         init { setRenderer("plain") }
     }
 }
+
+fun Iterable<StyledText>.join(separator: StyledText) =
+    StyledText(joinWith(separator))
+
+fun Iterable<StyledText>.join(separator: String) =
+    join(StyledText(separator))
