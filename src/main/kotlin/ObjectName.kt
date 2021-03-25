@@ -15,6 +15,7 @@ class ObjectName(val newUrl: String="") {
     private val elements: MutableList<Element> = mutableListOf()
     val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
     val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
+        ?: Metadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isWild }

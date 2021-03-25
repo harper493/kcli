@@ -231,9 +231,11 @@ class ShowCommand(val cli: CliCommand) {
         }
     }
 
-    private fun showHealth(): StyledText {
-        return StyledText("")
-    }
+    private fun showHealth() =
+        StyledText(Rest.getObject("rest/top", mapOf("select" to "last_log_entry"))
+            ?.get("last_log_entry")?.value ?: "No health information available",
+            color=Properties.get("color", "even_row"))
+
 
     private fun showLicense(): StyledText {
         return StyledText("")

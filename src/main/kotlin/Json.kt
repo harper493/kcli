@@ -67,6 +67,11 @@ class JsonObjectImpl : JsonObject {
                     return result
                 } else if (!escape && skipChar('\\', doSkipWs=false)) {
                     escape = true
+                } else if (escape) {
+                    val ch = "" + string[index]
+                    result += escapes[ch] ?: ch
+                    ++index
+                    escape = false
                 } else {
                     result += string[index]
                     ++index
@@ -142,7 +147,8 @@ class JsonObjectImpl : JsonObject {
             isBoolean() -> boolVal!!.toString()
             isString() -> "\"${stringVal!!
                 .replace("\\", "\\\\")
-                .replace("\"", "\\\"")}\""
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")}\""
             isArray() -> {
                 val content = arrayVal!!.joinToString(",${nl()}${myPrefix}") { toStr(it) }
                 "[${nl()}${myPrefix}${content}${nl()}${prefix}]"
@@ -236,6 +242,12 @@ class JsonObjectImpl : JsonObject {
             }
         }
         return this
+    }
+    companion object {
+        val escapes = mapOf(
+            "n" to "\n",
+            "t" to "\t",
+            "r" to "\r",)
     }
 }
 
