@@ -143,18 +143,7 @@ class Table (
 
     fun renderStyled(): StyledText {
         val spacer = StyledText(" ".repeat(columnSpacing))
-        val rows2 = listOf(wrappedHeadings, body).flatMap { rows ->
-            rows.map { row ->
-                zip(sortedCols, row).map { colRow ->
-                    colRow.second.justify(colRow.first.maxWidth)
-                }
-            }
-        }
-        val joinedRows = rows2.map{it.join(spacer)}
-        val result = joinedRows.join("\n")
-        return result
-        /*
-        val result = listOf(wrappedHeadings, body).flatMap { rows ->
+        return listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->
                 zip(sortedCols, row).map { colRow ->
                     colRow.second.justify(colRow.first.maxWidth)
@@ -162,11 +151,6 @@ class Table (
             }
         }.map{it.join(spacer)}
             .join("\n")
-        //val joinedRows = rows.map{it.join(spacer)}
-        //val result = joinedRows.join("\n")
-        return result
-        */
-
     }
 
 }

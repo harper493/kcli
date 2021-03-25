@@ -244,9 +244,9 @@ class ShowCommand(val cli: CliCommand) {
     }
 
     private fun showParameters(): StyledText {
+        val paramClass = Metadata.getClass("parameter_info")!!
         val param = parser.findKeyword(
-            KeywordList(
-                Metadata.getClass("parameter_info")!!.attributes), endOk=true)
+            KeywordList(paramClass.attributes), endOk=true)
         val raw = Rest.getRaw("parameters")
         val params = raw.asDict()["collection"]?.asArray()?.get(0)
         if (param==null) {
@@ -258,11 +258,13 @@ class ShowCommand(val cli: CliCommand) {
                 stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
             )
             for((name, value) in params!!.asDict()) {
-                display.append(name, value.asString())
+                val displayName = paramClass.getAttribute(name)?.displayName ?:
+                                    makeNameHuman(name)
+                display.append(displayName, value.asString())
             }
             result = display.layoutText().renderStyled()
         } else {
-            val name = param.attribute?.name
+            val name = param.attribute!!.displayName
             val value = params?.asDict()?.get(name)?.asString()
             result = StyledText("$name = $value", color=Properties.get("color", "even_row"))
         }
