@@ -187,7 +187,7 @@ class ShowCommand(val cli: CliCommand) {
         )
         val objClass = obj["class"].value
         val objName = obj["name"].value
-        val heading = makeHeading(header ?: "${Properties.get("class", objClass)} '${objName}'}")
+        val heading = makeHeading(header ?: "${Properties.get("class", objClass)} '${objName}'")
         val sortedValues = obj.attributes
             .filter { entry ->
                 Properties.getInt("suppress", classMd.name, entry.value.name) == 0

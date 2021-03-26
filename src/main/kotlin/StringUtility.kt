@@ -181,6 +181,7 @@ fun makeNameHuman(name: String): String =
 fun addToTextList(old: String?, new: String, delimiter: String = ",") =
     (old ?: "")
         .split(delimiter)
+        .filter{ it.isNotEmpty() }
         .toMutableList()
         .also { it.addAll(new.split(delimiter)) }
         .joinToString(delimiter)
