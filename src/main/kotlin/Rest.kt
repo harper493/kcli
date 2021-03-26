@@ -97,6 +97,11 @@ class Rest(
     fun getObject(oname: ObjectName, options: Map<String,String>?=null) =
         getCollection(oname, options).first()
 
+    fun getAttribute(oname: ObjectName, aname: String, options: Map<String,String>?=null) =
+        getObject(oname,
+            if (options==null) mapOf("select" to aname) else options + ("select" to aname))
+            ?.get(aname)?.value
+
     fun put(url: String, body: String) {
         val (_, response, result) = Fuel.put(makeUrl(url))
             .jsonBody(body)
@@ -152,5 +157,9 @@ class Rest(
             theRest.getCollection(oname, options)
         fun getObject(url: String, options: Map<String,String>?=null) =
             theRest.getObject(ObjectName(url), options)
+        fun getAttribute(oname: ObjectName, aname: String, options: Map<String,String>?=null) =
+            theRest.getAttribute(oname, aname, options)
+        fun getAttribute(url: String, aname: String, options: Map<String,String>?=null) =
+            theRest.getAttribute(ObjectName(url), aname, options)
     }
 }

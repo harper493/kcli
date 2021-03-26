@@ -77,5 +77,7 @@ class Properties (
         fun get(vararg keys: String) = properties.get(*keys)
         fun getInt(vararg keys: String, default: Int=0) = properties.getInt(*keys, default=default)
         fun getFloat(vararg keys: String, default: Double=0.0) = properties.getFloat(*keys, default=default)
+        fun getColor(color: String) = properties.get("color", color)
+        fun getColors(vararg colors: String) = colors.map{ getColor(it)}.filterNotNull()
     }
 }

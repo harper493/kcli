@@ -1,5 +1,4 @@
 import kotlin.math.absoluteValue
-import kotlin.math.sign
 
 class Table (
     private val maxColumnWidth: Int = 0,
@@ -15,7 +14,7 @@ class Table (
         ) {
     class Column(
         var heading: String,
-        var position: Int = 0,
+        var position: Int = --defaultPosition,
         var maxWidth: Int = 0
     ) {
         val content: MutableList<StyledText> = mutableListOf()
@@ -37,18 +36,16 @@ class Table (
             return this
         }
 
-        fun justify(text: String) = when {
-            maxWidth < 0 -> text.padStart(-maxWidth)
-            maxWidth > 0 -> text.padEnd(maxWidth)
-            else -> text // ==0
+        companion object {
+            private var defaultPosition = 10000
         }
     }
 
     private val columns = mutableMapOf<String, Column>()
     private var sortedCols: List<Column> = listOf()
 
-    val breadth get() = columns.size
-    val depth get() = columns.values.map { it.size }.maxOrNull() ?: 0
+    private val breadth get() = columns.size
+    private val depth get() = columns.values.map { it.size }.maxOrNull() ?: 0
     private var headings = listOf<StyledText>()
     private var wrappedHeadings = listOf<List<StyledText>>()
     private var body = listOf<List<StyledText>>()
@@ -59,9 +56,19 @@ class Table (
         color: String? = null,
         background: String? = null,
         style: String? = null
-    ) = (columns[columnName] ?: Column(columnName, breadth, maxColumnWidth).also { columns[columnName] = it })
+    ) = (columns[columnName]
+        ?: Column(columnName, breadth, maxColumnWidth)
+            .also { columns[columnName] = it })
         .padTo(depth - 1)
         .append(text, color, background, style)
+
+    fun append(vararg values: Pair<String,String>,
+               color: String? = null,
+               background: String? = null,
+               style: String? = null) {
+        values.map{ append(it.first, it.second,
+            color=color, background=background, style=style) }
+    }
 
     fun orderColumns(fn: (String) -> Int) {
         for (col in columns.keys) columns[col]!!.position = fn(col)
@@ -80,16 +87,16 @@ class Table (
         return this
     }
 
-    fun finalize(): Table {
+    private fun finalize(): Table {
         columns.values.map{it.padTo(depth)}
         sortedCols = columns.values.sortedBy { it.position }
         sortedCols.map { col ->
             val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width)
-                    else col.width
-            col.maxWidth = col.maxWidth.sign *
-                    maxOf(w, if (squishHeadings)
-                        wrap(col.heading, w).map { it.length }.maxOrNull() ?: 0
-                    else col.heading.length) }
+            else col.width
+            val s = if (col.maxWidth<0) -1 else 1
+            col.maxWidth = s * maxOf(w,
+                if (squishHeadings) wrap(col.heading, w).map { it.length }.maxOrNull() ?: 0
+                else col.heading.length) }
         headings = sortedCols.map{
             StyledText(it.heading, headingColor, headingBackground, headingStyle)
         }
@@ -120,7 +127,9 @@ class Table (
         finalize()
         if (showHeadings) {
             wrappedHeadings = splitCells(headings, padAtEnd = false)
-            if (underlineHeadings) for (h in wrappedHeadings.last()) h.addStyle("underline")
+            if (underlineHeadings && wrappedHeadings.isNotEmpty()) {
+                for (h in wrappedHeadings.last()) h.addStyle("underline")
+            }
         } else {
             wrappedHeadings = listOf()
         }

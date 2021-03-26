@@ -157,8 +157,7 @@ class CliCommand(line: String) {
             maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
             headingColor = Properties.get("parameter", "heading_color"),
             headingStyle = Properties.get("parameter", "heading_style"),
-            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
-        )
+            stripeColors = Properties.getColors("even_row", "odd_row"))
 
     fun output(text: String) = Cli.output(text)
     fun outputln(text: String) = Cli.outputln(text)

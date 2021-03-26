@@ -137,7 +137,8 @@ class Parser (
                 classKeys.add(finalExtras)
             }
             val classKey = findKeyword(classKeys, missOk=true)
-                ?: if (missOk) break else throw Exception("unknown collection or keyword '$curToken'")
+                ?: if (missOk) break
+                   else throw CliException("unknown collection or keyword '$curToken'")
             val attrMd = classKey.attribute
             if (attrMd != null) {
                 val name = nextToken(endOk=true, completer=ObjectCompleter(result.copy().append(attrMd, ""), finalExtras))

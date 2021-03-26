@@ -102,59 +102,68 @@ fun wrap(text: String, width: Int,
          splitter: (String)->Pair<String,String> = { baseSplitter(it) }): Iterable<String> {
     var newWidth = width
     var line = ""
-    return text.trim().split(" ").map { it.trim() }
-        .map { word ->
-            val thisResult = mutableListOf<String>()
-            val space = if (line.isEmpty()) "" else " "
-            if (line.length + word.length + space.length <= newWidth) {
-                line = "$line$space$word"
-            } else {
-                if (!force) {
-                    newWidth = maxOf(newWidth, line.length)
-                }
-                var (prefix, residue) = hyphenate(word, maxOf(0, newWidth - line.length - space.length - 1))
-                if (prefix.isNotEmpty()) {
-                    if (line.length + prefix.length + space.length <= newWidth - 1) {
-                        line = "$line$space${prefix}-"
-                    } else {
-                        residue = prefix + residue
+    return if (width==0) {
+        listOf(text)
+    } else {
+
+        text.trim().split(" ").map { it.trim() }
+            .map { word ->
+                val thisResult = mutableListOf<String>()
+                val space = if (line.isEmpty()) "" else " "
+                if (line.length + word.length + space.length <= newWidth) {
+                    line = "$line$space$word"
+                } else {
+                    if (!force) {
+                        newWidth = maxOf(newWidth, line.length)
                     }
-                }
-                if (line.isNotEmpty()) {
-                    thisResult.add(line)
-                    newWidth = maxOf(newWidth, line.length)
-                    line = ""
-                }
-                if (residue.length > newWidth) {
-                    if (force) {
-                        hyphenate(residue, -1)
-                            .also{ prefix = it.first
-                                   residue = it.second }
-                        if (prefix.length > newWidth - 1) {
-                            val chunks = prefix.splitUsing(splitter, newWidth).map{ it.chunked(newWidth) }.flatten()
-                            thisResult.addAll(chunks.dropLast(1))
-                            residue = chunks.last()
-                        } else if (prefix.isNotEmpty()) {
-                            thisResult.add("${prefix}-")
-                        }
-                        if (residue.length > newWidth) {
-                            val chunks = residue.splitUsing(splitter, newWidth).map{ it.chunked(newWidth) }.flatten()
-                            thisResult.addAll(chunks.dropLast(1))
-                            residue = chunks.last()
-                        }
-                    } else {
-                        val h3 = hyphenate(residue, -1)
-                        if (h3.first.isNotEmpty()) {
-                            thisResult.add("${h3.first}-")
-                            residue = h3.second
+                    var (prefix, residue) = hyphenate(word, maxOf(0, newWidth - line.length - space.length - 1))
+                    if (prefix.isNotEmpty()) {
+                        if (line.length + prefix.length + space.length <= newWidth - 1) {
+                            line = "$line$space${prefix}-"
+                        } else {
+                            residue = prefix + residue
                         }
                     }
+                    if (line.isNotEmpty()) {
+                        thisResult.add(line)
+                        newWidth = maxOf(newWidth, line.length)
+                        line = ""
+                    }
+                    if (residue.length > newWidth) {
+                        if (force) {
+                            hyphenate(residue, -1)
+                                .also {
+                                    prefix = it.first
+                                    residue = it.second
+                                }
+                            if (prefix.length > newWidth - 1) {
+                                val chunks =
+                                    prefix.splitUsing(splitter, newWidth).map { it.chunked(newWidth) }.flatten()
+                                thisResult.addAll(chunks.dropLast(1))
+                                residue = chunks.last()
+                            } else if (prefix.isNotEmpty()) {
+                                thisResult.add("${prefix}-")
+                            }
+                            if (residue.length > newWidth) {
+                                val chunks =
+                                    residue.splitUsing(splitter, newWidth).map { it.chunked(newWidth) }.flatten()
+                                thisResult.addAll(chunks.dropLast(1))
+                                residue = chunks.last()
+                            }
+                        } else {
+                            val h3 = hyphenate(residue, -1)
+                            if (h3.first.isNotEmpty()) {
+                                thisResult.add("${h3.first}-")
+                                residue = h3.second
+                            }
+                        }
+                    }
+                    line = residue
                 }
-                line = residue
-            }
-            thisResult
-        }.flatten()
-        .appendIf(line){line.isNotEmpty()}
+                thisResult
+            }.flatten()
+            .appendIf(line) { line.isNotEmpty() }
+    }
 }
 
 /**

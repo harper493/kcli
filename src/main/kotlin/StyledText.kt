@@ -7,6 +7,9 @@ class StyledText (
     constructor(input: Iterable<StyledText>): this() {
         input.map{ append(it) }
     }
+    constructor(vararg input: StyledText): this() {
+        input.map{ append(it) }
+    }
     private val nestedText = mutableListOf<StyledText>()
     private val isNested get() = nestedText.isNotEmpty()
     val length get() = text.length

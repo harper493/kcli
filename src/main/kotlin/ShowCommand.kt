@@ -37,7 +37,7 @@ class ShowCommand(val cli: CliCommand) {
         }
         val (oname, terminator) = this.parser.getObjectName(initialExtras=initialExtras,
             finalExtras=finalExtras,
-        initialPred={ !it.name.startsWith("parameter")})
+            initialPred={ !it.name.startsWith("parameter")})
         classMd = oname.leafClass ?: Metadata.getClass("configuration")!!
         var myKey: Keyword? = terminator
         while (myKey != null) {
@@ -74,9 +74,9 @@ class ShowCommand(val cli: CliCommand) {
         if (coll.size == 0) {
             throw CliException("no matching objects found")
         } else if (oname.isWild || coll.size>1) {
-            cli.outputln(showCollection(coll))
+            cli.outputln(showCollection(coll).render())
         } else {
-            cli.outputln(showOne(coll.first()!!))
+            cli.outputln(showOne(coll.first()!!).render())
         }
     }
 
@@ -177,19 +177,17 @@ class ShowCommand(val cli: CliCommand) {
         parser.findKeyword(finalExtras, endOk=true)
     }
 
-    private fun showOne(obj: ObjectData): String {
+    private fun showOne(obj: ObjectData, header: String?=null): StyledText {
         val display = ColumnLayout(
             columns = Properties.getInt("parameter", "show_columns"),
             separator = "=",
             labelColumnWidth = Properties.getInt("parameter", "label_column_width"),
             valueColumnWidth = Properties.getInt("parameter", "value_column_width"),
-            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+            stripeColors = Properties.getColors("even_row", "odd_row")
         )
         val objClass = obj["class"].value
         val objName = obj["name"].value
-        val heading = StyledText("${Properties.get("class", objClass)} '${objName}' at ${getDateTime()}",
-            color=Properties.get("parameter", "heading_color"),
-            style="underline")
+        val heading = makeHeading(header ?: "${Properties.get("class", objClass)} '${objName}'}")
         val sortedValues = obj.attributes
             .filter { entry ->
                 Properties.getInt("suppress", classMd.name, entry.value.name) == 0
@@ -203,10 +201,10 @@ class ShowCommand(val cli: CliCommand) {
                     attributeData.value)} ${attributeData.attributeMd.unit}"
             )
         }
-        return "${heading.render()}\n${display.layoutText().render()}"
+        return StyledText(heading, display.layoutText().renderStyled())
     }
 
-    private fun showCollection(coll: CollectionData): String {
+    private fun showCollection(coll: CollectionData): StyledText {
         val table = cli.makeTable()
         if (coll.isNotEmpty()) {
             for (obj in coll) {
@@ -224,25 +222,82 @@ class ShowCommand(val cli: CliCommand) {
                 col.position = -(if (name == "name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
                 col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
             }
-            return table.layoutText().render()
-
+            return table.layoutText().renderStyled()
         } else {
             throw CliException("no matching objects found")
         }
     }
 
     private fun showHealth() =
-        StyledText(Rest.getObject("rest/top", mapOf("select" to "last_log_entry"))
-            ?.get("last_log_entry")?.value ?: "No health information available",
-            color=Properties.get("color", "even_row"))
-
+        StyledText(makeHeading("System Health Information"),
+            StyledText(Rest.getAttribute("rest/top", "last_log_entry")
+                ?: "No health information available",
+                color=Properties.get("color", "even_row")))
 
     private fun showLicense(): StyledText {
-        return StyledText("")
+        val licenses = Rest.getCollection("rest/top/licenses/",
+            mapOf("order" to "<issue_time", "limit" to "1"))
+        if (licenses.isNotEmpty()) {
+            return showOne(licenses.first()!!, header="License Information")
+        } else {
+            throw CliException("No license installed")
+        }
     }
 
     private fun showMetadata(): StyledText {
-        return StyledText("")
+        val classKw = parser.findKeyword(
+            KeywordList(*Metadata.classes.map{ it.name }.toTypedArray()),
+            endOk=true
+        )
+        if (classKw==null) {
+            val layout = ColumnLayout(4,
+                stripeColors = Properties.getColors("even_row", "odd_row")
+            )
+            Metadata.classes.map{ layout.append(it.name) }
+            return StyledText(makeHeading("Available Classes", includeTime = false),
+                layout.layoutText().renderStyled())
+        } else {
+            val classMd = Metadata[classKw.asString()]!!
+            val headings = ColumnLayout(1,
+                valueColumnWidth=80,
+                stripeColors=Properties.getColors("heading"))
+            val parent = classMd.parentClass
+            if (parent==null) {
+                headings.append("Parent", "None")
+            } else {
+                headings.append("Parent:",
+                    "${parent.name}.${classMd.container?.name?:""}")
+            }
+            if (classMd.derivedClasses.isNotEmpty()) {
+                headings.append("Subclasses:",
+                    classMd.derivedClasses.joinToString(", ") { it.name })
+            }
+            headings.append("Base Classes:",
+                classMd.baseClasses.joinToString(", ") { it.name })
+            headings.append("All Base Classes:",
+                classMd.allBaseClasses.joinToString(", ") { it.name })
+            val body = Table(
+                maxColumnWidth=Properties.getInt("parameter", "metadata_column_width"),
+                headingColor=Properties.get("parameter", "heading_color"),
+                stripeColors=Properties.getColors("even_row", "odd_row"))
+            classMd.attributes.map{ attr ->
+                body.append(
+                    "Name" to attr.displayName,
+                    "Rest Name" to attr.name,
+                    "Level" to attr.level,
+                    "Nature" to attr.nature,
+                    "Type" to attr.type.name,
+                    "Filter Type" to attr.filterType.name,
+                    "Unit" to attr.unit,
+                    "Range" to attr.range)
+            }
+            return StyledText(
+                makeHeading("Metadata for Class '${classMd.displayName}' (${classMd.name})", includeTime=false),
+                headings.layoutText().renderStyled(),
+                StyledText("\n"),
+                body.layoutText().renderStyled()
+            )
+        }
     }
 
     private fun showParameters(): StyledText {
@@ -257,7 +312,7 @@ class ShowCommand(val cli: CliCommand) {
                 separator = "=",
                 labelColumnWidth = Properties.getInt("parameter", "parameter_label_width"),
                 valueColumnWidth = Properties.getInt("parameter", "parameter_value_width"),
-                stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+                stripeColors = Properties.getColors("even_row", "odd_row")
             )
             for((name, value) in params!!.asDict()) {
                 val displayName = paramClass.getAttribute(name)?.displayName ?:
@@ -274,117 +329,23 @@ class ShowCommand(val cli: CliCommand) {
     }
 
     private fun showSystem(): StyledText {
-        return StyledText()
+        return showOne(Rest.getObject("rest/top",
+            options=mapOf("level" to "full"))!!,
+            header="System Information")
     }
 
     private fun showVersion(): StyledText {
-        return StyledText(Rest.getObject("configurations/running",
-            options=mapOf("select" to "build_version"))
-            ?.get("build_version")?.value ?: "unknown",
+        return StyledText(Rest.getAttribute("configurations/running",
+            "build_version") ?: "unknown",
             color = Properties.get("color", "even_row"))
     }
+
+    private fun makeHeading(text: String, includeTime: Boolean=true): StyledText {
+        val time = if (includeTime) " at ${getDateTime()}" else ""
+        return StyledText(
+            "$text$time\n",
+            color=Properties.get("parameter", "heading_color"),
+            style="underline")
+    }
+
 }
-
-/*
-#
-# show_system - create an object corresponding to the top level rest item,
-# and show its attributes
-#
-    def show_system(self, reader) :
-        obj = self.api.metadata.get_object(object_name(), name_list=['top'],
-                                          options={"level":"full"})
-        self.show_one(obj)
-#
-# show_parameters - implement show parameters {parameter}
-#
-
-    def show_parameters(self, reader) :
-        params = self.api.rest_get_object(url='parameters')
-        names, values = [], []
-        if reader.is_finished() :
-            for p in sorted(params.keys()) :
-                names += [p]
-                values += [params[p]]
-            names = ['name'] + names
-            values = ['value'] + values
-            print format_columns([names, values])
-        else :
-            commands = { str(p) : str(p) for p in params.keys() }
-            param = reader.next_keyword(commands)
-            print '%s = %s' % (param, params[param])
-
-#
-# show_health - show the health report
-#
-
-    def show_health(self, reader) :
-        health = self.api.rest_get_object(url='rest/top',
-                                          options={"select":"last_log_entry"})[u'last_log_entry']
-        print health
-
-#
-# show_version - show the version string
-#
-
-    def show_version(self, reader) :
-        version = self.api.get_attribute_value(object_name('configurations/running'), 'build_version')
-        print version
-#
-# show_license - show the currently installed license, if there is one
-#
-
-    def show_license(self, reader) :
-        licenses = self.api.rest_get_collection(url='rest/top/licenses/',
-                                                options={'order':'<issue_time', 'limit':'1'})
-        if licenses :
-            license = self.api.get_object('rest/top/licenses/' + licenses[0][u'name'],
-                                          options={'level':'full'})
-            self.show_one(license)
-        else :
-            print "No license installed"
-
-#
-# show_metadata - show the metadata for a class
-#
-    def show_metadata(self, reader) :
-        class_name = reader.next_keyword({ c:c for c in self.api.metadata.get_classes()}, missOK=True, endOK=True) or \
-            reader.get_curtoken()
-        if class_name :
-            try :
-                the_class = self.api.get_class_metadata(class_name)
-            except NameError :
-                raise SemanticException, "no such class '%s'" % (class_name,)
-            print format_columns([["Metadata for class '%s'" % (class_name,)]], underline=True)
-            parent, parent_coll = the_class.parent_class, the_class.parent_collection
-            if parent is None :
-                for b in the_class.all_base_classes :
-                    bc = self.api.get_class_metadata(b)
-                    if bc.parent_class :
-                        parent,parent_coll = bc.parent_class, bc.parent_collection
-                        break
-            if parent :
-                print "Parent: %s.%s" % (parent.class_name, parent_coll.name)
-            else :
-                print "Parent: <None>"
-            if the_class.subclasses :
-                print "Subclasses:", ', '.join([ "'%s'" % (str(c),) for c in the_class.subclasses])
-            print "Base Classes:", ', '.join([ "'%s'" % (str(c),) for c in the_class.base_classes])
-            print "All Base Classes:", ', '.join([ "'%s'" % (str(c),) for c in the_class.all_base_classes])
-            if the_class.parent_class :
-                print "Container: %s.%s" % (str(the_class.parent_class), str(the_class.parent_collection))
-            rows = [['name', 'kind', 'level', 'nature', 'type', 'filter_type', 'unit', 'range']]
-            values = {}
-            for a in the_class.attributes.itervalues() :
-                a_or_c = 'coll' if a.is_collection() else 'attr'
-                values[a.name] = [a.name, a_or_c, a.level, ','.join(a.nature), \
-                                  a.type.type_name if a.type else a.type_name, \
-                                  a.filter_type or '', a.unit or '', \
-                                  a.range or '']
-            rows += [values[k] for k in sorted(values.keys())]
-            cols = [[e for e in r] for r in zip(*rows)]
-            print format_columns(cols, underline=True)
-        else :
-            print format_columns([["Known Object Classes"]], underline=True)
-            print column_layout(sorted(self.api.metadata.get_classes()), columns=4)
-
- */

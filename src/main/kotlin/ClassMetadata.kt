@@ -2,7 +2,7 @@ data class ClassMetadata(
     val name: String,
     val jsonMetadata: JsonObject
 ) {
-    lateinit var displayName: String
+    val displayName = Properties.get("class", name) ?: makeNameHuman(name)
     private val attributeMap: Map<String, AttributeMetadata> =
         (jsonMetadata["metadata"]
             ?.get("collection")
@@ -18,7 +18,7 @@ data class ClassMetadata(
         ?.asArray()
         ?.map{it.asString()} ?: listOf()
 
-    val attributes get() = derivedAttributeMap.values
+    val attributes by lazy( { derivedAttributeMap.values.sortedBy{ it.displayName } })
     val collections by lazy( {attributeMap.values.filter{it.isCollection}.toList() })
     var container: AttributeMetadata? = null; private set
     var baseClasses: List<ClassMetadata> = listOf(); private set
@@ -53,15 +53,13 @@ data class ClassMetadata(
         return result
     }
     fun finalizeClassData() {
-        if (container!=null || isRoot) {
-            val derivedAttributes = derivedClasses.chain(this)
-                .map{it.attributeMap.values}
-                .flatten()
-                .distinctBy{it.name}
-            derivedAttributeMap = mapOf(*derivedAttributes.map{Pair(it.name, it)}.toList().toTypedArray())
-            settableAttributes = derivedAttributeMap.values.filter{it.isSettable}
-            modifiableAttributes = derivedAttributeMap.values.filter{it.isModifiable}
-        }
+        val derivedAttributes = derivedClasses.chain(this)
+            .map{it.attributeMap.values}
+            .flatten()
+            .distinctBy{it.name}
+        derivedAttributeMap = mapOf(*derivedAttributes.map{Pair(it.name, it)}.toList().toTypedArray())
+        settableAttributes = derivedAttributeMap.values.filter{it.isSettable}
+        modifiableAttributes = derivedAttributeMap.values.filter{it.isModifiable}
     }
     private fun addDerived(classMd: ClassMetadata): Boolean = derivedClasses.add(classMd)
 }

@@ -19,19 +19,21 @@ class CommandCompleter : Completer {
             CliCommand("${line.line()}${Parser.completerCh}")
         } catch (exc: CompletionException) {
             exc.completions.map{ candidates.add(Candidate(it))}
+        } catch (exc: Exception) {
+            // do nothing
         }
     }
 }
 
 class CompletionException(val completions: List<String>): Exception("")
 
-class CommandReader (val prompt: String) {
+class CommandReader (private val prompt: String) {
     //val width = "tput cols".runCommand(File(".")) ?: "0".toInt()
-    val builder: TerminalBuilder = TerminalBuilder.builder()
-    val terminal: Terminal = builder.build()
-    val completer = CommandCompleter()
+    private val builder: TerminalBuilder = TerminalBuilder.builder()
+    private val terminal: Terminal = builder.build()
+    private val completer = CommandCompleter()
 
-    val reader: LineReader = LineReaderBuilder.builder()
+    private val reader: LineReader = LineReaderBuilder.builder()
         .terminal(terminal)
         .completer(completer)
         .parser(DefaultParser())
