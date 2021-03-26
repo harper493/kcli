@@ -23,6 +23,7 @@ open class AttributeMetadata(
     val preference: Int get() = getMd("preference").toIntOrNull() ?: 0
     val isCollection: Boolean = getMd("usage_type") == "collection"
     val isRelation: Boolean = getMd("usage_type") == "related"
+    val isPseudonym: Boolean = "pseudonym" in natures
     val relativeUrl: String = getMd("relative_url")
     val typeName: String = getMd("type_name")
     val containedClass get() = Metadata.getClass(typeName)

@@ -124,7 +124,8 @@ class Parser (
     fun getObjectName(initialExtras: KeywordList=KeywordList(),
                       finalExtras: KeywordList=KeywordList(),
                       missOk: Boolean=false,
-                      initialPred: (AttributeMetadata)->Boolean={ true }) : Pair<ObjectName, Keyword?> {
+                      initialPred: (AttributeMetadata)->Boolean={ true },
+                      keywordAdder: (ClassMetadata, KeywordList)->Unit={_,_ -> }) : Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
         var curMd = Metadata.getConfigMd()
@@ -136,12 +137,15 @@ class Parser (
             } else {
                 classKeys.add(finalExtras)
             }
+            keywordAdder(curMd, classKeys)
             val classKey = findKeyword(classKeys, missOk=true)
                 ?: if (missOk) break
-                   else throw CliException("unknown collection or keyword '$curToken'")
+                else throw CliException("unknown collection or keyword '$curToken'")
             val attrMd = classKey.attribute
-            if (attrMd != null) {
-                val name = nextToken(endOk=true, completer=ObjectCompleter(result.copy().append(attrMd, ""), finalExtras))
+            if (attrMd != null && attrMd.isCollection) {
+                val name = nextToken(endOk=true,
+                    completer=ObjectCompleter(result.copy().append(attrMd, ""),
+                        finalExtras))
                 val key = finalExtras.exactMatch(name?:"")
                 result.append(attrMd, if (key==null) name?:"" else "")
                 if (key!=null) {

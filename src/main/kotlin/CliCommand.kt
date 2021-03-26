@@ -22,10 +22,12 @@ class CliCommand(line: String) {
                 KeywordFn("set") { doSet() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
-            missOk=true)
+                keywordAdder={ classMd, keywords -> classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },
+                missOk=true)
             if (objName.isEmpty) {
                 key?.invoke()
             } else {
+                parser.backup()
                 doModify(objName)
             }
         }
@@ -49,8 +51,7 @@ class CliCommand(line: String) {
             }
         }
         val classMd = obj.leafClass!!
-        val keywords = KeywordList(if (exists) classMd.modifiableAttributes
-                                   else classMd.settableAttributes)
+        val keywords = KeywordList(classMd.settableAttributes)
         keywords.addKeys("no")
         val values = mutableMapOf<String,String>()
         while (true) {
@@ -63,6 +64,8 @@ class CliCommand(line: String) {
                 k = kk!!
             }
             val attrMd = k.attribute ?: break
+            CliException.throwIf("attribute '${attrMd.name}' can only be set when an object is created",
+                                { exists && !attrMd.isModifiable})
             if (noSeen) {
                 if (attrMd.type.name=="bool") {
                     values[attrMd.name] = "F"

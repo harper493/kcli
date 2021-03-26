@@ -12,14 +12,15 @@ data class ClassMetadata(
                 val name = it["name"]!!.asString()
                 Pair(name,
                     AttributeMetadata(name, this, it))} ?: listOf())
+            .filter{ !it.second.isPseudonym }
             .toMap()
     private var derivedAttributeMap: Map<String, AttributeMetadata> = mapOf()
     val baseClassNames = jsonMetadata["metadata"]?.asDict()?.get("base_classes")
         ?.asArray()
         ?.map{it.asString()} ?: listOf()
 
-    val attributes by lazy( { derivedAttributeMap.values.sortedBy{ it.displayName } })
-    val collections by lazy( {attributeMap.values.filter{it.isCollection}.toList() })
+    val attributes by lazy { derivedAttributeMap.values.sortedBy { it.displayName } }
+    val collections by lazy { attributeMap.values.filter { it.isCollection }.toList() }
     var container: AttributeMetadata? = null; private set
     var baseClasses: List<ClassMetadata> = listOf(); private set
     val parentClass: ClassMetadata? get() { return container?.myClass }
@@ -42,7 +43,7 @@ data class ClassMetadata(
     }
     fun completeClassData(): Boolean {
         if (baseClassNames.isNotEmpty() && baseClasses.isEmpty()) {
-            baseClasses = baseClassNames.map{ Metadata.getClass(it) }.filterNotNull()
+            baseClasses = baseClassNames.mapNotNull { Metadata.getClass(it) }
             allBaseClasses = setOf(*baseClasses.toTypedArray())
         }
         val newBases: Set<ClassMetadata> = mutableSetOf(*allBaseClasses.map{it.allBaseClasses}
