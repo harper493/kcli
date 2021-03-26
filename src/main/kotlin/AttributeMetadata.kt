@@ -3,14 +3,14 @@ open class AttributeMetadata(
     val myClass: ClassMetadata,
     private val md: JsonObject
 ) {
-    val type by lazy( {Datatype.makeType(md["type_name"]?.asString() ?: "")} )
+    val type by lazy { Datatype.makeType(md["type_name"]?.asString() ?: "") }
     private val natures = (md["nature"]?.asArray()?.toList() ?: listOf())
         .map {
             val nn = it.asString().split(":")
             Pair(nn[0], nn.getOrNull(1))
         }.filter{it.first.isNotEmpty()}.toMap()
 
-    val nature get() = md["nature"]?.asArray()?.map{ it.asString() }?.joinToString(" ") ?: ""
+    val nature get() = md["nature"]?.asArray()?.joinToString(" ") { it.asString() } ?: ""
     var displayName: String = (Properties.get("attribute", name) ?: makeNameHuman(name))
         .replace("&.*?;".toRegex(), "")
     var isSettable = "req" in natures || "mod" in natures || "set" in natures
@@ -24,6 +24,7 @@ open class AttributeMetadata(
     val isCollection: Boolean = getMd("usage_type") == "collection"
     val isRelation: Boolean = getMd("usage_type") == "related"
     val isPseudonym: Boolean = "pseudonym" in natures
+    val isEnum: Boolean get() = typeName=="enum"
     val relativeUrl: String = getMd("relative_url")
     val typeName: String = getMd("type_name")
     val containedClass get() = Metadata.getClass(typeName)
@@ -33,4 +34,5 @@ open class AttributeMetadata(
     fun getMd(mname: String) = md[mname]?.asString() ?: ""
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)
+    fun completer() = if (isEnum) EnumCompleter(this) else CliCompleter()
 }

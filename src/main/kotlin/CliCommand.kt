@@ -64,8 +64,8 @@ class CliCommand(line: String) {
                 k = kk!!
             }
             val attrMd = k.attribute ?: break
-            CliException.throwIf("attribute '${attrMd.name}' can only be set when an object is created",
-                                { exists && !attrMd.isModifiable})
+            CliException.throwIf("attribute '${attrMd.name}' can only be set when an object is created"
+            ) { exists && !attrMd.isModifiable }
             if (noSeen) {
                 if (attrMd.type.name=="bool") {
                     values[attrMd.name] = "F"
@@ -77,14 +77,13 @@ class CliCommand(line: String) {
             } else if (attrMd.type.name=="bool") {
                 values[attrMd.name]= "T"
             } else {
-                parser.nextToken(validator = attrMd.type.validator)
+                parser.nextToken(completer = attrMd.completer(), validator = attrMd.type.validator)
                 CliException.throwIf("value expected for attribute '${attrMd.name}'") { parser.curToken == null }
                 values[attrMd.name] = parser.curToken!!
             }
         }
         parser.checkFinished()
         val body = values.toJson()
-        println(body)
         Rest.put(obj.url, body)
     }
 

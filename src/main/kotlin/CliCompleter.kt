@@ -34,3 +34,11 @@ class ObjectCompleter(
     }
 }
 
+class EnumCompleter(
+    private val attrMd: AttributeMetadata
+): CliCompleter() {
+    override fun complete(line: String, token: String): List<String> =
+        KeywordCompleter(KeywordList(*attrMd.range.split("|").toTypedArray()))
+            .complete(line, token)
+}
+
