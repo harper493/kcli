@@ -34,11 +34,13 @@ class SetCommand(val cli: CliCommand) {
     }
 
     private fun setConfiguration() {
-
+        val config = parser.nextToken(completer=ObjectCompleter(ObjectName("configurations/")))!!
+        Rest.setConfig(config)
     }
 
     private fun setTrace() {
-
+        val type = Datatype["boolean"]
+        Rest.setTrace(Datatype.toBoolean(parser.nextToken(type=type) ?: "F"))
     }
 }
 

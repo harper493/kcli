@@ -13,7 +13,7 @@ class KeywordCompleter(
 
 class ObjectCompleter(
     private val objName: ObjectName,
-    private val extras: KeywordList
+    private val extras: KeywordList=KeywordList()
 ): CliCompleter() {
     override fun complete(line: String, token: String): List<String> {
         return try {

@@ -49,11 +49,15 @@ data class ServerInfo(
 }
 
 class Rest(
-    var server: String = "localhost",
-    val config: String = "running",
-    val trace: Boolean = false
+    private var server: String = "localhost",
+    private var config: String = "running",
+    private var trace: Boolean = false
 ) {
     private val serverInfo = ServerInfo(server)
+
+    fun setTrace(t: Boolean) { trace = t }
+
+    fun setConfig(newConfig: String) { config = newConfig }
 
     fun getRaw(url: String, options: Map<String,String>?=null) : JsonObject {
         val u = makeUrl(url, options)
@@ -161,5 +165,9 @@ class Rest(
             theRest.getAttribute(oname, aname, options)
         fun getAttribute(url: String, aname: String, options: Map<String,String>?=null) =
             theRest.getAttribute(ObjectName(url), aname, options)
+        fun setTrace(t: Boolean) =
+            theRest.setTrace(t)
+        fun setConfig(newConfig: String) =
+            theRest.setConfig(newConfig)
     }
 }

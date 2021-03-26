@@ -144,6 +144,7 @@ abstract class Datatype (
         fun load() = addTypes(
             IntDatatype("int"),
             FloatDatatype("float"),
+            BooleanDatatype("boolean"),
             IntDatatype("counter", properties="counter"),
             IntDatatype("byte_counter", properties="counter"),
             StringDatatype("string"),
@@ -336,6 +337,21 @@ open class FloatDatatype(
         else validator.validate(value)
 
     override fun isNumeric(): Boolean = true
+}
+
+open class BooleanDatatype(
+    name: String,
+    description: String = name,
+    properties: String = "",
+    wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
+) : TypedDatatype<Boolean>(name,
+    description,
+    properties = "$properties",
+    converter =  { toBoolean(it) },
+    gvFactory = { TypedGenericVariable<Boolean>( toBoolean(it) ) },
+) {
+    override fun validate(value: String) =
+        conversionValidator(value, this)
 }
 
 class ClassDatatype(
