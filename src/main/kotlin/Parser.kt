@@ -7,7 +7,7 @@ class Parser (
     private var lineIndex = 0
     private var tokenIndex = -1
     private var finished = false
-    enum class TokenType { ttName, ttNumber, ttAny, ttExplicit, ttGeneral, ttAll }
+    enum class TokenType { ttName, ttNumber, ttAny, ttExplicit, ttGeneral, ttAll, ttNonBlank }
     var curToken: String? = null
 
     private val escChars = mapOf( 'n' to '\n', 'r' to '\r', 't' to '\t' )
@@ -35,7 +35,7 @@ class Parser (
                     TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
                     TokenType.ttAll -> Validator(".*")
                     TokenType.ttExplicit -> validator
-                    else -> Validator("""\S+""")
+                    else -> Validator("""\S+""")  // ttNonBlank
                 }
         fun good() = lineIndex < line.length
 

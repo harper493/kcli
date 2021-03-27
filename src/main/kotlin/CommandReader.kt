@@ -38,7 +38,6 @@ object CommandReader {
         .terminal(terminal)
         .completer(completer)
         .parser(DefaultParser())
-        .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
         .build()
 
     fun setPrompt(p: String) { prompt = p }
@@ -50,8 +49,12 @@ object CommandReader {
             throw CliException("")
         }
 
-    fun readPassword(myPrompt: String? = null): String =
-        reader. readLine(myPrompt ?: prompt,'*')
+    fun readPassword(myPrompt: String? = null): String {
+        reader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+        val result = reader.readLine (myPrompt ?: prompt, '*')
+        reader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, false)
+        return result
+    }
 }
 
 

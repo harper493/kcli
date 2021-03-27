@@ -21,9 +21,9 @@ class KeywordList()
     fun addAttributes(vararg attrs: AttributeMetadata,
                       pred: (AttributeMetadata)->Boolean={ true }) =
         also{ addAttributes(attrs.asIterable(), pred) }
-    fun addKeys(keys: Iterable<String>) = also{ keys.map{ add(Keyword(it, value=it))}}
-    fun addKeys(vararg keys: String) = also{ keys.map{ add(Keyword(it, value=it))}}
-    fun addFns(vararg fns: KeywordFn) = also{ fns.map{ add(Keyword(it.key, function=it.function))}}
+    fun addKeys(keys: Iterable<String>) = also{ keys.map{ add(Keyword(it, value=it)) }}
+    fun addKeys(vararg keys: String) = also{ keys.map{ add(Keyword(it, value=it)) }}
+    fun add(vararg fns: KeywordFn) = also{ fns.map{ add(Keyword(it.key, function=it.function)) }}
     fun add(keys: KeywordList) = also{ keys.keywords.map{ add(it) }}
     fun add(vararg keys: Keyword) = also{ keys.map{ add(it) }}
     fun remove(key: String) = also{ keywords.find{ it.key==key }.also{ keywords.remove(it) } }
@@ -37,7 +37,7 @@ class KeywordList()
         keywords.fold(false){b, p -> b || p.key==key.key }
 
     constructor(vararg fns: KeywordFn) : this() {
-        addFns(*fns)
+        add(*fns)
     }
     constructor(vararg keys: String) : this() {
         addKeys(*keys)

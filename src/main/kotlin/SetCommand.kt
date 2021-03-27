@@ -16,7 +16,7 @@ class SetCommand(val cli: CliCommand) {
                 Metadata.getClass("parameter_info")!!.attributes))!!.attribute!!
         val value = parser.nextToken(attribute=param)!!
         parser.checkFinished()
-        Rest.put("parameters", mapOf(param.name to value).toJson())
+        Rest.put("parameters", mapOf(param.name to value))
     }
 
     private fun setLogging() {
@@ -26,11 +26,37 @@ class SetCommand(val cli: CliCommand) {
         val level = parser.findKeyword(KeywordList("fatal", "error", "warn",
             "info", "debug", "trace"))!!.toString()
         parser.checkFinished()
-        Rest.put("loggers/$logger", mapOf("level" to level).toJson())
+        Rest.put("loggers/$logger", mapOf("level" to level))
     }
 
     private fun setPassword() {
-
+        var admin: String? = null
+        var password: String? = null
+        var oldPassword = ""
+        if (Cli.isSuperuser) {
+            admin = parser.nextToken(completer=ObjectCompleter(ObjectName("administrators/")), endOk=true)
+            if (admin!=null) {
+                password = parser.nextToken(tokenType = Parser.TokenType.ttNonBlank, endOk=true)
+            }
+        }
+        parser.checkFinished()
+        if (password==null) {
+            if (admin==null) {
+                oldPassword = CommandReader.readPassword("Old Password? ")
+            }
+            password = CommandReader.readPassword("New Password? ")
+            val repeatPassword = CommandReader.readPassword("Repeat Password? ")
+            CliException.throwIf("passwords do not match", { password!=repeatPassword} )
+        }
+        val body = mutableMapOf("password" to password)
+        if (oldPassword.isNotEmpty()) {
+            body.put("old_password", oldPassword)
+        }
+        admin = admin ?: Cli.username
+        Rest.put("administrators/${admin}", body)
+        if (admin==Cli.username) {
+            Rest.setPassword(password)
+        }
     }
 
     private fun setConfiguration() {

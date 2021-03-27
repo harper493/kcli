@@ -83,8 +83,7 @@ class CliCommand(line: String) {
             }
         }
         parser.checkFinished()
-        val body = values.toJson()
-        Rest.put(obj.url, body)
+        Rest.put(obj.url, values)
     }
 
     private fun doQuit() {

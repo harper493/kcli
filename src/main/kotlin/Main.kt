@@ -1,11 +1,12 @@
 import java.io.PrintWriter
-import java.net.InetAddress
 
 class Cli(private val cmdargs: Array<String>) {
     private val homeDir: String = System.getProperty("user.home")
     private val targets = Properties("${homeDir}/.kcli")
     private lateinit var outFile: PrintWriter
-    private lateinit var args: Args; private set
+    private lateinit var args: Args
+    private lateinit var privilege: String
+    private lateinit var target: ServerInfo
 
     init {
         theCli = this
@@ -16,7 +17,7 @@ class Cli(private val cmdargs: Array<String>) {
         Properties.load("/etc/kcli/objects.properties")
             .load("/etc/kcli/cli.properties")
         args = Args(cmdargs)
-        val target = findTarget(args.server)
+        target = findTarget(args.server)
         Rest.connect(server = target.toString(), trace=args.trace)
         if (args.output.isBlank()) {
             StyledText.setRenderer("ISO6429")
@@ -30,14 +31,15 @@ class Cli(private val cmdargs: Array<String>) {
             when {
                 HttpStatus.timeout(exc.status) ->
                     outputError("failed to connect to STM - connection timeout")
-                HttpStatus.unauthorized(exc.status) ->
+                HttpStatus.forbidden(exc.status) ->
                     outputError("incorrect username or password")
                 else ->
                     outputError("error connecting to STM: ${exc.text}")
             }
             return
         }
-        CommandReader.setPrompt("${Rest.getSystemName() ?: "stm"}# ")
+        privilege = Rest.getAttribute("administrators/${target.username}", "privilege") ?: ""
+        CommandReader.setPrompt("${Rest.getAttribute("configurations/running", "system_name") ?: "stm"}# ")
         while (true) {
             var error = ""
             try {
@@ -53,7 +55,8 @@ class Cli(private val cmdargs: Array<String>) {
                     break
                 }
             } catch (exc: RestException) {
-                error = exc.message ?: ""
+                error = if (HttpStatus.forbidden(exc.status)) "incorrect username or password"
+                        else  exc.message ?: ""
             }
             if (error.isNotEmpty()) {
                 outputError(error)
@@ -104,12 +107,6 @@ class Cli(private val cmdargs: Array<String>) {
         }
     }
 
-    private fun getSystemName(): String? =
-        try {
-            InetAddress.getLocalHost().hostName
-        } catch (E: Exception) {
-            null
-        }
 
     companion object {
         lateinit var theCli: Cli
@@ -125,6 +122,9 @@ class Cli(private val cmdargs: Array<String>) {
             )
             output(StyledText("").render())
         }
+        val isSuperuser get() = theCli.privilege=="superuser"
+        val isConfig get() = theCli.privilege=="config"
+        val username get() = theCli.target.username
     }
 }
 

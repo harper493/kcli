@@ -6,7 +6,7 @@ import com.github.kittinunf.result.Result
 
 enum class HttpStatus( val status: Int, val text: String) {
     success(201, "success"),
-    unauthorized(403, "unauthorized"),
+    forbidden(401, "forbidden"),
     notFound(404, "not found"),
     timeout(-1, "request timed out");
 
@@ -118,9 +118,13 @@ class Rest(
             ?.split("/")
             ?.get(2)
 
-    fun put(url: String, body: String) {
-        val (_, response, result) = Fuel.put(makeUrl(url))
-            .jsonBody(body)
+    fun put(url: String, body: Map<String,String>) {
+        val u = makeUrl(url)
+        if (trace) {
+            println("$u ${body.toJson()}")
+        }
+        val (_, response, result) = Fuel.put(u)
+            .jsonBody(body.toJson())
             .authentication().basic(serverInfo.username, serverInfo.password)
             .response()
         when (result) {
@@ -134,6 +138,8 @@ class Rest(
             else -> return
         }
     }
+
+    fun setPassword(p: String) { serverInfo.password = p }
 
     private fun makeUrl(url: String, options: Map<String,String>?=null) : String {
         val elements = url.split("/").toMutableList()
@@ -164,7 +170,7 @@ class Rest(
 
         fun getRaw(url: String, options: Map<String,String>?=null) =
             theRest.getRaw(url, options)
-        fun put(url: String, body: String) = theRest.put(url, body)
+        fun put(url: String, body: Map<String,String>) = theRest.put(url, body)
         fun get(oname: ObjectName, options: Map<String,String>?=null) =
             theRest.get(oname, options)
         fun getCollection(url: String, options: Map<String,String>?=null) =
@@ -183,5 +189,7 @@ class Rest(
             theRest.setConfig(newConfig)
         fun getSystemName() =
             theRest.getSystemName()
+        fun setPassword(p: String) =
+            theRest.setPassword(p)
     }
 }
