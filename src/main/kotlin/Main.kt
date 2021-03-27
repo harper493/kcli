@@ -1,11 +1,11 @@
-import java.io.File
 import java.io.PrintWriter
+import java.net.InetAddress
 
-class Cli(val cmdargs: Array<String>) {
-    val homeDir = java.lang.System.getProperty("user.home")
-    val targets = Properties("${homeDir}/.kcli")
-    lateinit var outFile: PrintWriter; private set
-    lateinit var args: Args; private set
+class Cli(private val cmdargs: Array<String>) {
+    private val homeDir: String = System.getProperty("user.home")
+    private val targets = Properties("${homeDir}/.kcli")
+    private lateinit var outFile: PrintWriter
+    private lateinit var args: Args; private set
 
     init {
         theCli = this
@@ -37,39 +37,29 @@ class Cli(val cmdargs: Array<String>) {
             }
             return
         }
-        if (true) {
-            val commandReader = if (args.command.isEmpty()) CommandReader("stm# ")
-                                else null
-            while (true) {
-                var error = ""
-                try {
-                    CliCommand(commandReader?.read() ?: args.command)
-                } catch (exc: CliException) {
-                    if (exc.message ?: "" != "") {
-                        error = exc.message ?: ""
-                    } else {
-                        break
-                    }
-                } catch (exc: RestException) {
-                    error = exc.message ?: ""
-                }
-                if (error.isNotEmpty()) {
-                    outputError(error)
-                }
-                output(StyledText("").render())
-                if (commandReader==null) break
-            }
-        } else {
-            val command = "show flow with port=443 top 10 by byte_count select rtt_s"
-            //val command = "application youtube no desc priority 3021"
+        CommandReader.setPrompt("${Rest.getSystemName() ?: "stm"}# ")
+        while (true) {
+            var error = ""
             try {
-                outputln(command)
-                CliCommand(command)
+                if (args.command.isNotEmpty()) {
+                    CliCommand(args.command)
+                } else {
+                    CliCommand(CommandReader.read())
+                }
             } catch (exc: CliException) {
                 if (exc.message ?: "" != "") {
-                    outputln(exc.message ?: "")
+                    error = exc.message ?: ""
+                } else {
+                    break
                 }
+            } catch (exc: RestException) {
+                error = exc.message ?: ""
             }
+            if (error.isNotEmpty()) {
+                outputError(error)
+            }
+            output(StyledText().render())
+            if (args.command.isNotEmpty()) break
         }
         if (args.output.isNotBlank()) {
             outFile.close()
@@ -113,6 +103,14 @@ class Cli(val cmdargs: Array<String>) {
             outFile.append(text)
         }
     }
+
+    private fun getSystemName(): String? =
+        try {
+            InetAddress.getLocalHost().hostName
+        } catch (E: Exception) {
+            null
+        }
+
     companion object {
         lateinit var theCli: Cli
         fun outputln(text: String) = theCli.outputln(text)

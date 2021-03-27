@@ -106,6 +106,18 @@ class Rest(
             if (options==null) mapOf("select" to aname) else options + ("select" to aname))
             ?.get(aname)?.value
 
+    fun getSystemName() =
+        getRaw("rest/top/", mapOf("link" to "full"))["collection"]
+            ?.asArray()
+            ?.get(0)
+            ?.asDict()
+            ?.get("link")
+            ?.asDict()
+            ?.get("href")
+            ?.asString()
+            ?.split("/")
+            ?.get(2)
+
     fun put(url: String, body: String) {
         val (_, response, result) = Fuel.put(makeUrl(url))
             .jsonBody(body)
@@ -169,5 +181,7 @@ class Rest(
             theRest.setTrace(t)
         fun setConfig(newConfig: String) =
             theRest.setConfig(newConfig)
+        fun getSystemName() =
+            theRest.getSystemName()
     }
 }

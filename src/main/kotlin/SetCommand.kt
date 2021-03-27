@@ -39,8 +39,7 @@ class SetCommand(val cli: CliCommand) {
     }
 
     private fun setTrace() {
-        val type = Datatype["boolean"]
-        Rest.setTrace(Datatype.toBoolean(parser.nextToken(type=type) ?: "F"))
+        Rest.setTrace(Datatype.toBoolean(parser.nextToken(type=Datatype["boolean"]) ?: "F"))
     }
 }
 

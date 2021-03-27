@@ -13,7 +13,7 @@ class Args (
     ).default("")
     val output by parser.storing("-o", "--output", help = "specify output file")
         .default("")
-    private val commandOpt by parser.positionalList(help = "command to execute")
+    private val commandOpt by parser.positionalList(help = "command to execute", 0..Int.MAX_VALUE)
     var command: String; private set
     var server: String; private set
 

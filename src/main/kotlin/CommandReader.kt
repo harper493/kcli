@@ -27,11 +27,12 @@ class CommandCompleter : Completer {
 
 class CompletionException(val completions: List<String>): Exception("")
 
-class CommandReader (private val prompt: String) {
+object CommandReader {
     //val width = "tput cols".runCommand(File(".")) ?: "0".toInt()
     private val builder: TerminalBuilder = TerminalBuilder.builder()
     private val terminal: Terminal = builder.build()
     private val completer = CommandCompleter()
+    private var prompt: String = ""; private set
 
     private val reader: LineReader = LineReaderBuilder.builder()
         .terminal(terminal)
@@ -40,12 +41,17 @@ class CommandReader (private val prompt: String) {
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%M%P > ")
         .build()
 
+    fun setPrompt(p: String) { prompt = p }
+
     fun read(): String =
         try {
             reader.readLine(prompt)
         } catch (exc: Exception) {
             throw CliException("")
         }
+
+    fun readPassword(myPrompt: String? = null): String =
+        reader. readLine(myPrompt ?: prompt,'*')
 }
 
 
