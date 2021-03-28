@@ -224,4 +224,10 @@ fun<T> Iterable<T>.joinWith(separator: T) =
 
 fun<T,U> T.ifNotNull(u: U) = if (this!=null) u else null
 
+fun<T> Iterable<T>.removeDuplicates(pred: (T,T)->Boolean) =
+    map { thisOne ->
+        if (fold(false){ b, other -> b || !(thisOne===other) && pred(thisOne, other)})
+            null else thisOne }
+        .filterNotNull()
+
 

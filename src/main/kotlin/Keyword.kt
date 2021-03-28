@@ -4,6 +4,8 @@ class Keyword(
     val attribute: AttributeMetadata?=null,
     val function: (()->Unit)? = null) {
     operator fun invoke() = function?.invoke()
+    fun sameReferent(other: Keyword) =
+        value==other.value && attribute==other.attribute && function==other.function
     fun asString() = value ?: ""
 }
 

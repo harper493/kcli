@@ -231,8 +231,4 @@ fun String.justify(width: Int) = when {
  */
 
 fun Iterable<String>.removePrefixes() =
-    map { thisOne ->
-        Pair(thisOne, fold(false)
-        { b, other -> b || (other != thisOne && other.startsWith(thisOne)) })
-    }.filter{!it.second}
-        .map{ it.first }
+    removeDuplicates{ a,b -> b.startsWith(a) }

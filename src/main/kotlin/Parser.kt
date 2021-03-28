@@ -174,6 +174,8 @@ class Parser (
                 result = exact
             } else {
                 val matches = keys.match(token)
+                    .removeDuplicates{ a,b -> a.sameReferent(b)
+                                       && a.key.length < b.key.length }
                 when (matches.size) {
                     0 -> {
                         backup()
@@ -186,7 +188,7 @@ class Parser (
                     1 -> {
                         result = matches[0]
                     }
-                    else -> throw CliException("keyword '$token' matches all of: ${keys.toStrings(matches)
+                    else -> throw CliException("keyword '$token' matches ${if (matches.size==2) "both" else "all"} of: ${keys.toStrings(matches)
                         .removePrefixes()
                         .joinToString(", ")}")
                 }
