@@ -186,7 +186,9 @@ class Parser (
                     1 -> {
                         result = matches[0]
                     }
-                    else -> throw CliException("keyword '$token' matches all of: ${keys.toStrings(matches).joinToString(", ")}")
+                    else -> throw CliException("keyword '$token' matches all of: ${keys.toStrings(matches)
+                        .removePrefixes()
+                        .joinToString(", ")}")
                 }
             }
         }
