@@ -27,7 +27,9 @@ class CliCommand(line: String) {
             if (objName.isEmpty) {
                 key?.invoke()
             } else {
-                parser.backup()
+                if (!parser.isFinished()) {
+                    parser.backup()
+                }
                 doModify(objName)
             }
         }
@@ -80,6 +82,17 @@ class CliCommand(line: String) {
                 parser.nextToken(completer = attrMd.completer(), validator = attrMd.type.validator)
                 CliException.throwIf("value expected for attribute '${attrMd.name}'") { parser.curToken == null }
                 values[attrMd.name] = parser.curToken!!
+            }
+        }
+        if (!exists) {
+            val missing = classMd.requiredAttributes.filter{ it !in values && it.name!="name" }
+            if (missing.isNotEmpty()) {
+                if (missing.size==1 && missing[0].type.name=="password") {
+                    values.put(missing[0].name, Cli.getPassword())
+                } else {
+                    throw CliException("the following attributes must be specified: ${missing.map{ it.name }
+                        .joinToString(", ")}")
+                }
             }
         }
         parser.checkFinished()

@@ -125,12 +125,54 @@ class Cli(private val cmdargs: Array<String>) {
         val isSuperuser get() = theCli.privilege=="superuser"
         val isConfig get() = theCli.privilege=="config"
         val username get() = theCli.target.username
+        fun getPassword(): String {
+            val password = CommandReader.readPassword("New Password? ")
+            val repeatPassword = CommandReader.readPassword("Repeat Password? ")
+            CliException.throwIf("passwords do not match") { password != repeatPassword }
+            return password
+        }
     }
 }
 
 
 fun main(args: Array<String>) {
     Cli(args).run()
+}
+
+fun test2() {
+    val words = listOf(
+        "entry",
+        "entry",
+        "soliloquy",
+        "wife",
+        "hovercraft",
+        "gentleman",
+        "hoof",
+        "bus",
+        "witch",
+        "cat",
+        "fungus",
+        "wish",
+        "catch",
+        "box",
+    )
+    words.forEach { println("$it => ${it.makePlural()}") }
+    println(pluralCache)
+    words.map{ it.makePlural() }.forEach { println("$it => ${it.makeSingular()}") }
+    println(singularCache)
+    val words2 = listOf(
+        "cat",
+        "elephant",
+        "uniform",
+        "ewe",
+        "utility",
+        "hour",
+        "honorable",
+        "unusual",
+        "elephant",
+    )
+    words2.forEach{ println("${it.indefiniteArticle()} $it")}
+    println(articleCache)
 }
 
 

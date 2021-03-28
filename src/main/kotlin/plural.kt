@@ -23,14 +23,13 @@ val pluralIrregulars = mapOf(
     "vertex" to "vertices",
     "crisis" to "crises",
     "axis" to "axes",
-    "crisis" to "crises",
     "samurai" to "samurai",
     "radius" to "radii",
     "fungus" to "fungi",
     "millennium" to "millennia",
 )
 
-val pluralTransforms = listOf(
+val pluralRules = listOf(
     (Regex("(.*(?:s|z|ch|sh|x))$") to "es"),
     (Regex("(.*)quy$") to "quies"),
     (Regex("(.*[^aeiou])y$") to "ies"),
@@ -42,12 +41,60 @@ val pluralTransforms = listOf(
 
 val pluralCache = mutableMapOf<String,String>()
 
-fun String.makePlural(quantity:Int = 2) =
+fun String.makePlural(quantity:Int = 2): String =
     if (quantity==1) this
-    else pluralCache[this]
-        ?: pluralIrregulars[this]
-        ?: (pluralTransforms.map{ pattern ->
+    else makePluralOrSingular(pluralIrregulars, pluralRules, pluralCache)
+
+val singularIrregulars = pluralIrregulars.map{ it.value to it.key }.toMap()
+
+val singularRules = listOf(
+    (Regex("(.*)ies$") to "y"),
+    (Regex("(.*[aeloru])ves$") to "f"),
+    (Regex("(.*i)ves$") to "fe"),
+    (Regex("(.*)ses$") to "s"),
+    (Regex("(.*)ches$") to "ch"),
+    (Regex("(.*)shes$") to "sh"),
+    (Regex("(.*)xes$") to "x"),
+    (Regex("(.*)men$") to "man"),
+    (Regex("(.*)s$") to ""),
+)
+
+val singularCache = mutableMapOf<String,String>()
+
+fun String.makeSingular(): String =
+    makePluralOrSingular(singularIrregulars, singularRules, singularCache)
+
+fun String.makePluralOrSingular(irregulars: Map<String,String>,
+                                rules: List<Pair<Regex,String>>,
+                                cache: MutableMap<String,String>) =
+    cache[this]
+        ?: irregulars[this]
+        ?: (rules.map { pattern ->
             pattern.first.replace(this)
-                { it.groupValues[1] + pattern.second }
-            }.firstOrNull())?.also{ pluralCache[this] = it }
+            { it.groupValues[1] + pattern.second }}
+            .firstOrNull { it != this })
+            ?.also{ cache[this] = it }
         ?: this
+    
+val articleRules = listOf(
+    (Regex("(hour|honor|honour|honest)\\w*") to true),
+    (Regex("uni[cfltv][aeiouy]\\w*") to false),
+    (Regex("un\\w*") to true),
+    (Regex("ewe|ewer") to false),
+    (Regex("u[^aeiou][aeious]\\w*") to false),
+    (Regex("[aeiou]\\w*") to true),
+    (Regex("\\w*") to false),
+)
+
+val articleCache = mutableMapOf<String,Boolean>()
+
+fun String.indefiniteArticle() =
+    if (articleCache[this]
+            ?: (articleRules
+                .map{ pattern -> pattern.first
+                    .matchEntire(this)
+                    .ifNotNull(pattern.second) }
+                .filterNotNull()
+                .firstOrNull() ?: false)
+                .also{ articleCache[this] = it })
+        "an" else "a"

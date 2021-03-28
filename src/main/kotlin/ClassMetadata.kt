@@ -21,6 +21,7 @@ data class ClassMetadata(
 
     val attributes by lazy { derivedAttributeMap.values.sortedBy { it.displayName } }
     val collections by lazy { attributeMap.values.filter { it.isCollection }.toList() }
+    val requiredAttributes by lazy { settableAttributes.filter{ it.isRequired } }
     var container: AttributeMetadata? = null; private set
     var baseClasses: List<ClassMetadata> = listOf(); private set
     val parentClass: ClassMetadata? get() { return container?.myClass }

@@ -222,4 +222,6 @@ fun<T> MutableList<T>.removeLast(n: Int=1) {
 fun<T> Iterable<T>.joinWith(separator: T) =
     map{ listOf(it, separator) }.flatten().dropLast(1)
 
+fun<T,U> T.ifNotNull(u: U) = if (this!=null) u else null
+
 

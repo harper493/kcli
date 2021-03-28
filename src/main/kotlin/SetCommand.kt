@@ -44,9 +44,7 @@ class SetCommand(val cli: CliCommand) {
             if (admin==null) {
                 oldPassword = CommandReader.readPassword("Old Password? ")
             }
-            password = CommandReader.readPassword("New Password? ")
-            val repeatPassword = CommandReader.readPassword("Repeat Password? ")
-            CliException.throwIf("passwords do not match", { password!=repeatPassword} )
+            password = Cli.getPassword()
         }
         val body = mutableMapOf("password" to password)
         if (oldPassword.isNotEmpty()) {
