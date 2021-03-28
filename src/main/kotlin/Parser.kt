@@ -65,8 +65,8 @@ class Parser (
                     if (ch == completerCh) {
                         break
                     }
-                    ++lineIndex
                 }
+                ++lineIndex
             }
         }
         tokens.add(token)
