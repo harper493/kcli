@@ -17,7 +17,11 @@ class KeywordList()
 
     fun addAttributes(attrs: Iterable<AttributeMetadata>,
                       pred: (AttributeMetadata)->Boolean={ true }) =
-        also {attrs.filter{ pred(it) }.map{ add(Keyword(it.name, attribute=it)) } }
+        also {attrs.filter{ pred(it) }
+            .forEach{ add(Keyword(it.name, attribute=it))
+                      if (it.isCollection) add(Keyword(it.typeName, attribute=it))
+            }
+        }
     fun addAttributes(vararg attrs: AttributeMetadata,
                       pred: (AttributeMetadata)->Boolean={ true }) =
         also{ addAttributes(attrs.asIterable(), pred) }

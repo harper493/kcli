@@ -48,7 +48,7 @@ class SetCommand(val cli: CliCommand) {
         }
         val body = mutableMapOf("password" to password)
         if (oldPassword.isNotEmpty()) {
-            body.put("old_password", oldPassword)
+            body["old_password"] = oldPassword
         }
         admin = admin ?: Cli.username
         Rest.put("administrators/${admin}", body)

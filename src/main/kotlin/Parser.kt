@@ -22,14 +22,14 @@ class Parser (
                   type: Datatype?=null,
                   attribute: AttributeMetadata?=null,
                   endOk: Boolean=false): String? {
-        var myDatatype = if (attribute!=null) attribute.type else type
+        val myDatatype = attribute?.type ?: type
         var escape = false
         var quote = nullCh
         var token: String? = null
         var ch = nullCh
         val myValidator =
-            if (myDatatype!=null) myDatatype.validator else
-                when (if (validator.isNull) tokenType else TokenType.ttExplicit) {
+            myDatatype?.validator
+                ?: when (if (validator.isNull) tokenType else TokenType.ttExplicit) {
                     TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
                     TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
                     TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
@@ -89,7 +89,7 @@ class Parser (
 
 
     fun getInt(): Int {
-        var result: Int
+        val result: Int
         try {
             result = (nextToken(tokenType=TokenType.ttNumber)?:"").toInt()
         } catch (exc: Exception) {
@@ -193,7 +193,7 @@ class Parser (
         return result
     }
     companion object {
-        val completerCh = '~'
+        const val completerCh = '~'
     }
 }
 
