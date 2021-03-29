@@ -67,20 +67,19 @@ fun String.makeSingular(): String =
 fun String.makePluralOrSingular(irregulars: Map<String,String>,
                                 rules: List<Pair<Regex,String>>,
                                 cache: MutableMap<String,String>) =
-    cache[this]
-        ?: irregulars[this]
-        ?: (rules.map { pattern ->
-            pattern.first.replace(this)
-            { it.groupValues[1] + pattern.second }}
-            .firstOrNull { it != this })
-            ?.also{ cache[this] = it }
-        ?: this
-    
+    lazily(this, cache, {
+        irregulars[this]
+            ?: (rules.map { pattern ->
+                pattern.first.replace(this)
+                { it.groupValues[1] + pattern.second }}
+                .firstOrNull { it != this })
+            ?: this })
+
 val articleRules = listOf(
     (Regex("(hour|honor|honour|honest)\\w*") to true),
+    (Regex("ewe|ewer") to false),
     (Regex("uni[cfltv][aeiouy]\\w*") to false),
     (Regex("un\\w*") to true),
-    (Regex("ewe|ewer") to false),
     (Regex("u[^aeiou][aeious]\\w*") to false),
     (Regex("[aeiou]\\w*") to true),
     (Regex("\\w*") to false),
@@ -89,12 +88,11 @@ val articleRules = listOf(
 val articleCache = mutableMapOf<String,Boolean>()
 
 fun String.indefiniteArticle() =
-    if (articleCache[this]
-            ?: (articleRules
-                .map{ pattern -> pattern.first
-                    .matchEntire(this)
-                    .ifNotNull(pattern.second) }
-                .filterNotNull()
-                .firstOrNull() ?: false)
-                .also{ articleCache[this] = it })
-        "an" else "a"
+    lazily(this, articleCache, {(articleRules
+        .map{ pattern -> pattern.first
+            .matchEntire(this)
+            .ifNotNull(pattern.second) }
+        .filterNotNull()
+        .firstOrNull() ?: false)})
+        .ifElse("an", "a")
+
