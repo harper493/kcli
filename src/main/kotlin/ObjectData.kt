@@ -1,5 +1,7 @@
 class ObjectData(val classMd: ClassMetadata) {
     val attributes: MutableMap<String, AttributeData> = mutableMapOf()
+    lateinit var name: ObjectName; private set
+    val url get() = name.url
 
     operator fun get(attributeName: String): AttributeData = attributes[attributeName]
         ?: throw CliException("unknown attribute '$attributeName' for class '${classMd.name}")
@@ -9,11 +11,13 @@ class ObjectData(val classMd: ClassMetadata) {
     fun load(json: JsonObject): ObjectData {
         for ( (name, value) in json.asDict()) {
             val attrMd = classMd.getAttribute(name)
-            if (attrMd != null) {
+            if (name=="link") {
+                this.name = ObjectName(value.asDict()["href"]?.asString() ?: "")
+            } else if (attrMd != null) {
                 if (value.isString()) {
                     add(AttributeData(attrMd, value.asString()))
                 } else if (value.isDict()) {
-                    val innerValue = value.asDict().get("name")
+                    val innerValue = value.asDict()["name"]
                     if (innerValue?.isString() ?: false) {
                         add(AttributeData(attrMd, innerValue!!.asString()))
                     }

@@ -12,13 +12,14 @@ class ObjectName(val newUrl: String="") {
             if (name=="*") name = ""
         }
     }
-    private val elements: MutableList<Element> = mutableListOf()
+    val elements: MutableList<Element> = mutableListOf()
     val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
     val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
         ?: Metadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isWild }
+    val wildDepth get() = elements.fold(0) { result, elem -> result + elem.isWild.ifElse(1, 0) }
     val isEmpty get() = elements.isEmpty()
 
     init {
@@ -47,6 +48,9 @@ class ObjectName(val newUrl: String="") {
 
     fun parse(url: String) {
         val split = url.split("/").toMutableList()
+        if (split[0].isEmpty()) {
+            split.removeFirst()
+        }
         if (split.size %2 != 0) {
             split += ""
         }

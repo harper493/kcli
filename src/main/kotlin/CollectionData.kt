@@ -9,7 +9,7 @@ class CollectionData(val classMd: ClassMetadata) {
     val keys get() = objects.keys
     val values get() = objects.values
     fun add(obj: ObjectData) {
-        objects[obj["name"].value] = obj
+        objects[obj.url] = obj
     }
 
     fun load(json: JsonObject): CollectionData {

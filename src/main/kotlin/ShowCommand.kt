@@ -74,7 +74,7 @@ class ShowCommand(val cli: CliCommand) {
         if (coll.size == 0) {
             throw CliException("no matching objects found")
         } else if (oname.isWild || coll.size>1) {
-            cli.outputln(showCollection(coll).render())
+            cli.outputln(showCollection(oname, coll).render())
         } else {
             cli.outputln(showOne(coll.first()!!).render())
         }
@@ -204,23 +204,31 @@ class ShowCommand(val cli: CliCommand) {
         return StyledText(heading, display.layoutText().renderStyled())
     }
 
-    private fun showCollection(coll: CollectionData): StyledText {
+    private fun showCollection(oname: ObjectName, coll: CollectionData): StyledText {
         val table = cli.makeTable()
+        var namePosition = -1000000
+        val nameColumns = oname.elements.takeLast(oname.wildDepth)
+            .map{ Pair(it.attrMd.containedClass?.displayName ?: "", ++namePosition)}
+            .toMap()
         if (coll.isNotEmpty()) {
             for (obj in coll) {
-                val color = obj.getOr("color")?.value
+                val color = obj.getOr("color")?.value?.ifBlank{ null }
+                for (elem in obj.name.elements.takeLast(oname.wildDepth)) {
+                    table.append(elem.attrMd.containedClass?.displayName ?: "", elem.name, color)
+                }
                 for ((name, attributeData) in obj) {
-                    if (Properties.get("suppress", classMd.name, name) == null || name == "name") {
-                        table.append(
-                            name,
-                            attributeData.value,
-                            color = color?.ifBlank { null })
+                    if (Properties.get("suppress", classMd.name, name) == null && name != "name") {
+                        table.append(name, attributeData.value, color = color)
                     }
                 }
             }
             table.setColumns { name, col ->
-                col.position = -(if (name == "name") 1000000 else classMd.getAttribute(name)?.preference ?: 0)
-                col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
+                if (name in nameColumns) {
+                    col.position = nameColumns[name]!!
+                } else {
+                    col.position = -(classMd.getAttribute(name)?.preference ?: 0)
+                    col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
+                }
             }
             return table.layoutText().renderStyled()
         } else {
