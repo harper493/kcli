@@ -37,6 +37,10 @@ class KeywordList()
     fun add(key: Keyword) = also{ if (!present(key.key)) keywords.add(key) }
     fun match(key: String) = keywords.mapNotNull { if (it.key.startsWith(key)) it else null }
     fun exactMatch(key: String) = keywords.find{ it.key==key }
+    fun matchShorter(key: String) =
+        keywords.filter{ key.startsWith(it.key) }
+            .sortedBy{ it.key.length }
+            .lastOrNull()
     fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
     fun copy() = KeywordList().add(this)
     operator fun contains(key: Keyword): Boolean =

@@ -131,6 +131,10 @@ class Parser (
         var curMd = Metadata.getConfigMd()
         while (true) {
             val classKeys = KeywordList(curMd.collections.filter{initialPred(it)})
+            curMd.collections
+                .map{ Pair(it, Properties.get("abbreviate", it.typeName)) }
+                .filter{ it.second!=null }
+                .forEach{ classKeys.add(Keyword(it.second!!, attribute=it.first)) }
             if (result.isEmpty) {
                 classKeys.add(initialExtras)
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
@@ -175,7 +179,7 @@ class Parser (
             } else {
                 val matches = keys.match(token)
                     .removeDuplicates{ a,b -> a.sameReferent(b)
-                                       && a.key.length < b.key.length }
+                            && a.key.length < b.key.length }
                 when (matches.size) {
                     0 -> {
                         backup()
@@ -188,9 +192,16 @@ class Parser (
                     1 -> {
                         result = matches[0]
                     }
-                    else -> throw CliException("keyword '$token' matches ${if (matches.size==2) "both" else "all"} of: ${keys.toStrings(matches)
-                        .removePrefixes()
-                        .joinToString(", ")}")
+                    else -> {
+                        result = keys.matchShorter(token)
+                        if (result==null) {
+                            throw CliException(
+                                "keyword '$token' matches ${if (matches.size == 2) "both" else "all"} of: ${
+                                    keys.toStrings(matches)
+                                        .removePrefixes()
+                                        .joinToString(", ")}")
+                        }
+                    }
                 }
             }
         }

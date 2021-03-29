@@ -224,15 +224,18 @@ fun<T> Iterable<T>.joinWith(separator: T) =
 
 fun<T,U> T.ifNotNull(u: U) = if (this!=null) u else null
 
+fun<T,U> T.ifNull(u: U) = if (this==null) u else null
+
 fun<T> Iterable<T>.removeDuplicates(pred: (T,T)->Boolean) =
-    map { thisOne ->
-        if (fold(false){ b, other -> b || !(thisOne===other) && pred(thisOne, other)})
-            null else thisOne }
-        .filterNotNull()
+    mapNotNull { thisOne ->
+        fold(false) { b, other -> b || !(thisOne === other) && pred(thisOne, other) }
+            .ifElse(null, thisOne)
+    }
 
 fun<T> Boolean.ifElse(t: T, f: T) = if (this) t else f
 
 fun<T,U> lazily(input: T, cache: MutableMap<T,U>, fn: (T)->U) =
     cache[input]
         ?: fn(input).also{ cache[input] = it }
+
 

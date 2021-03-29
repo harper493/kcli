@@ -22,7 +22,9 @@ class CliCommand(line: String) {
                 KeywordFn("set") { doSet() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
-                keywordAdder={ classMd, keywords -> classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },
+                keywordAdder={ classMd, keywords ->
+                    if (classMd.name != "configuration")
+                        classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },
                 missOk=true)
             if (objName.isEmpty) {
                 key?.invoke()

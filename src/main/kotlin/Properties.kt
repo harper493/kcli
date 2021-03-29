@@ -1,7 +1,7 @@
 class Properties (
     private var filename: String? = null
 ) {
-    private class Property (
+    class Property (
         val name: String,
         val parent: Property?
     ) {
@@ -28,22 +28,23 @@ class Properties (
             keys.none() -> leafValue
             else -> children[keys.first()]?.getUnique(keys.drop(1))
         }
-        fun getWild(keys: Iterable<String>): List<Property> = when {
-            keys.none() -> listOf(this)
-            else -> listOfNotNull(children[keys.first()], children["*"]).map{it.getWild(keys.drop(1))}.flatten()
-        }
+        fun getWild(keys: Iterable<String>): List<Property> =
+            if (keys.none()) listOf(this)
+            else listOfNotNull(children[keys.first()], children["*"])
+                .map{it.getWild(keys.drop(1))}
+                .flatten()
         fun visit(visitor: (String,String)->Unit) {
             if (leafValue!=null) {
                 visitor(getNameString(), leafValue!!)
             }
-            children.values.map{ it.visit(visitor) }
+            children.values.forEach{ it.visit(visitor) }
         }
     }
     private val root = Property("", null)
     fun addValue(value: String, keys: Iterable<String>) { root.addValue(value, keys) }
     fun getInt(vararg keys: String, default: Int=0) = get(*keys)?.toIntOrNull() ?: default
     fun getFloat(vararg keys: String, default: Double=0.0) = get(*keys)?.toDoubleOrNull() ?: default
-    fun get(vararg keys: String) = root.getWild(keys.toList()).sortedBy { it.wildness }.firstOrNull()?.value
+    fun get(vararg keys: String) = root.getWild(keys.toList()).minBy { it.wildness }?.value
     fun load(fn: String? = null): Properties {
         if (fn != null) {
             filename = fn
@@ -60,10 +61,13 @@ class Properties (
     }
     fun write(fn: String? = null) {
         val writer = java.io.PrintWriter(fn ?: filename ?: "")
-        root.visit{ name, value -> writer.append("${name} = $value\n")}
+        root.visit{ name, value -> writer.append("$name = $value\n")}
         writer.flush()
         writer.close()
     }
+    fun visit(vararg keys: String, fn: (Property)->Unit) =
+        root.getWild(keys.toList()).forEach{fn(it)}
+
     init {
         if (filename!=null) {
             load(filename!!)
@@ -78,6 +82,6 @@ class Properties (
         fun getInt(vararg keys: String, default: Int=0) = properties.getInt(*keys, default=default)
         fun getFloat(vararg keys: String, default: Double=0.0) = properties.getFloat(*keys, default=default)
         fun getColor(color: String) = properties.get("color", color)
-        fun getColors(vararg colors: String) = colors.map{ getColor(it)}.filterNotNull()
+        fun getColors(vararg colors: String) = colors.mapNotNull { getColor(it) }
     }
 }
