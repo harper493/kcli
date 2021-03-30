@@ -42,9 +42,9 @@ object CommandReader {
 
     fun setPrompt(p: String) { prompt = p }
 
-    fun read(): String =
+    fun read(myPrompt: String? = null): String =
         try {
-            reader.readLine(prompt)
+            reader.readLine(myPrompt ?: prompt)
         } catch (exc: Exception) {
             throw CliException("")
         }

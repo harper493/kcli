@@ -227,6 +227,25 @@ fun String.justify(width: Int) = when {
 }
 
 /**
+ * Get a yes/no answer from the user, return true iff yes
+ */
+
+fun readYesNo(prompt: String, defaultNo: Boolean=true): Boolean {
+    val keywords = KeywordList("yes", "no")
+    while (true) {
+        val answer = CommandReader.read("$prompt (${defaultNo.ifElse("y/N", "Y/n")})? ")
+        if (answer.isEmpty()) {
+            return !defaultNo
+        } else {
+            val k = keywords.match(answer)
+            if (k.isNotEmpty()) {
+                return k.first()?.asString()=="yes"
+            }
+        }
+    }
+}
+
+/**
  * Remove from a list of strings any which are a prefix of another
  */
 

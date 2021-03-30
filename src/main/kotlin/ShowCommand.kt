@@ -68,13 +68,22 @@ class ShowCommand(val cli: CliCommand) {
                 else -> ">$order"
             }
         )
-        addOption("limit", if (limit > 0) "$limit" else "")
+        val pageSize = Properties.getInt("parameter", "page_size")
+        addOption("limit", "${minOf(limit, pageSize).takeIf{it>0}?:pageSize}")
         classMd.getAttribute("color")?.let { selections.add(it) }
-        val coll = Rest.getCollection(oname, options = optionsMap)
+        val (envelope, coll) = Rest.get(oname, options = optionsMap)
         if (coll.size == 0) {
             throw CliException("no matching objects found")
         } else if (oname.isWild || coll.size>1) {
             cli.outputln(showCollection(oname, coll).render())
+            var start = 0
+            while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
+                    && readYesNo("Show more", defaultNo = false)) {
+                start += pageSize
+                optionsMap["start"] = "$start"
+                val coll2 = Rest.getCollection(oname, options = optionsMap)
+                cli.outputln(showCollection(oname, coll2).render())
+            }
         } else {
             cli.outputln(showOne(coll.first()!!).render())
         }
