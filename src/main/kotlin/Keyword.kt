@@ -15,36 +15,44 @@ class KeywordFn(
 
 class KeywordList()
 {
-    val keywords: MutableList<Keyword> = mutableListOf()
+    val keywords = Trie<Char, Keyword>()
+    fun stringToSequence(str: String): List<Char> = str.map{ it }
+    fun addOne(key: Keyword):KeywordList {
+        keywords.add(key, stringToSequence(key.key))
+        return this
+    }
+    fun remove(key: String) = keywords.remove(stringToSequence(key))
+    fun match(key: String) = keywords.getAll(stringToSequence(key))
+    fun exactMatch(key: String) = keywords.find{ it.key==key }
+    fun matchShorter(key: String) = keywords.getShorter(stringToSequence(key))
+    operator fun contains(key: Keyword): Boolean = keywords.getExact(stringToSequence(key.key)) != null
+    fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
+    fun copy(): KeywordList = KeywordList().add(this)
+
+    /*
+    From here on are "convenience functions" to simplify usage
+     */
 
     fun addAttributes(attrs: Iterable<AttributeMetadata>,
                       pred: (AttributeMetadata)->Boolean={ true }) =
-        also {attrs.filter{ pred(it) }
-            .forEach{ add(Keyword(it.name, attribute=it))
-                      if (it.isCollection) add(Keyword(it.typeName, attribute=it))
-            }
+        attrs.filter{ pred(it) }
+            .forEach{ addOne(Keyword(it.name, attribute=it))
+                      if (it.isCollection) addOne(Keyword(it.typeName, attribute=it))
         }
     fun addAttributes(vararg attrs: AttributeMetadata,
                       pred: (AttributeMetadata)->Boolean={ true }) =
-        also{ addAttributes(attrs.asIterable(), pred) }
-    fun addKeys(keys: Iterable<String>) = also{ keys.map{ add(Keyword(it, value=it)) }}
-    fun addKeys(vararg keys: String) = also{ keys.map{ add(Keyword(it, value=it)) }}
-    fun add(vararg fns: KeywordFn) = also{ fns.map{ add(Keyword(it.key, function=it.function)) }}
-    fun add(keys: KeywordList) = also{ keys.keywords.map{ add(it) }}
-    fun add(vararg keys: Keyword) = also{ keys.map{ add(it) }}
-    fun remove(key: String) = also{ keywords.find{ it.key==key }.also{ keywords.remove(it) } }
-    fun present(key: String) = keywords.find{it.key==key}!=null
-    fun add(key: Keyword) = also{ if (!present(key.key)) keywords.add(key) }
-    fun match(key: String) = keywords.mapNotNull { if (it.key.startsWith(key)) it else null }
-    fun exactMatch(key: String) = keywords.find{ it.key==key }
-    fun matchShorter(key: String) =
-        keywords.filter{ key.startsWith(it.key) }
-            .sortedBy{ it.key.length }
-            .lastOrNull()
-    fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
-    fun copy() = KeywordList().add(this)
-    operator fun contains(key: Keyword): Boolean =
-        keywords.fold(false){b, p -> b || p.key==key.key }
+        addAttributes(attrs.asIterable(), pred)
+    fun addKeys(keys: Iterable<String>) = keys.map{ addOne(Keyword(it, value=it)) }
+    fun addKeys(vararg keys: String): KeywordList {
+        keys.forEach { addOne(Keyword(it, value = it)) }
+        return this
+    }
+    fun add(vararg fns: KeywordFn) = fns.map{ addOne(Keyword(it.key, function=it.function)) }
+    fun add(keys: KeywordList): KeywordList {
+        keys.keywords.map{ addOne(it) }
+        return this
+    }
+    fun add(vararg keys: Keyword) = keys.map{ addOne(it) }
 
     constructor(vararg fns: KeywordFn) : this() {
         add(*fns)

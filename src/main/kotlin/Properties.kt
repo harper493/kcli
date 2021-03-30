@@ -3,7 +3,7 @@ class Properties (
 ) {
     private val myTrie = Trie<String, String>("*")
     fun addValue(value: String, keys: Iterable<String>) {
-        myTrie.addValue(value, keys)
+        myTrie.add(value, keys)
     }
     fun get(vararg keys: String) = myTrie.get(keys.toList())
 

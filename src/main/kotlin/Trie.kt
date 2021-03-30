@@ -1,5 +1,5 @@
-class Trie<KE,V>(val wildKey: KE? = null) {
-    private class Node<KE,V>(
+class Trie<KE,V>(val wildKey: KE? = null) : Iterable<V>{
+    class Node<KE,V>(
         val owner: Trie<KE,V>,
         val key: KE?,
         val parent: Node<KE,V>?
@@ -30,11 +30,25 @@ class Trie<KE,V>(val wildKey: KE? = null) {
             keys.none() -> best
             else -> children[keys.first()]?.getShorter(keys.drop(1), value ?: best) ?: value ?: best
         }
+        fun getExact(keys: Iterable<KE>) : V? = when {
+            keys.none() -> value
+            else -> children[keys.first()]?.getExact(keys.drop(1))
+        }
         fun getAll(keys: Iterable<KE>): List<Node<KE,V>> =
-            if (keys.none()) listOf(this)
-            else listOfNotNull(children[keys.first()], children[wildKey])
-                .map{it.getAll(keys.drop(1))}
-                .flatten()
+            (if (keys.none()) {
+                listOf(listOf(this), children.values.map { it.getAll(keys) }.flatten())
+            } else {
+                listOfNotNull(children[keys.first()], children[wildKey]).map { it.getAll(keys.drop(1)) }
+            }).flatten()
+                .filter { it.value != null }
+
+        fun remove(keys: Iterable<KE>) {
+            if (keys.none()) {
+                value = null
+            } else {
+                children[keys.first()]?.remove(keys.drop(1))
+            }
+        }
         fun visit(visitor: (Iterable<KE>,V)->Unit) {
             if (value!=null) {
                 visitor(getName(), value!!)
@@ -42,11 +56,22 @@ class Trie<KE,V>(val wildKey: KE? = null) {
             children.values.forEach{ it.visit(visitor) }
         }
     }
+    class TrieIterator<KE,V>(var here: Node<KE,V>): Iterator<V>{
+        val myList = here.getAll(listOf())
+        val myIter = myList.iterator()
+
+        override fun hasNext() = myIter.hasNext()
+        override fun next(): V = myIter.next()?.value!!
+    }
     private val root = Node<KE,V>(this, null, null)
 
-    fun addValue(value: V, keys: Iterable<KE>) { root.addValue(value, keys) }
-    fun get(keys: Iterable<KE>) = root.getAll(keys).minBy { it.wildness }?.value
+    fun add(value: V, keys: Iterable<KE>) = root.addValue(value, keys)
+    fun remove(keys: Iterable<KE>) = root.remove(keys)
+    fun get(keys: Iterable<KE>) = root.getAll(keys).minByOrNull { it.wildness }?.value
+    fun getAll(keys: Iterable<KE>) = root.getAll(keys).map{ it.value }
     fun getShorter(keys: Iterable<KE>) = root.getShorter(keys)
+    fun getExact(keys: Iterable<KE>) = root.getExact(keys)
+    override fun iterator() = TrieIterator(root)
     fun visit(keys: Iterable<KE>, fn: (Iterable<KE>, V)->Unit) =
         root.getAll(keys).filter{ it.value!=null }.forEach{fn(it.getName(), it.value!!)}
 }

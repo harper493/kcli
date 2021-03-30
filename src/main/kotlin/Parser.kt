@@ -125,7 +125,7 @@ class Parser (
                       finalExtras: KeywordList=KeywordList(),
                       missOk: Boolean=false,
                       initialPred: (AttributeMetadata)->Boolean={ true },
-                      keywordAdder: (ClassMetadata, KeywordList)->Unit={_,_ -> }) : Pair<ObjectName, Keyword?> {
+                      keywordAdder: (ClassMetadata, KeywordList)->Unit={_,_ -> }): Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
         var curMd = Metadata.getConfigMd()
@@ -134,7 +134,7 @@ class Parser (
             curMd.collections
                 .map{ Pair(it, Properties.get("abbreviate", it.typeName)) }
                 .filter{ it.second!=null }
-                .forEach{ classKeys.add(Keyword(it.second!!, attribute=it.first)) }
+                .forEach{ classKeys.addOne(Keyword(it.second!!, attribute=it.first)) }
             if (result.isEmpty) {
                 classKeys.add(initialExtras)
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
@@ -177,9 +177,9 @@ class Parser (
             if (exact!=null) {
                 result = exact
             } else {
-                val matches = keys.match(token)
+                val matches = keys.match(token).filterNotNull()
                     .removeDuplicates{ a,b -> a.sameReferent(b)
-                            && a.key.length < b.key.length }
+                                       && a.key.length < b.key.length }
                 when (matches.size) {
                     0 -> {
                         backup()

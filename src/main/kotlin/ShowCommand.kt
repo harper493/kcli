@@ -24,7 +24,7 @@ class ShowCommand(val cli: CliCommand) {
         KeywordFn("with") { doWith() },
         KeywordFn("top") { doTopBottom(true) },
         KeywordFn("bottom") { doTopBottom(false) },
-    ).also { keywords -> levels.map { keywords.add(Keyword(it, function = { doLevel(it) })) } }
+    ).also { keywords -> levels.map { keywords.addOne(Keyword(it, function = { doLevel(it) })) } }
 
     fun doShow() {
         val optionsMap = mutableMapOf(
