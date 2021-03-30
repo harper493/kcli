@@ -60,7 +60,7 @@ class ShowCommand(val cli: CliCommand) {
         )
         addOption("select",
             "${if (onlySelect || selections.isEmpty()) "" else "+"}${selections.joinToString(",") { it.name }}")
-        addOption("with", filters.joinToString(if (filterConjunction == "and") "," else "|"))
+        addOption("with", filters.joinToString((filterConjunction == "and").ifElse(",","|")))
         addOption(
             "order", when (descending) {
                 null -> ""

@@ -1,50 +1,14 @@
 class Properties (
     private var filename: String? = null
 ) {
-    class Property (
-        val name: String,
-        val parent: Property?
-    ) {
-        private var leafValue: String? = null
-        val value get() = leafValue
-        private var children: MutableMap<String, Property> = mutableMapOf()
-        private fun getChild(key: String) : Property {
-            if (children[key] == null) {
-                children[key] = Property(key, this)
-            }
-            return children[key]!!
-        }
-        val wild = name=="*"
-        val wildness: Int = (parent?.wildness ?: 0) + (if (wild) 1 else 0)
-        fun getName() : MutableList<String> = parent?.getName()?.apply{add(name)} ?: mutableListOf()
-        fun getNameString() = getName().joinToString(".")
-        fun addValue(value: String, keys: Iterable<String>) {
-            when {
-                keys.none() -> leafValue = value
-                else ->getChild(keys.first()).addValue(value, keys.drop(1))
-            }
-        }
-        fun getUnique(keys: Iterable<String>) : String? = when {
-            keys.none() -> leafValue
-            else -> children[keys.first()]?.getUnique(keys.drop(1))
-        }
-        fun getWild(keys: Iterable<String>): List<Property> =
-            if (keys.none()) listOf(this)
-            else listOfNotNull(children[keys.first()], children["*"])
-                .map{it.getWild(keys.drop(1))}
-                .flatten()
-        fun visit(visitor: (String,String)->Unit) {
-            if (leafValue!=null) {
-                visitor(getNameString(), leafValue!!)
-            }
-            children.values.forEach{ it.visit(visitor) }
-        }
+    private val myTrie = Trie<String, String>("*")
+    fun addValue(value: String, keys: Iterable<String>) {
+        myTrie.addValue(value, keys)
     }
-    private val root = Property("", null)
-    fun addValue(value: String, keys: Iterable<String>) { root.addValue(value, keys) }
-    fun getInt(vararg keys: String, default: Int=0) = get(*keys)?.toIntOrNull() ?: default
-    fun getFloat(vararg keys: String, default: Double=0.0) = get(*keys)?.toDoubleOrNull() ?: default
-    fun get(vararg keys: String) = root.getWild(keys.toList()).minBy { it.wildness }?.value
+    fun get(vararg keys: String) = myTrie.get(keys.toList())
+
+    fun getInt(vararg keys: String, default: Int = 0) = get(*keys)?.toIntOrNull() ?: default
+    fun getFloat(vararg keys: String, default: Double = 0.0) = get(*keys)?.toDoubleOrNull() ?: default
     fun load(fn: String? = null): Properties {
         if (fn != null) {
             filename = fn
@@ -54,34 +18,42 @@ class Properties (
                 try {
                     val (key, value) = it.split(" #")[0].split("=")
                     addValue(value.trim(), key.trim().split("."))
-                } catch (exc: Exception) { }   // ignore parsing error
+                } catch (exc: Exception) {
+                }   // ignore parsing error
             }
-        } catch (exc: Exception) { }
+        } catch (exc: Exception) {
+        }
         return this
     }
+
     fun write(fn: String? = null) {
         val writer = java.io.PrintWriter(fn ?: filename ?: "")
-        root.visit{ name, value -> writer.append("$name = $value\n")}
+        myTrie.visit(listOf())
+            { name, value -> writer.append("${name.joinToString(".")} = $value\n") }
         writer.flush()
         writer.close()
     }
-    fun visit(vararg keys: String, fn: (Property)->Unit) =
-        root.getWild(keys.toList()).forEach{fn(it)}
+
+    fun visit(vararg keys: String, fn: (Iterable<String>, String) -> Unit) =
+        myTrie.visit(keys.toList(), fn)
 
     init {
-        if (filename!=null) {
+        if (filename != null) {
             load(filename!!)
         }
     }
+
     companion object {
         private var properties = Properties()
         fun load(fn: String): Properties {
             return properties.load(fn)
         }
+
         fun get(vararg keys: String) = properties.get(*keys)
-        fun getInt(vararg keys: String, default: Int=0) = properties.getInt(*keys, default=default)
-        fun getFloat(vararg keys: String, default: Double=0.0) = properties.getFloat(*keys, default=default)
+        fun getInt(vararg keys: String, default: Int = 0) = properties.getInt(*keys, default = default)
+        fun getFloat(vararg keys: String, default: Double = 0.0) = properties.getFloat(*keys, default = default)
         fun getColor(color: String) = properties.get("color", color)
         fun getColors(vararg colors: String) = colors.mapNotNull { getColor(it) }
     }
 }
+
