@@ -227,11 +227,15 @@ fun String.justify(width: Int) = when {
 }
 
 /**
- * Get a yes/no answer from the user, return true iff yes
+ * Get a yes/no answer from the user, return true iff yes. Allow qut for backward compatibility as
+ * synonym for "no".
  */
 
-fun readYesNo(prompt: String, defaultNo: Boolean=true): Boolean {
+fun readYesNo(prompt: String, defaultNo: Boolean=true, allowQuit: Boolean=false): Boolean {
     val keywords = KeywordList("yes", "no")
+    if (allowQuit) {
+        keywords.addKeys("quit")
+    }
     while (true) {
         val answer = CommandReader.read("$prompt (${defaultNo.ifElse("y/N", "Y/n")})? ")
         if (answer.isEmpty()) {

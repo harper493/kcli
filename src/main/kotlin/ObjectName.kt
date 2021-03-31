@@ -7,7 +7,8 @@ class ObjectName(val newUrl: String="") {
     ) {
         val urlName get() = if(name.isEmpty()) "*" else name
         val url: String get() = "${attrMd.relativeUrl}${urlName}"
-        val isWild get() = name.isEmpty()
+        val isWild get() = name.isEmpty() || name=="*"
+        val isQuiteWild get() = '*' in name && name != "*"
         init {
             if (name=="*") name = ""
         }
@@ -45,6 +46,17 @@ class ObjectName(val newUrl: String="") {
 
     fun wipeLeafName() =
         if (isEmpty) ObjectName() else dropLast().append(leafAttribute!!, "")
+
+    fun convertWild(): List<String> {
+        val result = mutableListOf<String>()
+        for (e in elements) {
+            if (e.isQuiteWild) {
+                result.add("${e.attrMd.typeName}.name=${e.name}")
+                e.name = "*"
+            }
+        }
+        return result
+    }
 
     fun parse(url: String) {
         val split = url.split("/").toMutableList()

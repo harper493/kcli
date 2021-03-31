@@ -17,9 +17,10 @@ class CliCommand(line: String) {
         if (line.isNotEmpty()) {
             parser = Parser(line)
             val extras = KeywordList(
-                KeywordFn("show") { doShow() },
-                KeywordFn("quit") { doQuit() },
-                KeywordFn("set") { doSet() },
+                KeywordFn("show")  { doShow() },
+                KeywordFn("count") { doCount() },
+                KeywordFn("quit")  { doQuit() },
+                KeywordFn("set")   { doSet() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
                 keywordAdder={ classMd, keywords ->
@@ -37,8 +38,8 @@ class CliCommand(line: String) {
         }
     }
 
-    private fun doShow() = ShowCommand(this).doShow()
-
+    private fun doShow() = ShowCommand(this, "show").doShow()
+    private fun doCount() = ShowCommand(this, "count").doCount()
     private fun doSet() = SetCommand(this).doSet()
 
     private fun doModify(obj: ObjectName) {

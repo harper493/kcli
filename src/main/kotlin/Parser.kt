@@ -148,6 +148,7 @@ class Parser (
             val attrMd = classKey.attribute
             if (attrMd != null && attrMd.isCollection) {
                 val name = nextToken(endOk=true,
+                    tokenType=TokenType.ttName,
                     completer=ObjectCompleter(result.copy().append(attrMd, ""),
                         finalExtras))
                 val key = finalExtras.exactMatch(name?:"")

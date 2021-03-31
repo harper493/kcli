@@ -1,4 +1,4 @@
-class ShowCommand(val cli: CliCommand) {
+class ShowCommand(val cli: CliCommand, val verb: String) {
     private val parser get() = cli.parser
     private var classMd: ClassMetadata = Metadata.getClass("configuration")!!
     private val selections = mutableListOf<AttributeMetadata>()
@@ -9,8 +9,12 @@ class ShowCommand(val cli: CliCommand) {
     private var descending: Boolean? = null
     private var limit = 100
     private var level = ""
+    private val optionsMap = mutableMapOf<String,String>()
+    private lateinit var objectName: ObjectName
     private val levels = listOf("brief", "full", "detail", "debug")
     private var result = StyledText("")
+    private val pageSize = Properties.getInt("parameter", "page_size")
+    private val finalExtras = KeywordList()
     private val initialExtras = KeywordList(
         KeywordFn("health"){ result = showHealth() },
         KeywordFn("license"){ result = showLicense() },
@@ -19,23 +23,57 @@ class ShowCommand(val cli: CliCommand) {
         KeywordFn("system"){ result = showSystem() },
         KeywordFn("version"){ result = showVersion() },
     )
-    private val finalExtras = KeywordList(
+    private val finalExtraTemplate = KeywordList(
         KeywordFn("select") { doSelect() },
         KeywordFn("with") { doWith() },
         KeywordFn("top") { doTopBottom(true) },
         KeywordFn("bottom") { doTopBottom(false) },
-    ).also { keywords -> levels.map { keywords.addOne(Keyword(it, function = { doLevel(it) })) } }
+    )
 
     fun doShow() {
-        val optionsMap = mutableMapOf(
-            "link" to "name",
-        )
-        fun addOption(option: String, value: String) {
-            if (value.isNotEmpty()) {
-                optionsMap[option] = value
+        getShowInput()
+        makeOptions()
+        var (envelope, coll) = Rest.get(objectName, options = optionsMap)
+        if (coll.size == 0) {
+            throw CliException("no matching objects found")
+        } else if (objectName.isWild || coll.size>1) {
+            cli.outputln(showCollection(objectName, coll).render())
+            var start = 0
+            while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
+                && run {
+                    cli.output(StyledText().render())
+                    true
+                }
+                && readYesNo("Show more", defaultNo = false, allowQuit=true)) {
+                start += pageSize
+                optionsMap["start"] = "$start"
+                coll = Rest.getCollection(objectName, options = optionsMap)
+                cli.outputln(showCollection(objectName, coll).render())
             }
+        } else {
+            cli.outputln(showOne(coll.first()!!).render())
         }
-        val (oname, terminator) = this.parser.getObjectName(initialExtras=initialExtras,
+    }
+
+    fun doCount() {
+        getShowInput(exclude=listOf("select", "top", "bottom", "limit", "level"))
+        optionsMap["limit"] = "1"
+        optionsMap["level"] = "list"
+        makeOptions()
+        var (envelope, coll) = Rest.get(objectName, options = optionsMap)
+        val quantity = envelope["size"]?.toInt() ?: 0
+        val result = StyledText("$quantity matching ${classMd.name.makePlural(quantity)} found")
+        cli.outputln(result.render())
+    }
+
+
+    private fun getShowInput(exclude: Iterable<String> = listOf()) {
+        optionsMap["link"] = "name"
+        finalExtraTemplate.keywords.forEach{ if (it.key !in exclude) finalExtras.add(it) }
+        if ("levels" !in exclude) {
+            levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
+        }
+        val (oname, terminator) = parser.getObjectName(initialExtras=initialExtras,
             finalExtras=finalExtras,
             initialPred={ !it.name.startsWith("parameter")})
         classMd = oname.leafClass ?: Metadata.getClass("configuration")!!
@@ -47,20 +85,41 @@ class ShowCommand(val cli: CliCommand) {
                 return
             }
             if (oname.leafClass == null) {
-                throw CliException("expected object name after 'show'")
+                throw CliException("expected object name after '$verb'")
             }
             myKey = finalExtras.exactMatch(parser.curToken ?: "")
         }
+        objectName = oname
+    }
+
+    private fun makeOptions() {
+        fun addOption(option: String, value: String) {
+            if (value.isNotEmpty()) {
+                optionsMap[option] = value
+            }
+        }
+        classMd.getAttribute("color")?.let { selections.add(it) }
+        addOption("select",
+            "${if (onlySelect || selections.isEmpty()) "" else "+"}" +
+                    "${selections.joinToString(",") { it.name }}")
+        var with = filters.joinToString((filterConjunction == "and")
+            .ifElse(",","|"))
+        val converted = objectName.convertWild().joinToString(",")
+        if (converted.isNotEmpty()) {
+            if (with.isEmpty()) {
+                with = converted
+            } else {
+                with = "$with,$converted"
+            }
+        }
+        addOption("with", with)
         addOption(
             "level", when {
                 level.isNotEmpty() -> level
-                oname.isWild -> "brief"
+                objectName.isWild -> "brief"
                 else -> "full"
             }
         )
-        addOption("select",
-            "${if (onlySelect || selections.isEmpty()) "" else "+"}${selections.joinToString(",") { it.name }}")
-        addOption("with", filters.joinToString((filterConjunction == "and").ifElse(",","|")))
         addOption(
             "order", when (descending) {
                 null -> ""
@@ -68,27 +127,63 @@ class ShowCommand(val cli: CliCommand) {
                 else -> ">$order"
             }
         )
-        val pageSize = Properties.getInt("parameter", "page_size")
         addOption("limit", "${minOf(limit, pageSize).takeIf{it>0}?:pageSize}")
-        classMd.getAttribute("color")?.let { selections.add(it) }
-        val (envelope, coll) = Rest.get(oname, options = optionsMap)
-        if (coll.size == 0) {
-            throw CliException("no matching objects found")
-        } else if (oname.isWild || coll.size>1) {
-            cli.outputln(showCollection(oname, coll).render())
-            var start = 0
-            while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
-                    && readYesNo("Show more", defaultNo = false)) {
-                start += pageSize
-                optionsMap["start"] = "$start"
-                val coll2 = Rest.getCollection(oname, options = optionsMap)
-                cli.outputln(showCollection(oname, coll2).render())
-            }
-        } else {
-            cli.outputln(showOne(coll.first()!!).render())
-        }
     }
 
+    /*
+        #
+    # do_total - implement the total command
+    #
+    def do_total(self, reader) :
+        self.options = {}
+        breaks = ['attributes', 'select']
+        self._make_show_options(False)
+        for b in breaks :
+            self.show_options[b] = b
+        self.command_context = { 'limit' : 1, 'total' : 'post' }
+        objname = self._get_object_name(reader, nested_extra=self.show_options)
+        self._gather_show_arguments(reader, objname)
+        for b in breaks :
+            if b.startswith(reader.get_curtoken()) :
+                reader.next_token()
+                break
+        class_name = objname.leaf_class().class_name
+        self.options['level'] = 'list'
+        self._gather_attributes(reader, only=False, pred=(lambda a : a.is_arithmetic()))
+        self.options['select'] = self.command_context['select']
+        if len(self.selected)==0 :
+            raise ValueError, "must specify at least one attribute"
+        coll = self.api.get_collection(objname, options=self.options)
+        if len(coll) :
+            columns = [ [ 'attribute' ], [ 'count' ], [' total' ], [' average' ] ]
+            for a in self.selected :
+                total_type = a.get_nature('total')
+                if total_type in ('sum', 'average') :
+                    columns[0].append(a.name)
+                    try :
+                        count = coll.counts[a.name]
+                    except KeyError :
+                        count = 0
+                    try :
+                        total = coll.totals[a.name]
+                    except KeyError :
+                        total = 0
+                    columns[1].append(str(count))
+                    if total_type=='sum' :
+                        columns[2].append(str(total))
+                        columns[3].append("%.3f" % ((total/float(count) if count else 0),))
+                    else :
+                        columns[2].append('')
+                        columns[3].append(str(total))
+            if len(self.selected) > 1 :
+                output(format_columns(columns, underline=True))
+            else :
+                output("for attribute '%s' count %s total %s average %.3f" %
+                    (columns[0][1], columns[1][1], columns[2][1], float(columns[3][1])))
+        else :
+            error_output("No matching %s found" % (make_plural(class_name),))
+
+     */
     private fun doSelect() {
         cli.checkRepeat({ selections.isNotEmpty() }, "select")
         val myExtras = finalExtras
