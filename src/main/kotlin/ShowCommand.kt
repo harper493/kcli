@@ -60,9 +60,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         optionsMap["limit"] = "1"
         optionsMap["level"] = "list"
         makeOptions()
-        var (envelope, coll) = Rest.get(objectName, options = optionsMap)
+        var (envelope, _) = Rest.get(objectName, options = optionsMap)
         val quantity = envelope["size"]?.toInt() ?: 0
-        val result = StyledText("$quantity matching ${classMd.name.makePlural(quantity)} found")
+        val result = StyledText("$quantity matching ${classMd.name.makePlural(quantity)} found",
+                                color = Properties.get("parameter", "result_color"))
         cli.outputln(result.render())
     }
 
@@ -435,7 +436,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         } else {
             val name = param.attribute!!.displayName
             val value = params?.asDict()?.get(name)?.asString()
-            result = StyledText("$name = $value", color=Properties.get("color", "even_row"))
+            result = StyledText("$name = $value", color=Properties.get("color", "result_color"))
         }
         return result
     }
@@ -449,7 +450,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private fun showVersion(): StyledText {
         return StyledText(Rest.getAttribute("configurations/running",
             "build_version") ?: "unknown",
-            color = Properties.get("color", "even_row"))
+            color = Properties.get("parameter", "result_color"))
     }
 
     private fun makeHeading(text: String, includeTime: Boolean=true): StyledText {

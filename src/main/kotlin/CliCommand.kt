@@ -28,6 +28,9 @@ class CliCommand(line: String) {
                         classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },
                 missOk=true)
             if (objName.isEmpty) {
+                if (key==null) {
+                    throw CliException("unknown command or collection '${parser.curToken}'")
+                }
                 key?.invoke()
             } else {
                 if (!parser.isFinished()) {

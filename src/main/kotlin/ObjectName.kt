@@ -47,16 +47,13 @@ class ObjectName(val newUrl: String="") {
     fun wipeLeafName() =
         if (isEmpty) ObjectName() else dropLast().append(leafAttribute!!, "")
 
-    fun convertWild(): List<String> {
-        val result = mutableListOf<String>()
-        for (e in elements) {
-            if (e.isQuiteWild) {
-                result.add("${e.attrMd.typeName}.name=${e.name}")
-                e.name = "*"
-            }
+    fun convertWild() =
+        elements.mapNotNull{ if (it.isQuiteWild)
+            it.let { e -> val n=e.name
+                e.name="*"
+                "${e.attrMd.typeName}.name=${n}"}
+        else null
         }
-        return result
-    }
 
     fun parse(url: String) {
         val split = url.split("/").toMutableList()

@@ -30,7 +30,7 @@ class Parser (
         val myValidator =
             myDatatype?.validator
                 ?: when (if (validator.isNull) tokenType else TokenType.ttExplicit) {
-                    TokenType.ttName -> Validator("""\*?[a-zA-Z][a-zA-Z0-9-_$]*\*?""")
+                    TokenType.ttName -> Validator("""\*?[a-zA-Z0-9-_$]*\*?""")
                     TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
                     TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
                     TokenType.ttAll -> Validator(".*")

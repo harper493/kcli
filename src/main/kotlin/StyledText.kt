@@ -114,6 +114,8 @@ class StyledText (
             "white" to 15,
             "grey" to 244,
             "even_grey" to 239,
+            "deep_blue" to 20,
+            "mid_blue" to 27,
             "orange" to 208,
             "pink" to 201,
             "brown" to 1,

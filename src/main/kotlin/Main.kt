@@ -7,6 +7,7 @@ class Cli(private val cmdargs: Array<String>) {
     private lateinit var args: Args
     private lateinit var privilege: String
     private lateinit var target: ServerInfo
+    private lateinit var systemName: String
 
     init {
         theCli = this
@@ -39,7 +40,14 @@ class Cli(private val cmdargs: Array<String>) {
             return
         }
         privilege = Rest.getAttribute("administrators/${target.username}", "privilege") ?: ""
-        CommandReader.setPrompt("${Rest.getAttribute("configurations/running", "system_name") ?: "stm"}# ")
+        systemName = Rest.getAttribute("configurations/running", "system_name") ?: "stm"
+        if (args.output.isBlank() && args.command.isEmpty()) {
+            outputln(StyledText("User '${target.username}' logged on to '$systemName'" +
+                    " (${target.server}) with privilege level $privilege",
+                color=Properties.get("parameter", "login_color")).render())
+            output(StyledText().render())
+        }
+        CommandReader.setPrompt("$systemName# ")
         while (true) {
             var error = ""
             try {
