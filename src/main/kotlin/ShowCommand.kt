@@ -32,6 +32,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
 
     fun doShow() {
         getShowInput()
+        if (result.isNotEmpty()) {
+            println(result.render())
+            return
+        }
         makeOptions()
         var (envelope, coll) = Rest.get(objectName, options = optionsMap)
         if (coll.size == 0) {
@@ -82,8 +86,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         while (myKey != null) {
             myKey.function!!.invoke()
             if (result.isNotEmpty()) {
-                println(result.render())
-                return
+                break
             }
             myKey = finalExtras.exactMatch(parser.curToken ?: "")
         }
