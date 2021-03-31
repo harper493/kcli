@@ -85,9 +85,6 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 println(result.render())
                 return
             }
-            if (oname.leafClass == null) {
-                throw CliException("expected object name after '$verb'")
-            }
             myKey = finalExtras.exactMatch(parser.curToken ?: "")
         }
         objectName = oname

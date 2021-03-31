@@ -68,8 +68,19 @@ class JsonObjectImpl : JsonObject {
                 } else if (!escape && skipChar('\\', doSkipWs=false)) {
                     escape = true
                 } else if (escape) {
-                    val ch = "" + string[index]
-                    result += escapes[ch] ?: ch
+                    if (string[index]=='u') {
+                        var code = ""
+                        for (i in 0..3) {
+                            ++index
+                            if (good()) {
+                                code = "$code${string[index]}"
+                            } else break
+                        }
+                        result += code.toInt(16).toChar()
+                    } else {
+                        val ch = "" + string[index]
+                        result += escapes[ch] ?: ch
+                    }
                     ++index
                     escape = false
                 } else {
