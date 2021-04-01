@@ -1,4 +1,5 @@
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 // import com.sun.org.apache.xpath.internal.operations.Bool
 //import kotlin.reflect.full.cast
@@ -290,7 +291,8 @@ open class StringDatatype(
 open class IntDatatype(
     name: String,
     description: String = name,
-    formatter: (value: Any) -> String = { it.toString() },
+    formatter: (value: Any) -> String =
+        { (it.toString().toFloatOrNull()?:(0.0.toFloat())).roundToInt().toString() },
     validator: Validator=Validator(),
     unit: String = "",
     properties: String = "",
@@ -316,7 +318,7 @@ open class IntDatatype(
 open class FloatDatatype(
     name: String,
     description: String = name,
-    formatter: (value: Any) -> String = { it.toString() },
+    formatter: (value: Any) -> String = { (it.toString().toFloatOrNull() ?: 0).toString() },
     validator: Validator=Validator(),
     unit: String = "",
     properties: String = "",

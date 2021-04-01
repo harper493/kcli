@@ -1,3 +1,4 @@
+
 val pluralIrregulars = mapOf(
     "ox" to "oxen",
     "vax" to "vaxen",

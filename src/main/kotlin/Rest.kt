@@ -106,6 +106,9 @@ class Rest(
             if (options==null) mapOf("select" to aname) else options + ("select" to aname))
             ?.get(aname)?.value
 
+    fun getTotals(oname: ObjectName, options: Map<String,String>?=null) =
+        getRaw(oname.url, options).let{ it.asDict()?.get("total")?.toMap() ?: mapOf() }
+
     fun getSystemName() =
         getRaw("rest/top/", mapOf("link" to "full"))["collection"]
             ?.asArray()
@@ -183,6 +186,8 @@ class Rest(
             theRest.getAttribute(oname, aname, options)
         fun getAttribute(url: String, aname: String, options: Map<String,String>?=null) =
             theRest.getAttribute(ObjectName(url), aname, options)
+        fun getTotals(oname: ObjectName, options: Map<String,String>?=null) =
+            theRest.getTotals(oname, options)
         fun setTrace(t: Boolean) =
             theRest.setTrace(t)
         fun setConfig(newConfig: String) =

@@ -74,11 +74,30 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     fun doTotal() {
         getShowInput(exclude=listOf("level"))
         optionsMap["limit"] = "1"
+        optionsMap["total"] = "post"
         CliException.throwIf("must use 'select' for attributes in total command"){ selections.isEmpty() }
-        makeOptions()
-        val json = Rest.getRaw(objectName.url, options = optionsMap)
-        val totals = json.asDict()?.get("total")?.asDict() ?: mapOf()
-
+        makeOptions(doColor=false)
+        val totals = Rest.getTotals(objectName, options = optionsMap)
+        CliException.throwIf("no matching objects found")
+        { totals.filter{ it.key.startsWith("_count") }.values.map{ it.toIntOrNull()?: 0}.sum() == 0 }
+        val table = cli.makeTable()
+        selections
+            .filter{ it.name in totals }
+            .sortedBy{ it.displayName }
+            .forEach{ attr ->
+                val count = maxOf(1, ((totals["_count_${attr.name}"] ?: "1").toIntOrNull() ?: 1))
+                val total = attr.type.convert((totals[attr.name] ?: "0"))
+                table.append(
+                    "Attribute" to attr.displayName,
+                    "Count" to "$count",
+                    "Total" to (attr.total=="sum").ifElse( "$total ${attr.unit}", ""),
+                    "Average" to "${when(attr.total) {
+                        "average" -> "$total"
+                        "sum" -> attr.type.formatter(total.toFloat() / count.toFloat())
+                        else -> ""}} ${attr.unit}"
+                )
+            }
+        cli.outputln(table.layoutText().render())
     }
 
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
@@ -102,13 +121,15 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         objectName = oname
     }
 
-    private fun makeOptions() {
+    private fun makeOptions(doColor: Boolean=true) {
         fun addOption(option: String, value: String) {
             if (value.isNotEmpty()) {
                 optionsMap[option] = value
             }
         }
-        classMd.getAttribute("color")?.let { selections.add(it) }
+        if (doColor) {
+            classMd.getAttribute("color")?.let { selections.add(it) }
+        }
         addOption("select",
             "${if (onlySelect || selections.isEmpty()) "" else "+"}" +
                     "${selections.joinToString(",") { it.name }}")
@@ -140,60 +161,6 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         addOption("limit", "${minOf(limit, pageSize).takeIf{it>0}?:pageSize}")
     }
 
-    /*
-        #
-    # do_total - implement the total command
-    #
-    def do_total(self, reader) :
-        self.options = {}
-        breaks = ['attributes', 'select']
-        self._make_show_options(False)
-        for b in breaks :
-            self.show_options[b] = b
-        self.command_context = { 'limit' : 1, 'total' : 'post' }
-        objname = self._get_object_name(reader, nested_extra=self.show_options)
-        self._gather_show_arguments(reader, objname)
-        for b in breaks :
-            if b.startswith(reader.get_curtoken()) :
-                reader.next_token()
-                break
-        class_name = objname.leaf_class().class_name
-        self.options['level'] = 'list'
-        self._gather_attributes(reader, only=False, pred=(lambda a : a.is_arithmetic()))
-        self.options['select'] = self.command_context['select']
-        if len(self.selected)==0 :
-            raise ValueError, "must specify at least one attribute"
-        coll = self.api.get_collection(objname, options=self.options)
-        if len(coll) :
-            columns = [ [ 'attribute' ], [ 'count' ], [' total' ], [' average' ] ]
-            for a in self.selected :
-                total_type = a.get_nature('total')
-                if total_type in ('sum', 'average') :
-                    columns[0].append(a.name)
-                    try :
-                        count = coll.counts[a.name]
-                    except KeyError :
-                        count = 0
-                    try :
-                        total = coll.totals[a.name]
-                    except KeyError :
-                        total = 0
-                    columns[1].append(str(count))
-                    if total_type=='sum' :
-                        columns[2].append(str(total))
-                        columns[3].append("%.3f" % ((total/float(count) if count else 0),))
-                    else :
-                        columns[2].append('')
-                        columns[3].append(str(total))
-            if len(self.selected) > 1 :
-                output(format_columns(columns, underline=True))
-            else :
-                output("for attribute '%s' count %s total %s average %.3f" %
-                    (columns[0][1], columns[1][1], columns[2][1], float(columns[3][1])))
-        else :
-            error_output("No matching %s found" % (make_plural(class_name),))
-
-     */
     private fun doSelect() {
         cli.checkRepeat({ selections.isNotEmpty() }, "select")
         val myExtras = finalExtras

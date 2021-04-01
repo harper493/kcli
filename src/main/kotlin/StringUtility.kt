@@ -255,3 +255,4 @@ fun readYesNo(prompt: String, defaultNo: Boolean=true, allowQuit: Boolean=false)
 
 fun Iterable<String>.removePrefixes() =
     removeDuplicates{ a,b -> b.startsWith(a) }
+

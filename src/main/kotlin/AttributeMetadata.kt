@@ -31,6 +31,7 @@ open class AttributeMetadata(
     val range get() = getMd("range")
     val level get() = getMd("level")
     val default get() = natures["default"]
+    val total get() = natures["total"] ?: "none"
     fun getMd(mname: String) = md[mname]?.asString() ?: ""
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)

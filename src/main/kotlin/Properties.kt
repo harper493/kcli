@@ -28,14 +28,14 @@ class Properties (
 
     fun write(fn: String? = null) {
         val writer = java.io.PrintWriter(fn ?: filename ?: "")
-        myTrie.visit(listOf())
+        myTrie.visit()
             { name, value -> writer.append("${name.joinToString(".")} = $value\n") }
         writer.flush()
         writer.close()
     }
 
     fun visit(vararg keys: String, fn: (Iterable<String>, String) -> Unit) =
-        myTrie.visit(keys.toList(), fn)
+        myTrie.visit(fn)
 
     init {
         if (filename != null) {
