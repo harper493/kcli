@@ -79,7 +79,8 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         makeOptions(doColor=false)
         val totals = Rest.getTotals(objectName, options = optionsMap)
         CliException.throwIf("no matching objects found")
-        { totals.filter{ it.key.startsWith("_count") }.values.map{ it.toIntOrNull()?: 0}.sum() == 0 }
+            { totals.filter{ it.key.startsWith("_count") }
+                .values.map{ it.toIntOrNull()?: 0}.sum() == 0 }
         val table = cli.makeTable()
         selections
             .filter{ it.name in totals }
@@ -291,30 +292,27 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val nameColumns = oname.elements.takeLast(oname.wildDepth)
             .map{ Pair(it.attrMd.containedClass?.displayName ?: "", ++namePosition)}
             .toMap()
-        if (coll.isNotEmpty()) {
-            for (obj in coll) {
-                val color = obj.getOr("color")?.value?.ifBlank{ null }
-                for (elem in obj.name.elements.takeLast(oname.wildDepth)) {
-                    table.append(elem.attrMd.containedClass?.displayName ?: "", elem.name, color)
-                }
-                for ((name, attributeData) in obj) {
-                    if (Properties.get("suppress", classMd.name, name) == null && name != "name") {
-                        table.append(name, attributeData.value, color = color)
-                    }
+        CliException.throwIf("no matching objects found"){ coll.isEmpty() }
+        for (obj in coll) {
+            val color = obj.getOr("color")?.value?.ifBlank{ null }
+            for (elem in obj.name.elements.takeLast(oname.wildDepth)) {
+                table.append(elem.attrMd.containedClass?.displayName ?: "", elem.name, color)
+            }
+            for ((name, attributeData) in obj) {
+                if (Properties.get("suppress", classMd.name, name) == null && name != "name") {
+                    table.append(name, attributeData.value, color = color)
                 }
             }
-            table.setColumns { name, col ->
-                if (name in nameColumns) {
-                    col.position = nameColumns[name]!!
-                } else {
-                    col.position = -(classMd.getAttribute(name)?.preference ?: 0)
-                    col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
-                }
-            }
-            return table.layoutText().renderStyled()
-        } else {
-            throw CliException("no matching objects found")
         }
+        table.setColumns { name, col ->
+            if (name in nameColumns) {
+                col.position = nameColumns[name]!!
+            } else {
+                col.position = -(classMd.getAttribute(name)?.preference ?: 0)
+                col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
+            }
+        }
+        return table.layoutText().renderStyled()
     }
 
     private fun showHealth() =
