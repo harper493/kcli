@@ -71,6 +71,15 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         cli.outputln(result.render())
     }
 
+    fun doTotal() {
+        getShowInput(exclude=listOf("level"))
+        optionsMap["limit"] = "1"
+        CliException.throwIf("must use 'select' for attributes in total command"){ selections.isEmpty() }
+        makeOptions()
+        val json = Rest.getRaw(objectName.url, options = optionsMap)
+        val totals = json.asDict()?.get("total")?.asDict() ?: mapOf()
+
+    }
 
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
         optionsMap["link"] = "name"

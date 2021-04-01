@@ -1,4 +1,4 @@
-class Trie<KE,V>(val wildKey: KE? = null) : Iterable<V>{
+open class Trie<KE,V>(val wildKey: KE? = null) : Iterable<V>{
     class Node<KE,V>(
         val owner: Trie<KE,V>,
         val key: KE?,

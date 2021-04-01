@@ -15,17 +15,16 @@ class KeywordFn(
 
 class KeywordList()
 {
-    val keywords = Trie<Char, Keyword>()
-    fun stringToSequence(str: String): List<Char> = str.map{ it }
-    fun addOne(key: Keyword):KeywordList {
-        keywords.add(key, stringToSequence(key.key))
+    val keywords = StringTrie<Keyword>()
+    fun addOne(key: Keyword): KeywordList {
+        keywords.add(key, key.key)
         return this
     }
-    fun remove(key: String) = keywords.remove(stringToSequence(key))
-    fun match(key: String) = keywords.getAll(stringToSequence(key))
-    fun exactMatch(key: String) = keywords.find{ it.key==key }
-    fun matchShorter(key: String) = keywords.getShorter(stringToSequence(key))
-    operator fun contains(key: Keyword): Boolean = keywords.getExact(stringToSequence(key.key)) != null
+    fun remove(key: String) = keywords.remove(key)
+    fun match(key: String) = keywords.getAll(key)
+    fun exactMatch(key: String) = keywords.getExact(key)
+    fun matchShorter(key: String) = keywords.getShorter(key)
+    operator fun contains(key: Keyword): Boolean = keywords.getExact(key.key) != null
     fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
     fun copy(): KeywordList = KeywordList().add(this)
 
