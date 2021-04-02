@@ -121,7 +121,7 @@ class Rest(
             ?.split("/")
             ?.get(2)
 
-    fun put(url: String, body: Map<String,String>) {
+    fun put(url: String, body: Map<String,String>): JsonObject {
         val u = makeUrl(url)
         if (trace) {
             println("$u ${body.toJson()}")
@@ -138,7 +138,36 @@ class Rest(
                 val msg = if (m != null) m.groupValues[1] else response.responseMessage
                 throw RestException(response.statusCode, msg)
             }
-            else -> return
+            is Result.Success -> try {
+                return JsonObject.load(String(result.get()))
+            } catch (exc: JsonException) {
+                throw RestException(999, "error in Json text: $exc")
+            }
+        }
+    }
+
+    fun post(url: String, body: Map<String,String>): JsonObject {
+        val u = makeUrl(url)
+        if (trace) {
+            println("$u ${body.toJson()}")
+        }
+        val (_, response, result) = Fuel.post(u)
+            .jsonBody(body.toJson())
+            .authentication().basic(serverInfo.username, serverInfo.password)
+            .response()
+        when (result) {
+            is Result.Failure -> {
+                val rx = Regex(".*Body.*:.*?\"message\".*?:.*?\"(.*?)\".*")
+                val resp = response.toString().replace("\n", " ")
+                val m = rx.find(resp)
+                val msg = if (m != null) m.groupValues[1] else response.responseMessage
+                throw RestException(response.statusCode, msg)
+            }
+            is Result.Success -> try {
+                return JsonObject.load(String(result.get()))
+            } catch (exc: JsonException) {
+                throw RestException(999, "error in Json text: $exc")
+            }
         }
     }
 
@@ -174,6 +203,7 @@ class Rest(
         fun getRaw(url: String, options: Map<String,String>?=null) =
             theRest.getRaw(url, options)
         fun put(url: String, body: Map<String,String>) = theRest.put(url, body)
+        fun post(url: String, body: Map<String,String>) = theRest.post(url, body)
         fun get(oname: ObjectName, options: Map<String,String>?=null) =
             theRest.get(oname, options)
         fun getCollection(url: String, options: Map<String,String>?=null) =

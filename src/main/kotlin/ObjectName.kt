@@ -19,7 +19,7 @@ class ObjectName(val newUrl: String="") {
         ?: Metadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
-    val isWild get() = elements.fold(false) { acc, e -> acc || e.isWild }
+    val isWild get() = elements.fold(false) { acc, e -> acc || e.isQuiteWild }
     val wildDepth get() = elements.fold(0) { result, elem -> result + elem.isWild.ifElse(1, 0) }
     val isEmpty get() = elements.isEmpty()
 
@@ -33,6 +33,11 @@ class ObjectName(val newUrl: String="") {
                 "running"))
         }
         elements.add(Element(attrMd, name))
+        return this
+    }
+
+    fun addLeafName(name: String): ObjectName {
+        elements.lastOrNull()?.name = (name)
         return this
     }
 

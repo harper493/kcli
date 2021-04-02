@@ -22,7 +22,7 @@ class ObjectCompleter(
                 mapOf("completion" to token, "limit" to "10")
             )
             val size = envelope["size"]?.toIntOrNull() ?: -1
-            val completions = collection.objects.keys.map{ it.split("/").lastOrNull() ?: ""}
+            val completions = collection.getObjectNames()
             val completion = envelope["completion"] ?: ""
             val keywords = extras.keywords.map{it.key}.filter{it.startsWith(token, ignoreCase = true)}
             when(size) {

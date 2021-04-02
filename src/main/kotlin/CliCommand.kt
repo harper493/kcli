@@ -17,11 +17,16 @@ class CliCommand(line: String) {
         if (line.isNotEmpty()) {
             parser = Parser(line)
             val extras = KeywordList(
-                KeywordFn("show")  { ShowCommand(this, "show").doShow() },
-                KeywordFn("count") { ShowCommand(this, "count").doCount() },
-                KeywordFn("quit")  { doQuit() },
-                KeywordFn("set")   { SetCommand(this).doSet() },
-                KeywordFn("total", { ShowCommand(this, "total").doTotal()})
+                KeywordFn("count")    { ShowCommand(this, "count").doCount() },
+                KeywordFn("dump")     { doDump() },
+                KeywordFn("ping")     { doPing() },
+                KeywordFn("quit")     { doQuit() },
+                KeywordFn("reboot")   { doReboot() },
+                KeywordFn("save")     { doSave() },
+                KeywordFn("set")      { SetCommand(this).doSet() },
+                KeywordFn("show")     { ShowCommand(this, "show").doShow() },
+                KeywordFn("shutdown") { doShutdown() },
+                KeywordFn("total",    { ShowCommand(this, "total").doTotal()})
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
                 keywordAdder={ classMd, keywords ->
@@ -43,6 +48,7 @@ class CliCommand(line: String) {
     }
 
     private fun doModify(obj: ObjectName) {
+        CliException.throwIf("object name cannot use wildcards in modify command"){ obj.isWild }
         val exists = try { Rest.getRaw(obj.url, mapOf("select" to "name")); true }
         catch (exc: RestException) {
             if (HttpStatus.notFound(exc.status)) false else throw exc
@@ -56,6 +62,74 @@ class CliCommand(line: String) {
             }
         }
         val classMd = obj.leafClass!!
+        val values = readAttributes(classMd, exists)
+        if (!exists) {
+            val missing = classMd.requiredAttributes.filter{ it !in values && it.name!="name" }
+            if (missing.isNotEmpty()) {
+                if (missing.size==1 && missing[0].type.name=="password") {
+                    values.put(missing[0].name, Cli.getPassword())
+                } else {
+                    throw CliException("the following attributes must be specified: ${missing.map{ it.name }
+                        .joinToString(", ")}")
+                }
+            }
+        }
+        parser.checkFinished()
+        Rest.put(obj.url, values)
+    }
+
+    private fun doQuit() {
+        throw CliException()
+    }
+
+    private fun doReboot() {
+        val values = readPartitionConfig(getConfig=true)
+        if (readYesNo("Reboot system immediately")) {
+            values["reload_system"] = "1"
+            Rest.put("configurations/running", values)
+        }
+    }
+
+    private fun doShutdown() {
+        if (readYesNo("Shut system down immediately")) {
+            Rest.put("configurations/running", mapOf("shutdown_system" to "1"))
+        }
+    }
+
+    private fun doSave() {
+        val values = readPartitionConfig(allowBoth=true)
+        values["save_config"] = "1"
+        Rest.put("configurations/running", values)
+    }
+
+    private fun doDump() {
+        val keywords = KeywordList(*Metadata.getConfigMd()
+            .settableAttributes
+            .filter{ it.name.startsWith("dump_")}
+            .map{ it.name.split("_").drop(1).joinToString("_")}
+            .toTypedArray())
+        val kw = parser.findKeyword(keywords)!!
+        Rest.put("configurations/running", mapOf("dump_${kw.asString()}" to "!"))
+    }
+
+    fun makeDisplayName(classMd: ClassMetadata, name: String, value: String): String {
+        val attrMd = classMd.getAttribute(name)
+        var result = value
+        if (attrMd != null) {
+            try {
+                val converted = attrMd.convert(value)
+                result = converted.toString()
+            } catch (exc: Exception) {
+            }
+        }
+        return result
+    }
+
+    fun checkRepeat(pred: ()->Boolean, keyword: String="", msg: String="") {
+            CliException.throwIf(if (msg.isEmpty()) "keyword '$keyword' repeated" else msg, pred)
+    }
+
+    fun readAttributes(classMd: ClassMetadata, exists: Boolean): MutableMap<String, String> {
         val keywords = KeywordList(classMd.settableAttributes)
         keywords.addKeys("no")
         val values = mutableMapOf<String,String>()
@@ -76,7 +150,7 @@ class CliCommand(line: String) {
                     values[attrMd.name] = "F"
                 } else {
                     CliException.throwIf("'no' cannot be used with attribute '${attrMd.name}'")
-                        { !attrMd.type.hasNull() }
+                    { !attrMd.type.hasNull() }
                     values[attrMd.name] = ""
                 }
             } else if (attrMd.type.name=="bool") {
@@ -87,40 +161,37 @@ class CliCommand(line: String) {
                 values[attrMd.name] = parser.curToken!!
             }
         }
-        if (!exists) {
-            val missing = classMd.requiredAttributes.filter{ it !in values && it.name!="name" }
-            if (missing.isNotEmpty()) {
-                if (missing.size==1 && missing[0].type.name=="password") {
-                    values.put(missing[0].name, Cli.getPassword())
-                } else {
-                    throw CliException("the following attributes must be specified: ${missing.map{ it.name }
-                        .joinToString(", ")}")
+        return values
+    }
+
+    fun readPartitionConfig(getConfig:Boolean = false, allowBoth: Boolean = false): MutableMap<String,String> {
+        val values = mutableMapOf<String,String>()
+        val keywords = KeywordList("partition")
+        if (getConfig) {
+            keywords.addKeys("configuration")
+        }
+        val partitions = KeywordList("current", "alternate")
+        if (allowBoth) {
+            partitions.addKeys("both")
+        }
+        val seen = mutableSetOf<String>()
+        while (!parser.isFinished()) {
+            val kw = parser.findKeyword(keywords, endOk=true)?.asString()
+            if (kw!=null) {
+                checkRepeat({ kw in seen}, kw)
+                seen.add(kw)
+                when (kw) {
+                    "partition" ->
+                        values["boot_partition"] =
+                            parser.findKeyword(partitions)!!.asString()
+                    "configuration" ->
+                        values["boot_config_name"] =
+                            parser.nextToken(completer=ObjectCompleter(ObjectName("configurations/")))!!
+                    else -> { }
                 }
             }
         }
-        parser.checkFinished()
-        Rest.put(obj.url, values)
-    }
-
-    private fun doQuit() {
-        throw CliException()
-    }
-
-    fun makeDisplayName(classMd: ClassMetadata, name: String, value: String): String {
-        val attrMd = classMd.getAttribute(name)
-        var result = value
-        if (attrMd != null) {
-            try {
-                val converted = attrMd.convert(value)
-                result = converted.toString()
-            } catch (exc: Exception) {
-            }
-        }
-        return result
-    }
-
-    fun checkRepeat(pred: ()->Boolean, keyword: String="", msg: String="") {
-            CliException.throwIf(if (msg.isEmpty()) "keyword '$keyword' repeated" else msg, pred)
+        return values
     }
 
     fun abbreviateHeader(header: String) =

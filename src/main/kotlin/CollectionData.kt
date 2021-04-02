@@ -11,6 +11,7 @@ class CollectionData(val classMd: ClassMetadata) {
     fun add(obj: ObjectData) {
         objects[obj.url] = obj
     }
+    fun getObjectNames() = objects.keys.map{ it.split("/").lastOrNull() ?: ""}
 
     fun load(json: JsonObject): CollectionData {
         for (objJson in json.asArray()) {
