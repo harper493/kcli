@@ -1,6 +1,3 @@
-import java.time.LocalTime
-import java.time.Duration
-
 fun CliCommand.doPing() {
     val target = parser.nextToken(tokenType=Parser.TokenType.ttNonBlank)!!
     val values = readAttributes(Metadata.getClass("ping_request")!!,
@@ -19,34 +16,31 @@ fun CliCommand.doPing() {
     val count = pingObj!!.getInt("count")!!
     val destAdr = pingObj["destination_address"]
     var replyCount = 0
-    var lastSeq = 0
-    val timeout = Properties.getInt("parameter", "ping_timeout")
-    var startTime = LocalTime.now()
+    var nextSeq = 1
+    val seen = mutableSetOf<Int>()
+    Cli.clearInterrupted()
     while (!Cli.interrupted && (count==0 || replyCount < count)) {
         Thread.sleep(100)
         val replies = Rest.getCollection(replyName, mapOf(
-            "with" to "sequence_number>$lastSeq,state!=request_transmitted",
+            "with" to "sequence_number>=$nextSeq,state!=request_transmitted",
             "level" to "detail"
         ))
-        if (replies.isEmpty()) {
-            if (Duration.between(LocalTime.now(), startTime).toSeconds() > timeout) {
-                Cli.outputError("destination host unreachable")
-                break
-            }
-        } else {
-            replies.objects.values.forEach{ obj ->
-                val seq = obj.getInt("sequence_number")!!
+        replies.objects.values.forEach{ obj ->
+            val seq = obj.getInt("sequence_number")!!
+            if (seq !in seen) {
+                seen.add(seq)
                 val rtt = "%.2f".format(obj.getValue("round_trip_time")?.toFloat())
                 val destInfo = "From ${values["destination_host"]} ($destAdr):"
-                if (obj.getValue("state")=="reply_received") {
-                    Cli.outputln("$destInfo icmp_seq $seq rtt $rtt")
+                if (obj.getValue("state") == "reply_received") {
+                    Cli.outputln("$destInfo sequence $seq RTT $rtt mS")
                 } else {
-                    Cli.outputln("$destInfo reply not received")
+                    Cli.outputln("$destInfo reply $seq not received")
                 }
                 replyCount += 1
-                lastSeq = maxOf(seq, lastSeq)
+                if (seq==nextSeq) {
+                    nextSeq += 1
+                }
             }
-            startTime = LocalTime.now()
         }
     }
     val pingObj2 = Rest.getObject(pingName.url, mapOf("level" to "full"))
@@ -65,4 +59,5 @@ fun CliCommand.doPing() {
             .map{ "$it %.0f".format(1000 * pingObj2.getFloat("rtt_$it")!!) }
             .joinToString(", ")} mS"
     )
+    Cli.clearInterrupted()
 }

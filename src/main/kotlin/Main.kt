@@ -1,4 +1,8 @@
 import java.io.PrintWriter
+import java.time.LocalTime
+import java.time.Duration
+import sun.misc.Signal
+import sun.misc.SignalHandler
 
 class Cli(private val cmdargs: Array<String>) {
     private val homeDir: String = System.getProperty("user.home")
@@ -14,6 +18,7 @@ class Cli(private val cmdargs: Array<String>) {
     }
 
     fun run() {
+        establishSignals()
         Datatype.load()
         Properties.load("/etc/kcli/objects.properties")
             .load("/etc/kcli/cli.properties")
@@ -139,7 +144,26 @@ class Cli(private val cmdargs: Array<String>) {
             CliException.throwIf("passwords do not match") { password != repeatPassword }
             return password
         }
-        val interrupted get() = false
+        private var lastInterrupt: LocalTime? = null
+        var interrupted = false; private set
+        private fun establishSignals() {
+            Signal.handle(Signal("INT"), object : SignalHandler {
+                override fun handle(sig: Signal) {
+                    doInterrupt()
+                }
+            })
+        }
+        private fun doInterrupt() {
+            if (lastInterrupt != null
+                && Duration.between(LocalTime.now(), lastInterrupt).toSeconds() < 1.0
+            ) {
+                System.exit(0)
+            } else {
+                interrupted = true
+                lastInterrupt = LocalTime.now()
+            }
+        }
+        fun clearInterrupted() { interrupted = false }
     }
 }
 
