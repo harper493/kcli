@@ -55,9 +55,14 @@ fun CliCommand.doPing() {
         )
     )
     Cli.outputln(
-        "RTT ${listOf("min", "max", "average")
-            .map{ "$it %.0f".format(1000 * pingObj2.getFloat("rtt_$it")!!) }
-            .joinToString(", ")} mS"
+        "RTT ${
+            listOf(
+                "min",
+                "max",
+                "average"
+            ).joinToString(", ") 
+            { "$it %.0f".format(1000 * pingObj2.getFloat("rtt_$it")!!) }
+        } mS"
     )
     Cli.clearInterrupted()
     seen.forEach{ Rest.delete(replyName.copy().addLeafName("$it").url) }
