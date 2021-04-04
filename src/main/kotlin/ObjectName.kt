@@ -9,6 +9,7 @@ class ObjectName(val newUrl: String="") {
         val url: String get() = "${attrMd.relativeUrl}${urlName}"
         val isWild get() = name.isEmpty() || name=="*"
         val isQuiteWild get() = '*' in name && name != "*"
+        fun copy() = Element(attrMd, name)
         init {
             if (name=="*") name = ""
         }
@@ -39,7 +40,7 @@ class ObjectName(val newUrl: String="") {
     fun addLeafName(name: String): ObjectName =
         also { elements.lastOrNull()?.name = (name) }
 
-    fun copy() = ObjectName().also{ oname -> elements.map{oname.elements.add(it) } }
+    fun copy() = ObjectName().also{ oname -> elements.map{oname.elements.add(it.copy()) } }
 
     fun dropLast(n: Int=1) =
         ObjectName()
