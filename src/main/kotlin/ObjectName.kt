@@ -19,7 +19,7 @@ class ObjectName(val newUrl: String="") {
         ?: Metadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
-    val isWild get() = elements.fold(false) { acc, e -> acc || e.isQuiteWild }
+    val isWild get() = elements.fold(false) { acc, e -> acc || e.isQuiteWild || e.isWild }
     val wildDepth get() = elements.fold(0) { result, elem -> result + elem.isWild.ifElse(1, 0) }
     val isEmpty get() = elements.isEmpty()
 
@@ -36,12 +36,10 @@ class ObjectName(val newUrl: String="") {
         return this
     }
 
-    fun addLeafName(name: String): ObjectName {
-        elements.lastOrNull()?.name = (name)
-        return this
-    }
+    fun addLeafName(name: String): ObjectName =
+        also { elements.lastOrNull()?.name = (name) }
 
-    fun copy() = ObjectName().also{ oname -> elements.map{oname.elements.append(it) } }
+    fun copy() = ObjectName().also{ oname -> elements.map{oname.elements.add(it) } }
 
     fun dropLast(n: Int=1) =
         ObjectName()

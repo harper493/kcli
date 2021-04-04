@@ -139,6 +139,7 @@ class Cli(private val cmdargs: Array<String>) {
             CliException.throwIf("passwords do not match") { password != repeatPassword }
             return password
         }
+        val interrupted get() = false
     }
 }
 

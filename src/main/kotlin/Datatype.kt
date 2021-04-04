@@ -110,6 +110,25 @@ abstract class Datatype (
                 else -> throw CliException("invalid value for boolean '$value'")
             }
 
+        fun fromDuration(value: String): Double {
+            val mm = Regex("""([-+]?)(\d+):(\d+):(\d+)(?:.(\d+))?""").matchEntire(value)?.groupValues
+            CliException.throwIf("invalid value for time duration"){ mm==null }
+            val m = mm!!
+            return (m[1]=="-").ifElse(-1.0, 1.0) *
+                    (m[2].toDouble() * 3600
+                    + m[3].toDouble() * 60
+                    + m[4].toDouble()
+                    + (m[5].toDoubleOrNull() ?: 0.0) / (10.0.pow(m[5].length)))
+        }
+
+        fun formatDuration(value: Double) =
+            "%s%.0f:%.0f:%.3f".format(
+                (value<0).ifElse("-", ""),
+                value / 3600.0,
+                (value - value % 3600) / 60.0,
+                (value - value % 60)
+            )
+
         fun validateIpV4Address(value: String): Boolean =
             value.split(".").run{
                 size==4
@@ -169,6 +188,7 @@ abstract class Datatype (
             StringDatatype("ipv4_address", description="IPV4 address",
                 validator = Validator(fn={ value, _ -> validateIpV4Address(value) },
                     prefixRx="""[\d\.]+""")),
+            DurationDatatype("duration", description="time duration in hh:mm:ss.ssss format")
         )
     }
 }
@@ -305,7 +325,7 @@ open class IntDatatype(
     unit,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( toInt(it), toInt(it).toDouble()) },
+    { IntGenericVariable( toInt(it)) },
     wrapper,
 ) {
     override fun validate(value: String) =
@@ -324,6 +344,7 @@ open class FloatDatatype(
     properties: String = "",
     converter: (String)->Double = { toFloat(it) },
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
+    gvFactory: (String)->GenericVariable = { NumericGenericVariable( toFloat(it)) }
 ) : TypedDatatype<Double>(name,
     description,
     formatter,
@@ -331,7 +352,7 @@ open class FloatDatatype(
     unit,
     "arithmetic $properties",
     converter,
-    { NumericGenericVariable( toFloat(it), toFloat(it)) },
+    gvFactory,
     wrapper,
 ) {
     override fun validate(value: String) =
@@ -355,6 +376,17 @@ open class BooleanDatatype(
     override fun validate(value: String) =
         conversionValidator(value, this)
 }
+
+class DurationDatatype(    name: String,
+                           description: String = name,
+): FloatDatatype(
+    name,
+    description,
+    formatter = { formatDuration(it.toString().toDoubleOrNull() ?: 0.0) },
+    unit = "S",
+    converter = { fromDuration(it) },
+    gvFactory = { NumericGenericVariable(fromDuration(it)) }
+)
 
 class ClassDatatype(
     name: String,

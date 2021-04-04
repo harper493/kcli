@@ -7,6 +7,9 @@ class ObjectData(val classMd: ClassMetadata) {
         ?: throw CliException("unknown attribute '$attributeName' for class '${classMd.name}")
     fun getOr(attributeName: String) = attributes[attributeName]
     fun add(attribute: AttributeData) { attributes[attribute.name] = attribute}
+    fun getValue(attributeName: String) = attributes[attributeName]?.value
+    fun getInt(attributeName: String) = attributes[attributeName]?.toInt()
+    fun getFloat(attributeName: String) = attributes[attributeName]?.toFloat()
 
     fun load(json: JsonObject): ObjectData {
         for ( (name, value) in json.asDict()) {

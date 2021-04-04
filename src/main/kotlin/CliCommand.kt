@@ -129,36 +129,44 @@ class CliCommand(line: String) {
             CliException.throwIf(if (msg.isEmpty()) "keyword '$keyword' repeated" else msg, pred)
     }
 
-    fun readAttributes(classMd: ClassMetadata, exists: Boolean): MutableMap<String, String> {
+    fun readAttributes(classMd: ClassMetadata,
+                       exists: Boolean,
+                       extras:KeywordList = KeywordList()): MutableMap<String, String> {
         val keywords = KeywordList(classMd.settableAttributes)
-        keywords.addKeys("no")
+            .add(extras)
+            .addKeys("no")
         val values = mutableMapOf<String,String>()
         while (true) {
             var k = parser.findKeyword(keywords, endOk=true)?: break
-            val noSeen: Boolean = k.key=="no"
-            if (noSeen) {
-                keywords.remove("no")
-                val kk = parser.findKeyword(keywords)
-                CliException.throwIf("attribute expected after 'no'"){ kk==null }
-                k = kk!!
-            }
-            val attrMd = k.attribute ?: break
-            CliException.throwIf("attribute '${attrMd.name}' can only be set when an object is created"
-            ) { exists && !attrMd.isModifiable }
-            if (noSeen) {
-                if (attrMd.type.name=="bool") {
-                    values[attrMd.name] = "F"
-                } else {
-                    CliException.throwIf("'no' cannot be used with attribute '${attrMd.name}'")
-                    { !attrMd.type.hasNull() }
-                    values[attrMd.name] = ""
-                }
-            } else if (attrMd.type.name=="bool") {
-                values[attrMd.name]= "T"
+            if (k.function!=null) {
+                k()
             } else {
-                parser.nextToken(completer = attrMd.completer(), validator = attrMd.type.validator)
-                CliException.throwIf("value expected for attribute '${attrMd.name}'") { parser.curToken == null }
-                values[attrMd.name] = parser.curToken!!
+                val noSeen: Boolean = k.key == "no"
+                if (noSeen) {
+                    keywords.remove("no")
+                    val kk = parser.findKeyword(keywords)
+                    CliException.throwIf("attribute expected after 'no'") { kk == null }
+                    k = kk!!
+                }
+                val attrMd = k.attribute ?: break
+                CliException.throwIf(
+                    "attribute '${attrMd.name}' can only be set when an object is created"
+                ) { exists && !attrMd.isModifiable }
+                if (noSeen) {
+                    if (attrMd.type.name == "bool") {
+                        values[attrMd.name] = "F"
+                    } else {
+                        CliException.throwIf("'no' cannot be used with attribute '${attrMd.name}'")
+                        { !attrMd.type.hasNull() }
+                        values[attrMd.name] = ""
+                    }
+                } else if (attrMd.type.name == "bool") {
+                    values[attrMd.name] = "T"
+                } else {
+                    parser.nextToken(completer = attrMd.completer(), validator = attrMd.type.validator)
+                    CliException.throwIf("value expected for attribute '${attrMd.name}'") { parser.curToken == null }
+                    values[attrMd.name] = parser.curToken!!
+                }
             }
         }
         return values

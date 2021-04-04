@@ -64,7 +64,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         optionsMap["limit"] = "1"
         optionsMap["level"] = "list"
         makeOptions()
-        var (envelope, _) = Rest.get(objectName, options = optionsMap)
+        val (envelope, _) = Rest.get(objectName, options = optionsMap)
         val quantity = envelope["size"]?.toInt() ?: 0
         val result = StyledText("$quantity matching ${classMd.name.makePlural(quantity)} found",
                                 color = Properties.get("parameter", "result_color"))
@@ -132,16 +132,16 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             classMd.getAttribute("color")?.let { selections.add(it) }
         }
         addOption("select",
-            "${if (onlySelect || selections.isEmpty()) "" else "+"}" +
-                    "${selections.joinToString(",") { it.name }}")
+            (if (onlySelect || selections.isEmpty()) "" else "+") +
+                    selections.joinToString(",") { it.name })
         var with = filters.joinToString((filterConjunction == "and")
             .ifElse(",","|"))
         val converted = objectName.convertWild().joinToString(",")
         if (converted.isNotEmpty()) {
-            if (with.isEmpty()) {
-                with = converted
+            with = if (with.isEmpty()) {
+                converted
             } else {
-                with = "$with,$converted"
+                "$with,$converted"
             }
         }
         addOption("with", with)

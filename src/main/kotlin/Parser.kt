@@ -7,7 +7,7 @@ class Parser (
     private var lineIndex = 0
     private var tokenIndex = -1
     private var finished = false
-    enum class TokenType { ttName, ttNumber, ttAny, ttExplicit, ttGeneral, ttAll, ttNonBlank }
+    enum class TokenType { ttName, ttNumber, ttInt, ttAny, ttExplicit, ttGeneral, ttAll, ttNonBlank }
     var curToken: String? = null
 
     private val escChars = mapOf( 'n' to '\n', 'r' to '\r', 't' to '\t' )
@@ -32,6 +32,7 @@ class Parser (
                 ?: when (if (validator.isNull) tokenType else TokenType.ttExplicit) {
                     TokenType.ttName -> Validator("""\*?[a-zA-Z0-9-_$]*\*?""")
                     TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
+                    TokenType.ttInt -> Validator("""[+-]?\d+""")
                     TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
                     TokenType.ttAll -> Validator(".*")
                     TokenType.ttExplicit -> validator
@@ -91,7 +92,7 @@ class Parser (
     fun getInt(): Int {
         val result: Int
         try {
-            result = (nextToken(tokenType=TokenType.ttNumber)?:"").toInt()
+            result = (nextToken(tokenType=TokenType.ttInt)?:"").toInt()
         } catch (exc: Exception) {
             throw CliException("expected integer not '$curToken'")
         }

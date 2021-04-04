@@ -45,7 +45,9 @@ object CommandReader {
     fun read(myPrompt: String? = null): String =
         try {
             reader.readLine(myPrompt ?: prompt)
-        } catch (exc: Exception) {
+        } catch (exc: UserInterruptException) {
+            throw CliException("")
+        } catch (exc: EndOfFileException) {
             throw CliException("")
         }
 

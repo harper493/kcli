@@ -1,8 +1,11 @@
+import kotlin.math.roundToInt
+
 abstract class GenericVariable {
     open fun less(other: GenericVariable): Boolean { return false }
     open fun equal(other: GenericVariable): Boolean { return false }
     open fun add(other: GenericVariable) { }
     override fun toString(): String = ""
+    open fun toInt(): Int = 0
     open fun toFloat(): Double = 0.0
     open fun toBool(): Boolean = false
 }
@@ -28,14 +31,20 @@ open class TypedGenericVariable<T: Comparable<T>>(initial: T): GenericVariable()
     }
 }
 
-open class NumericGenericVariable<T: Comparable<T>>(initial: T, initialNumeric: Double): TypedGenericVariable<T>(initial) {
-    var numValue: Double = initialNumeric; private set
+open class NumericGenericVariable<T: Comparable<T>>(initial: T): TypedGenericVariable<T>(initial) {
+    var numValue: Double = initial.toString().toDouble(); private set
     override fun add(other: GenericVariable) {
         try {
             numValue += (other as NumericGenericVariable<*>).numValue
         } catch (e: Exception) {
         }
     }
+    override fun toInt() = (numValue.toString().toDoubleOrNull()?:(0.0.toDouble())).roundToInt()
     override fun toFloat() = numValue
     override fun toBool() = numValue!=0.0
+}
+
+open class IntGenericVariable(initial: Int): NumericGenericVariable<Int>(initial) {
+    override fun toInt() = value
+    override fun toBool() = value!=0
 }
