@@ -26,7 +26,8 @@ class CliCommand(line: String) {
                 KeywordFn("set")      { SetCommand(this).doSet() },
                 KeywordFn("show")     { ShowCommand(this, "show").doShow() },
                 KeywordFn("shutdown") { doShutdown() },
-                KeywordFn("total",    { ShowCommand(this, "total").doTotal()})
+                KeywordFn("total")    { ShowCommand(this, "total").doTotal()},
+                KeywordFn("traceroute"){ doTraceroute() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
                 keywordAdder={ classMd, keywords ->

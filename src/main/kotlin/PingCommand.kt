@@ -65,6 +65,8 @@ fun CliCommand.doPing() {
         } mS"
     )
     Cli.clearInterrupted()
-    seen.forEach{ Rest.delete(replyName.copy().addLeafName("$it").url) }
-    Rest.delete(pingName.url)
+    seen.forEach {
+        ignoreException{ Rest.delete(replyName.copy().addLeafName("$it").url) }
+    }
+    ignoreException { Rest.delete(pingName.url) }
 }

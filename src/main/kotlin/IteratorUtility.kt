@@ -238,5 +238,11 @@ fun<T,U> lazily(input: T, cache: MutableMap<T,U>, fn: (T)->U) =
     cache[input]
         ?: fn(input).also{ cache[input] = it }
 
-
+fun<T> ignoreException(fn: ()->T): T? {
+    try {
+        return fn()
+    } catch(exc: Exception) {
+        return null
+    }
+}
 
