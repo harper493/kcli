@@ -20,6 +20,7 @@ data class ClassMetadata(
         ?.map{it.asString()} ?: listOf()
 
     val attributes by lazy { derivedAttributeMap.values.sortedBy { it.displayName } }
+    val ownAttributes by lazy { attributeMap.values.sortedBy { it.displayName } }
     val collections by lazy { attributeMap.values.filter { it.isCollection }.toList() }
     val requiredAttributes by lazy { settableAttributes.filter{ it.isRequired } }
     var container: AttributeMetadata? = null; private set

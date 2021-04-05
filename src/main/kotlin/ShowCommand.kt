@@ -367,7 +367,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 maxColumnWidth=Properties.getInt("parameter", "metadata_column_width"),
                 headingColor=Properties.get("parameter", "heading_color"),
                 stripeColors=Properties.getColors("even_row", "odd_row"))
-            classMd.attributes.map{ attr ->
+            classMd.ownAttributes.map{ attr ->
                 body.append(
                     "Name" to attr.displayName,
                     "Rest Name" to attr.name,

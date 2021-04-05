@@ -17,6 +17,7 @@ class CliCommand(line: String) {
         if (line.isNotEmpty()) {
             parser = Parser(line)
             val extras = KeywordList(
+                KeywordFn("capture")  { doCapture() },
                 KeywordFn("count")    { ShowCommand(this, "count").doCount() },
                 KeywordFn("dump")     { doDump() },
                 KeywordFn("no")       { doNo() },
@@ -121,7 +122,7 @@ class CliCommand(line: String) {
             if (key==null) {
                 throw CliException("unknown command or collection '${parser.curToken}'")
             }
-            key?.invoke()
+            key.invoke()
         } else {
             CliException.throwIf("cannot delete a wildcard object") { objName.isWild }
             parser.checkFinished()
@@ -148,8 +149,11 @@ class CliCommand(line: String) {
 
     fun readAttributes(classMd: ClassMetadata,
                        exists: Boolean,
-                       extras:KeywordList = KeywordList()): MutableMap<String, String> {
-        val keywords = KeywordList(classMd.settableAttributes)
+                       extras:KeywordList = KeywordList(),
+                       exclude: (String)->Boolean = { false }): MutableMap<String, String> {
+        val keywords = KeywordList(
+            classMd.settableAttributes
+                .filter{!exclude(it.name)})
             .add(extras)
             .addKeys("no")
         val values = mutableMapOf<String,String>()

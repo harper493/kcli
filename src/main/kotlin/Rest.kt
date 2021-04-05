@@ -96,10 +96,18 @@ class Rest(
         CollectionData(oname.leafClass!!).load(json["collection"] ?: JsonObject.make())
 
     fun getObject(url: String, options: Map<String,String>?=null) =
-        getCollection(url, options).first()
+        try {
+            getCollection(url, options).first()
+        } catch(exc: RestException) {
+            if (HttpStatus.notFound(exc.status)) {
+                null
+            } else {
+                throw (exc)
+            }
+        }
 
     fun getObject(oname: ObjectName, options: Map<String,String>?=null) =
-        getCollection(oname, options).first()
+        getObject(oname.url, options)
 
     fun getAttribute(oname: ObjectName, aname: String, options: Map<String,String>?=null) =
         getObject(oname,
