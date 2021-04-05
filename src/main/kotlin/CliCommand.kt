@@ -112,7 +112,7 @@ class CliCommand(line: String) {
             .map{ it.name.split("_").drop(1).joinToString("_")}
             .toTypedArray())
         val kw = parser.findKeyword(keywords)!!
-        Rest.put("configurations/running", mapOf("dump_${kw.asString()}" to "!"))
+        Rest.put("configurations/running", mapOf("dump_${kw.asString()}" to "1"))
     }
 
     private fun doNo() {
@@ -214,7 +214,7 @@ class CliCommand(line: String) {
                         values["boot_partition"] =
                             parser.findKeyword(partitions)!!.asString()
                     "configuration" ->
-                        values["boot_config_name"] =
+                        values["boot_config"] =
                             parser.nextToken(completer=ObjectCompleter(ObjectName("configurations/")))!!
                     else -> { }
                 }
