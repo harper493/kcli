@@ -409,7 +409,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             result = display.layoutText().renderStyled()
         } else {
             val name = param.attribute!!.displayName
-            val value = params?.asDict()?.get(name)?.asString()
+            val value = params?.asDict()?.get(param.attribute!!.name)?.asString()
             result = StyledText("$name = $value", color=Properties.get("color", "result_color"))
         }
         return result
