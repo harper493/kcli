@@ -21,7 +21,7 @@ class Cli(private val cmdargs: Array<String>) {
         establishSignals()
         Datatype.load()
         Properties.load("/etc/kcli/objects.properties")
-            .load("/etc/kcli/cli.properties")
+            .load("/etc/kcli/cli.properties", defaultProperties)
         args = Args(cmdargs)
         target = findTarget(args.server)
         Rest.connect(server = target.toString(), trace=args.trace)

@@ -1,3 +1,5 @@
+val defaultProperties = """
+
 rename.collection.access_control_lists               = acls
 
 alternate.interface.disable                          = state=disabled
@@ -174,3 +176,5 @@ abbreviate.application                               = ap
 abbreviate.system                                    = sys
 abbreviate.geolocation                               = geo
 abbreviate.user                                      = user
+
+"""

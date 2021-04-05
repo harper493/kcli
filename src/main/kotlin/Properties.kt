@@ -9,19 +9,16 @@ class Properties (
 
     fun getInt(vararg keys: String, default: Int = 0) = get(*keys)?.toIntOrNull() ?: default
     fun getFloat(vararg keys: String, default: Double = 0.0) = get(*keys)?.toDoubleOrNull() ?: default
-    fun load(fn: String? = null): Properties {
+    fun load(fn: String? = null, default: String? = null): Properties {
         if (fn != null) {
             filename = fn
         }
         try {
-            java.io.File(filename!!).forEachLine {
-                try {
-                    val (key, value) = it.split(" #")[0].split("=")
-                    addValue(value.trim(), key.trim().split("."))
-                } catch (exc: Exception) {
-                }   // ignore parsing error
-            }
+            java.io.File(filename!!).forEachLine { loadOneLine(it) }
         } catch (exc: Exception) {
+            if (default!=null) {
+                default.split("\n").forEach{ loadOneLine(it) }
+            }
         }
         return this
     }
@@ -36,6 +33,14 @@ class Properties (
 
     fun visit(vararg keys: String, fn: (Iterable<String>, String) -> Unit) =
         myTrie.visit(fn)
+
+    private fun loadOneLine(line: String) {
+        try {
+            val (key, value) = line.split(" #")[0].split("=")
+            addValue(value.trim(), key.trim().split("."))
+        } catch (exc: Exception) {
+        }   // ignore parsing error
+    }
 
     init {
         if (filename != null) {
