@@ -19,6 +19,7 @@ class CliCommand(line: String) {
             val extras = KeywordList(
                 KeywordFn("count")    { ShowCommand(this, "count").doCount() },
                 KeywordFn("dump")     { doDump() },
+                KeywordFn("no")       { doNo() },
                 KeywordFn("ping")     { doPing() },
                 KeywordFn("quit")     { doQuit() },
                 KeywordFn("reboot")   { doReboot() },
@@ -111,6 +112,21 @@ class CliCommand(line: String) {
             .toTypedArray())
         val kw = parser.findKeyword(keywords)!!
         Rest.put("configurations/running", mapOf("dump_${kw.asString()}" to "!"))
+    }
+
+    private fun doNo() {
+        val extras = KeywordList()
+        val (objName, key) = parser.getObjectName(initialExtras = extras, missOk=true)
+        if (objName.isEmpty) {
+            if (key==null) {
+                throw CliException("unknown command or collection '${parser.curToken}'")
+            }
+            key?.invoke()
+        } else {
+            CliException.throwIf("cannot delete a wildcard object") { objName.isWild }
+            parser.checkFinished()
+            Rest.delete(objName.url)
+        }
     }
 
     fun makeDisplayName(classMd: ClassMetadata, name: String, value: String): String {
