@@ -95,7 +95,7 @@ class Table (
             else col.width
             val s = if (col.maxWidth<0) -1 else 1
             col.maxWidth = s * maxOf(w,
-                if (squishHeadings) wrap(col.heading, w).map { it.length }.maxOrNull() ?: 0
+                if (squishHeadings) wrap(col.heading, maxOf(w, 1)).map { it.length }.maxOrNull() ?: 0
                 else col.heading.length) }
         headings = sortedCols.map{
             StyledText(it.heading, headingColor, headingBackground, headingStyle)
