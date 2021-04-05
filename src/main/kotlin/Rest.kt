@@ -59,14 +59,14 @@ class Rest(
 
     fun setConfig(newConfig: String) { config = newConfig }
 
-    fun getRaw(url: String, options: Map<String,String>?=null) : JsonObject {
+    fun getRaw(url: String, options: Map<String,String>?=null): String {
         val u = makeUrl(url, options)
         if (trace) {
             println("GET $u")
         }
         val (request, response, result) = Fuel.get(u)
-                    .authentication().basic(serverInfo.username, serverInfo.password)
-                    .response()
+            .authentication().basic(serverInfo.username, serverInfo.password)
+            .response()
         when (result) {
             is Result.Failure -> {
                 val rx = Regex(".*Body.*:.*?\"message\".*?:.*?\"(.*?)\".*")
@@ -77,20 +77,29 @@ class Rest(
             }
             is Result.Success -> {
                 try {
-                    return JsonObject.load(String(result.get()))
+                    return String(result.get())
                 } catch (exc: JsonException) {
                     throw RestException(999, "error in Json text: $exc")
                 }
             }
         }
+
+    }
+
+    fun getJson(url: String, options: Map<String,String>?=null) : JsonObject {
+        try {
+            return JsonObject.load(getRaw(url, options))
+        } catch (exc: JsonException) {
+            throw RestException(999, "error in Json text: $exc")
+        }
     }
 
     fun get(oname: ObjectName, options: Map<String,String>?=null):
             Pair<Map<String,String>,CollectionData> =
-        getRaw(oname.url, options).let{Pair(it.toMap(), makeCollection(oname, it))}
+        getJson(oname.url, options).let{Pair(it.toMap(), makeCollection(oname, it))}
 
     fun getCollection(oname: ObjectName, options: Map<String,String>?=null) =
-        makeCollection(oname, getRaw(oname.url, options))
+        makeCollection(oname, getJson(oname.url, options))
 
     private fun makeCollection(oname: ObjectName, json: JsonObject): CollectionData =
         CollectionData(oname.leafClass!!).load(json["collection"] ?: JsonObject.make())
@@ -115,10 +124,10 @@ class Rest(
             ?.get(aname)?.value
 
     fun getTotals(oname: ObjectName, options: Map<String,String>?=null) =
-        getRaw(oname.url, options).let{ it.asDict()?.get("total")?.toMap() ?: mapOf() }
+        getJson(oname.url, options).let{ it.asDict()?.get("total")?.toMap() ?: mapOf() }
 
     fun getSystemName() =
-        getRaw("rest/top/", mapOf("link" to "full"))["collection"]
+        getJson("rest/top/", mapOf("link" to "full"))["collection"]
             ?.asArray()
             ?.get(0)
             ?.asDict()
@@ -206,20 +215,16 @@ class Rest(
     fun setPassword(p: String) { serverInfo.password = p }
 
     private fun makeUrl(url: String, options: Map<String,String>?=null) : String {
-        val elements = url.split("/").toMutableList()
-        if (elements[0]!="rest") {
-            if (elements[0]!="configurations") {
-                elements.add(0, "configurations")
-                elements.add(1, config)
-            }
-            elements.add(0, "rest")
-            elements.add(1, "top")
+        val trueUrl = when (url.split("/")[0]) {
+            "rest"            -> url
+            "files"           -> url
+            "configurations"  -> "rest/top/$url"
+            else              -> "rest/top/configurations/$config/$url"
         }
         val p = if (serverInfo.port!=0) ":${serverInfo.port}" else ""
-        val e = elements.joinToString("/")
         val opts = if (options!=null) "?" + options.keys.joinToString("&")
                     { "${it}=${options[it]}"} else ""
-        return "http://${serverInfo.server}${p}/${e}${opts}"
+        return "http://${serverInfo.server}${p}/${trueUrl}${opts}"
     }
     constructor(serverInfo: ServerInfo): this() {
         server = serverInfo.toString()
@@ -234,6 +239,8 @@ class Rest(
 
         fun getRaw(url: String, options: Map<String,String>?=null) =
             theRest.getRaw(url, options)
+        fun getJson(url: String, options: Map<String,String>?=null) =
+            theRest.getJson(url, options)
         fun put(url: String, body: Map<String,String>) = theRest.put(url, body)
         fun post(url: String, body: Map<String,String>) = theRest.post(url, body)
         fun delete(url: String) = theRest.delete(url)

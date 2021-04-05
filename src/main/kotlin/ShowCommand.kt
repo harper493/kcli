@@ -391,7 +391,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val paramClass = Metadata.getClass("parameter_info")!!
         val param = parser.findKeyword(
             KeywordList(paramClass.attributes), endOk=true)
-        val raw = Rest.getRaw("parameters")
+        val raw = Rest.getJson("parameters")
         val params = raw.asDict()["collection"]?.asArray()?.get(0)
         if (param==null) {
             val display = ColumnLayout(

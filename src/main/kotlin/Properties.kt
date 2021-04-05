@@ -50,8 +50,8 @@ class Properties (
 
     companion object {
         private var properties = Properties()
-        fun load(fn: String): Properties {
-            return properties.load(fn)
+        fun load(fn: String, default: String? = null): Properties {
+            return properties.load(fn, default)
         }
 
         fun get(vararg keys: String) = properties.get(*keys)
