@@ -20,41 +20,11 @@ class RestException (
     override fun toString() = "$status $text"
 }
 
-data class ServerInfo(
-    var server: String = "",
-    var port: Int = 5000,
-    var username: String = "",
-    var password: String = "",
-) {
-    val defaultPort = 5000
-    constructor(text: String) : this() {
-        val rx = Regex("""^(?:([^:@]+)(?::([^@]+))?@)?(.*)$""")
-        val m = rx.find(text)
-        if (m!=null) {
-            val (u, p, s) = m.groupValues.let { Triple(it[1], it[2], it[3]) }
-            this.username = u
-            this.password = p
-            when (s.filter { it == ':' }.count()) {
-                0 -> { this.server = s; this.port = defaultPort }
-                1 -> s.split(":").let { this.server = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
-                2 -> s.split("@").let { this.server = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
-            }
-        }
-        if (this.port < 0) {
-            throw Exception("Invalid server string '${text}'")
-        }
-    }
-    private fun strIf(text: String, pred: String) = if (pred.isEmpty()) "" else text
-    override fun toString() = "$username${strIf(":", password)}$password${strIf("@", username)}$server:${port.toString()}"
-}
-
 class Rest(
-    private var server: String = "localhost",
+    private val server: Server,
     private var config: String = "running",
     private var trace: Boolean = false
 ) {
-    private val serverInfo = ServerInfo(server)
-
     fun setTrace(t: Boolean) { trace = t }
 
     fun setConfig(newConfig: String) { config = newConfig }
@@ -65,7 +35,7 @@ class Rest(
             println("GET $u")
         }
         val (request, response, result) = Fuel.get(u)
-            .authentication().basic(serverInfo.username, serverInfo.password)
+            .authentication().basic(server.username, server.password)
             .response()
         when (result) {
             is Result.Failure -> {
@@ -145,7 +115,7 @@ class Rest(
         }
         val (_, response, result) = Fuel.put(u)
             .jsonBody(body.toJson())
-            .authentication().basic(serverInfo.username, serverInfo.password)
+            .authentication().basic(server.username, server.password)
             .response()
         when (result) {
             is Result.Failure -> {
@@ -170,7 +140,7 @@ class Rest(
         }
         val (_, response, result) = Fuel.post(u)
             .jsonBody(body.toJson())
-            .authentication().basic(serverInfo.username, serverInfo.password)
+            .authentication().basic(server.username, server.password)
             .response()
         when (result) {
             is Result.Failure -> {
@@ -194,7 +164,7 @@ class Rest(
             println("DELETE $u")
         }
         val (_, response, result) = Fuel.delete(u)
-            .authentication().basic(serverInfo.username, serverInfo.password)
+            .authentication().basic(server.username, server.password)
             .response()
         when (result) {
             is Result.Failure -> {
@@ -212,7 +182,7 @@ class Rest(
         }
     }
 
-    fun setPassword(p: String) { serverInfo.password = p }
+    fun setPassword(p: String) { server.password = p }
 
     private fun makeUrl(url: String, options: Map<String,String>?=null) : String {
         val trueUrl = when (url.split("/")[0]) {
@@ -221,18 +191,15 @@ class Rest(
             "configurations"  -> "rest/top/$url"
             else              -> "rest/top/configurations/$config/$url"
         }
-        val p = if (serverInfo.port!=0) ":${serverInfo.port}" else ""
+        val p = if (server.port!=0) ":${server.port}" else ""
         val opts = if (options!=null) "?" + options.keys.joinToString("&")
                     { "${it}=${options[it]}"} else ""
-        return "http://${serverInfo.server}${p}/${trueUrl}${opts}"
-    }
-    constructor(serverInfo: ServerInfo): this() {
-        server = serverInfo.toString()
+        return "http://${server.host}${p}/${trueUrl}${opts}"
     }
     companion object {
         private lateinit var theRest: Rest
         fun connect(
-            server: String = "localhost:5000",
+            server: Server,
             config: String = "running",
             trace: Boolean = false) = Rest(server=server, config=config, trace=trace)
                                       .also{ theRest = it }

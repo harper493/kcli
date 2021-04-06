@@ -2,31 +2,38 @@ import sun.misc.Signal
 import java.io.PrintWriter
 import java.time.Duration
 import java.time.LocalTime
+import java.io.File as File
 import kotlin.system.exitProcess
 
 object Cli {
     val homeDir: String = System.getProperty("user.home")
     val kcliDir: String = "$homeDir/.kcli"
-    private val targets = Properties()
     private lateinit var outFile: PrintWriter
     private lateinit var args: Args
     private lateinit var privilege: String
-    private lateinit var target: ServerInfo
+    private lateinit var target: Server
     private lateinit var systemName: String
 
     fun run(cmdargs: Array<String>) {
         args = Args(cmdargs)
-        java.io.File(kcliDir).mkdirs()
+        File(kcliDir).mkdirs()
         establishSignals()
         Datatype.load()
-        target = findTarget(args.server)
-        Rest.connect(server = target.toString(), trace=args.trace)
+        Server.restore()
+        Server.make(args.server).let { t ->
+            if (t == null) {
+                outputError("No information for server '${args.server}'")
+                return@run
+            }
+            target = getCredentials(t.copy())
+        }
+        Rest.connect(target, trace=args.trace)
         Properties
             .load(ResourceCache.get("objects.properties")
                 { Rest.getRaw("files/props/objects.properties") })
             .load(ResourceCache.get("attributes.properties")
                 { Rest.getRaw("files/props/attributes.properties") })
-            .load(ResourceCache.get("cli.properties", { defaultProperties }))
+            .load(ResourceCache.getStable("cli.properties", { defaultProperties }))
         if (args.output.isBlank()) {
             StyledText.setRenderer("ISO6429")
         } else {
@@ -50,7 +57,7 @@ object Cli {
         systemName = Rest.getAttribute("configurations/running", "system_name") ?: "stm"
         if (args.output.isBlank() && args.command.isEmpty()) {
             outputln(StyledText("User '${target.username}' logged on to '$systemName'" +
-                    " (${target.server}) with privilege level $privilege",
+                    " (${target.host}) with privilege level $privilege",
                 color=Properties.get("parameter", "login_color")).render())
             output(StyledText().render())
         }
@@ -84,31 +91,17 @@ object Cli {
         }
     }
 
-    private fun findTarget(tname: String): ServerInfo {
-        val kcliFile = "$kcliDir/targets"
-        var result: String?
-        ignoreException{ targets.loadFile(kcliFile) }
-        if ((tname).containsAnyOf(":.@")) {
-            result = tname
-            targets.addValue(tname, listOf("target", "_last"))
-            targets.write(kcliFile)
-        } else {
-            result = targets.get("target", tname)
-            if (result == null) {
-                result = targets.get("target", "_last")
-            }
+    private fun getCredentials(server: Server): Server {
+        if (server.host.isEmpty()) {
+            server.host = getUserInput("Server name or address? ")
         }
-        val si = ServerInfo(result?:"")
-        if (si.server.isEmpty()) {
-            si.server = getUserInput("Server name or address? ")
+        if (server.username.isEmpty()) {
+            server.username = getUserInput("Username? ")
         }
-        if (si.username.isEmpty()) {
-            si.username = getUserInput("Username? ")
+        if (server.password.isEmpty()) {
+            server.password = getUserInput("Password? ")
         }
-        if (si.password.isEmpty()) {
-            si.password = getUserInput("Password? ")
-        }
-        return si
+        return server
     }
 
     fun outputln(text: String) {

@@ -165,12 +165,13 @@ replace.retransmitted                                = ReTx
 replace.destination                                  = Dest
 
 hyphenate.application                                = appli-cation
+hyphenate.beautiful                                  = beau-ti-ful
 hyphenate.discarded                                  = disc-arded
 hyphenate.downstream                                 = down-stream
-hyphenate.transmitted                                = trans-mitted
 hyphenate.interface                                  = inter-face
-hyphenate.beautiful                                  = beau-ti-ful
 hyphenate.incredibly                                 = in-cred-ibly
+hyphenate.operational                                = oper-ational
+hyphenate.transmitted                                = trans-mitted
 
 abbreviate.application                               = ap
 abbreviate.system                                    = sys

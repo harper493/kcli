@@ -268,3 +268,10 @@ fun String.writeToFile(filename: String) {
     }
 }
 
+/**
+ * Read the content of a file
+ */
+
+fun readFile(filename: String) =
+    java.io.File(filename).readText()
+
