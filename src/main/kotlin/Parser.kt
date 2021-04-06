@@ -142,7 +142,7 @@ class Parser (
             keywordAdder(curMd, classKeys)
             val classKey = findKeyword(classKeys, missOk=true)
                 ?: if (missOk) break
-                else throw if (curToken==null) CliException("end of line found where object name or kewyord expected")
+                else throw if (curToken==null) CliException("end of line found where object name or keyword expected")
                            else CliException("unknown collection or keyword '$curToken'")
             val attrMd = classKey.attribute
             if (attrMd != null && attrMd.isCollection) {

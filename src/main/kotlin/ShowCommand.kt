@@ -38,6 +38,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             return
         }
         makeOptions()
+        parser.checkFinished()
         var (envelope, coll) = Rest.get(objectName, options = optionsMap)
         if (coll.size == 0) {
             throw CliException("no matching objects found")
@@ -331,8 +332,9 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         return table.layoutText().renderStyled()
     }
 
-    private fun showHealth() =
-        StyledText(
+    private fun showHealth(): StyledText {
+        parser.checkFinished()
+        return StyledText(
             makeHeading("System Health Information"),
             StyledText(
                 Rest.getAttribute("rest/top", "last_log_entry")
@@ -340,8 +342,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 color = Properties.get("color", "even_row")
             )
         )
+    }
 
     private fun showLicense(): StyledText {
+        parser.checkFinished()
         val licenses = Rest.getCollection(
             "rest/top/licenses/",
             mapOf("order" to "<issue_time", "limit" to "1")
@@ -358,6 +362,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             KeywordList(*Metadata.classes.map { it.name }.toTypedArray()),
             endOk = true
         )
+        parser.checkFinished()
         if (classKw == null) {
             val layout = ColumnLayout(
                 4,
@@ -423,6 +428,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val param = parser.findKeyword(
             KeywordList(paramClass.attributes), endOk = true
         )
+        parser.checkFinished()
         val raw = Rest.getJson("parameters")
         val params = raw.asDict()["collection"]?.asArray()?.get(0)
         if (param == null) {
@@ -448,6 +454,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
 
     private fun showServers(): StyledText =
         cli.makeTable().also { table ->
+            parser.checkFinished()
             for ((name, server) in Server) {
                 if (name != Server.lastName) {
                     table.append("Server Name" to name, "Target" to "$server")
@@ -458,12 +465,14 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         }.layoutText().renderStyled()
 
     private fun showSystem(): StyledText {
+        parser.checkFinished()
         return showOne(Rest.getObject("rest/top",
             options=mapOf("level" to "full"))!!,
             header="System Information")
     }
 
     private fun showVersion(): StyledText {
+        parser.checkFinished()
         return StyledText(Rest.getAttribute("configurations/running",
             "build_version") ?: "unknown",
             color = Properties.get("parameter", "result_color"))

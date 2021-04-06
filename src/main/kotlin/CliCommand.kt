@@ -88,6 +88,7 @@ class CliCommand(line: String) {
 
     private fun doReboot() {
         val values = readPartitionConfig(getConfig=true)
+        parser.checkFinished()
         if (readYesNo("Reboot system immediately")) {
             values["reload_system"] = "1"
             Rest.put("configurations/running", values)
@@ -95,6 +96,7 @@ class CliCommand(line: String) {
     }
 
     private fun doShutdown() {
+        parser.checkFinished()
         if (readYesNo("Shut system down immediately")) {
             Rest.put("configurations/running", mapOf("shutdown_system" to "1"))
         }
@@ -102,6 +104,7 @@ class CliCommand(line: String) {
 
     private fun doSave() {
         val values = readPartitionConfig(allowBoth=true)
+        parser.checkFinished()
         values["save_config"] = "1"
         Rest.put("configurations/running", values)
     }
@@ -113,6 +116,7 @@ class CliCommand(line: String) {
             .map{ it.name.split("_").drop(1).joinToString("_")}
             .toTypedArray())
         val kw = parser.findKeyword(keywords)!!
+        parser.checkFinished()
         Rest.put("configurations/running", mapOf("dump_${kw.asString()}" to "1"))
     }
 
@@ -134,6 +138,7 @@ class CliCommand(line: String) {
     private fun doServer() {
         val serverName = parser.nextToken(tokenType=Parser.TokenType.ttName)!!
         val target = parser.nextToken(tokenType = Parser.TokenType.ttNonBlank, endOk = true)
+        parser.checkFinished()
         if (target == null) {
             Server.getLast()?.saveAs(serverName)
         } else {
@@ -143,6 +148,7 @@ class CliCommand(line: String) {
 
     private fun doNoServer() {
         val serverName = parser.nextToken(tokenType=Parser.TokenType.ttName)!!
+        parser.checkFinished()
         Server.remove(serverName)
     }
 

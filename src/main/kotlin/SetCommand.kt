@@ -59,11 +59,14 @@ class SetCommand(val cli: CliCommand) {
 
     private fun setConfiguration() {
         val config = parser.nextToken(completer=ObjectCompleter(ObjectName("configurations/")))!!
+        parser.checkFinished()
         Rest.setConfig(config)
     }
 
     private fun setTrace() {
-        Rest.setTrace(Datatype.toBoolean(parser.nextToken(type=Datatype["boolean"]) ?: "F"))
+        val onOff = parser.nextToken(type=Datatype["boolean"]) ?: "F"
+        parser.checkFinished()
+        Rest.setTrace(Datatype.toBoolean(onOff))
     }
 }
 
