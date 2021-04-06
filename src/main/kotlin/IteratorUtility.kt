@@ -232,17 +232,20 @@ fun<T> Iterable<T>.removeDuplicates(pred: (T,T)->Boolean) =
             .ifElse(null, thisOne)
     }
 
-fun<T> Boolean.ifElse(t: T, f: T) = (if (this) t else f).also{}
+fun<T> Boolean.ifElse(t: T, f: T): T = (if (this) t else f)
 
 fun<T,U> lazily(input: T, cache: MutableMap<T,U>, fn: (T)->U) =
     cache[input]
         ?: fn(input).also{ cache[input] = it }
 
-fun<T> ignoreException(fn: ()->T): T? {
+fun<T> ifException(default: T?, fn: ()->T): T? {
     try {
         return fn()
     } catch(exc: Exception) {
-        return null
+        return default
     }
 }
+
+fun<T> ignoreException(fn: ()->T) =
+    ifException(null, fn)
 

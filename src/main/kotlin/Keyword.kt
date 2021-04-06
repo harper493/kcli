@@ -25,7 +25,7 @@ class KeywordList()
     fun exactMatch(key: String) = keywords.getExact(key)
     fun matchShorter(key: String) = keywords.getShorter(key)
     operator fun contains(key: Keyword): Boolean = keywords.getExact(key.key) != null
-    fun toStrings(keys: Iterable<Keyword>?=null) = (keys ?: keywords).map{ it.key }
+    fun toStrings() = keywords.map{ it.second.key }
     fun copy(): KeywordList = KeywordList().add(this)
 
     /*
@@ -48,7 +48,7 @@ class KeywordList()
     }
     fun add(vararg fns: KeywordFn) = fns.map{ addOne(Keyword(it.key, function=it.function)) }
     fun add(keys: KeywordList): KeywordList {
-        keys.keywords.map{ addOne(it) }
+        keys.keywords.map{ addOne(it.second) }
         return this
     }
     fun add(vararg keys: Keyword) = keys.map{ addOne(it) }

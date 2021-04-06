@@ -1,8 +1,9 @@
-class Metadata (
-) {
-    val classMap: Map<String, ClassMetadata> = Rest.getJson("rest/top/metadata/",
-                                                         mapOf("level" to "full"))
-            ?.get("metadata")
+class Metadata {
+    val classMap: Map<String, ClassMetadata> =
+        JsonObject.load(ResourceCache.get("metadata")
+        { Rest.getRaw("rest/top/metadata/",
+            mapOf("level" to "full")) })
+            .get("metadata")
             ?.get("collection")
             ?.asArray()
             ?.map{

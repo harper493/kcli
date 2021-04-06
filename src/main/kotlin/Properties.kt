@@ -1,5 +1,5 @@
 class Properties (
-    private var filename: String? = null
+    private val content: String? = null
 ) {
     private val myTrie = Trie<String, String>("*")
     fun addValue(value: String, keys: Iterable<String>) {
@@ -9,30 +9,21 @@ class Properties (
 
     fun getInt(vararg keys: String, default: Int = 0) = get(*keys)?.toIntOrNull() ?: default
     fun getFloat(vararg keys: String, default: Double = 0.0) = get(*keys)?.toDoubleOrNull() ?: default
-    fun load(fn: String? = null, default: String? = null): Properties {
-        if (fn != null) {
-            filename = fn
+    fun loadFile(filename: String): Properties =
+        also {
+            java.io.File(filename).readText().split("\n")
+                .forEach { loadOneLine(it) }
         }
-        try {
-            java.io.File(filename!!).forEachLine { loadOneLine(it) }
-        } catch (exc: Exception) {
-            if (default!=null) {
-                default.split("\n").forEach{ loadOneLine(it) }
-            }
+    fun load(content: String) =
+        also {
+            content.split("\n")
+                .forEach { loadOneLine(it) }
         }
-        return this
-    }
 
-    fun write(fn: String? = null) {
-        val writer = java.io.PrintWriter(fn ?: filename ?: "")
-        myTrie.visit()
-            { name, value -> writer.append("${name.joinToString(".")} = $value\n") }
-        writer.flush()
-        writer.close()
-    }
-
-    fun visit(vararg keys: String, fn: (Iterable<String>, String) -> Unit) =
-        myTrie.visit(fn)
+    fun write(filename: String) =
+        myTrie.map { "${it.first.joinToString(".")} = ${it.second}" }
+            .joinToString("\n")
+            .writeToFile(filename)
 
     private fun loadOneLine(line: String) {
         try {
@@ -43,22 +34,19 @@ class Properties (
     }
 
     init {
-        if (filename != null) {
-            load(filename!!)
+        if (content != null) {
+            load(content)
         }
     }
 
     companion object {
-        private var properties = Properties()
-        fun load(fn: String, default: String? = null): Properties {
-            return properties.load(fn, default)
-        }
+        var properties = Properties()
+        fun loadFile(filename: String) = properties.loadFile(filename)
+        fun load(content: String) = properties.load(content)
 
         fun get(vararg keys: String) = properties.get(*keys)
         fun getInt(vararg keys: String, default: Int = 0) = properties.getInt(*keys, default = default)
         fun getFloat(vararg keys: String, default: Double = 0.0) = properties.getFloat(*keys, default = default)
-        fun getColor(color: String) = properties.get("color", color)
-        fun getColors(vararg colors: String) = colors.mapNotNull { getColor(it) }
     }
 }
 

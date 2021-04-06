@@ -24,7 +24,8 @@ class ObjectCompleter(
             val size = envelope["size"]?.toIntOrNull() ?: -1
             val completions = collection.getObjectNames()
             val completion = envelope["completion"] ?: ""
-            val keywords = extras.keywords.map{it.key}.filter{it.startsWith(token, ignoreCase = true)}
+            val keywords = extras.keywords.map{it.second.key}
+                .filter{it.startsWith(token, ignoreCase = true)}
             when(size) {
                 0 -> keywords
                 1 -> keywords.append(completion)

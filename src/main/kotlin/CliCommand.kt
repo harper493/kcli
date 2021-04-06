@@ -25,6 +25,7 @@ class CliCommand(line: String) {
                 KeywordFn("quit")     { doQuit() },
                 KeywordFn("reboot")   { doReboot() },
                 KeywordFn("save")     { doSave() },
+                KeywordFn("server")   { doServer() },
                 KeywordFn("set")      { SetCommand(this).doSet() },
                 KeywordFn("show")     { ShowCommand(this, "show").doShow() },
                 KeywordFn("shutdown") { doShutdown() },
@@ -70,10 +71,10 @@ class CliCommand(line: String) {
             val missing = classMd.requiredAttributes.filter{ it !in values && it.name!="name" }
             if (missing.isNotEmpty()) {
                 if (missing.size==1 && missing[0].type.name=="password") {
-                    values.put(missing[0].name, Cli.getPassword())
+                    values[missing[0].name] = Cli.getPassword()
                 } else {
-                    throw CliException("the following attributes must be specified: ${missing.map{ it.name }
-                        .joinToString(", ")}")
+                    throw CliException("the following attributes must be specified: " +
+                            missing.joinToString(", ") { it.name })
                 }
             }
         }
@@ -128,6 +129,10 @@ class CliCommand(line: String) {
             parser.checkFinished()
             Rest.delete(objName.url)
         }
+    }
+
+    private fun doServer() {
+
     }
 
     fun makeDisplayName(classMd: ClassMetadata, name: String, value: String): String {
@@ -279,3 +284,12 @@ class CliCommand(line: String) {
     fun output(text: String) = Cli.output(text)
     fun outputln(text: String) = Cli.outputln(text)
 }
+
+/*
+Extension functions for other classes
+ */
+
+fun Properties.Companion.getColor(color: String) = properties.get("color", color)
+fun Properties.Companion.getColors(vararg colors: String) = colors.mapNotNull { getColor(it) }
+fun Properties.Companion.getParameter(color: String) = properties.get("parameter", color)
+

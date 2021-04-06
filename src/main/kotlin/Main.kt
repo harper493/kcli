@@ -1,31 +1,32 @@
-import java.io.PrintWriter
-import java.time.LocalTime
-import java.time.Duration
 import sun.misc.Signal
-import sun.misc.SignalHandler
+import java.io.PrintWriter
+import java.time.Duration
+import java.time.LocalTime
+import kotlin.system.exitProcess
 
-class Cli(private val cmdargs: Array<String>) {
-    private val homeDir: String = System.getProperty("user.home")
-    private val targets = Properties("${homeDir}/.kcli")
+object Cli {
+    val homeDir: String = System.getProperty("user.home")
+    val kcliDir: String = "$homeDir/.kcli"
+    private val targets = Properties()
     private lateinit var outFile: PrintWriter
     private lateinit var args: Args
     private lateinit var privilege: String
     private lateinit var target: ServerInfo
     private lateinit var systemName: String
 
-    init {
-        theCli = this
-    }
-
-    fun run() {
+    fun run(cmdargs: Array<String>) {
+        args = Args(cmdargs)
+        java.io.File(kcliDir).mkdirs()
         establishSignals()
         Datatype.load()
-        args = Args(cmdargs)
         target = findTarget(args.server)
         Rest.connect(server = target.toString(), trace=args.trace)
-        val objectProperties = Rest.getRaw("files/props/objects.properties")
-        Properties.load("", objectProperties)
-            .load("/etc/kcli/cli.properties", defaultProperties)
+        Properties
+            .load(ResourceCache.get("objects.properties")
+                { Rest.getRaw("files/props/objects.properties") })
+            .load(ResourceCache.get("attributes.properties")
+                { Rest.getRaw("files/props/attributes.properties") })
+            .load(ResourceCache.get("cli.properties", { defaultProperties }))
         if (args.output.isBlank()) {
             StyledText.setRenderer("ISO6429")
         } else {
@@ -84,12 +85,13 @@ class Cli(private val cmdargs: Array<String>) {
     }
 
     private fun findTarget(tname: String): ServerInfo {
+        val kcliFile = "$kcliDir/targets"
         var result: String?
-        targets.load()
+        ignoreException{ targets.loadFile(kcliFile) }
         if ((tname).containsAnyOf(":.@")) {
             result = tname
             targets.addValue(tname, listOf("target", "_last"))
-            targets.write()
+            targets.write(kcliFile)
         } else {
             result = targets.get("target", tname)
             if (result == null) {
@@ -120,13 +122,7 @@ class Cli(private val cmdargs: Array<String>) {
             outFile.append(text)
         }
     }
-
-
-    companion object {
-        lateinit var theCli: Cli
-        fun outputln(text: String) = theCli.outputln(text)
-        fun output(text: String) = theCli.output(text)
-        fun outputError(text: String) {
+         fun outputError(text: String) {
             outputln(
                 StyledText(
                     text.uppercaseFirst(),
@@ -136,9 +132,9 @@ class Cli(private val cmdargs: Array<String>) {
             )
             output(StyledText("").render())
         }
-        val isSuperuser get() = theCli.privilege=="superuser"
-        val isConfig get() = theCli.privilege=="config"
-        val username get() = theCli.target.username
+        val isSuperuser get() = privilege=="superuser"
+        val isConfig get() = privilege=="config"
+        val username get() = target.username
         fun getPassword(): String {
             val password = CommandReader.readPassword("New Password? ")
             val repeatPassword = CommandReader.readPassword("Repeat Password? ")
@@ -148,17 +144,13 @@ class Cli(private val cmdargs: Array<String>) {
         private var lastInterrupt: LocalTime? = null
         var interrupted = false; private set
         private fun establishSignals() {
-            Signal.handle(Signal("INT"), object : SignalHandler {
-                override fun handle(sig: Signal) {
-                    doInterrupt()
-                }
-            })
+            Signal.handle(Signal("INT")) { doInterrupt() }
         }
         private fun doInterrupt() {
             if (lastInterrupt != null
                 && Duration.between(LocalTime.now(), lastInterrupt).toSeconds() < 1.0
             ) {
-                System.exit(0)
+                exitProcess(0)
             } else {
                 interrupted = true
                 lastInterrupt = LocalTime.now()
@@ -166,11 +158,11 @@ class Cli(private val cmdargs: Array<String>) {
         }
         fun clearInterrupted() { interrupted = false }
     }
-}
+
 
 
 fun main(args: Array<String>) {
-    Cli(args).run()
+    Cli.run(args)
 }
 
 fun test2() {

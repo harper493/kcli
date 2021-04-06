@@ -256,3 +256,15 @@ fun readYesNo(prompt: String, defaultNo: Boolean=true, allowQuit: Boolean=false)
 fun Iterable<String>.removePrefixes() =
     removeDuplicates{ a,b -> b.startsWith(a) }
 
+/**
+ * Write a string to a file
+ */
+
+fun String.writeToFile(filename: String) {
+    java.io.PrintWriter(filename).let { file ->
+        file.append(this)
+        file.flush()
+        file.close()
+    }
+}
+

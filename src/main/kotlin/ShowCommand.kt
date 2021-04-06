@@ -103,7 +103,8 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
 
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
         optionsMap["link"] = "name"
-        finalExtraTemplate.keywords.forEach{ if (it.key !in exclude) finalExtras.add(it) }
+        finalExtraTemplate.keywords
+            .forEach{ if (it.second.key !in exclude) finalExtras.add(it.second) }
         if ("levels" !in exclude) {
             levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
         }

@@ -200,7 +200,7 @@ class Parser (
                         if (result==null) {
                             throw CliException(
                                 "keyword '$token' matches ${if (matches.size == 2) "both" else "all"} of: ${
-                                    keys.toStrings(matches)
+                                    matches.map{ it.key }
                                         .removePrefixes()
                                         .joinToString(", ")}")
                         }
