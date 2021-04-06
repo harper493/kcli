@@ -132,16 +132,13 @@ class Parser (
         var curMd = Metadata.getConfigMd()
         while (true) {
             val classKeys = KeywordList(curMd.collections.filter{initialPred(it)})
-            curMd.collections
-                .map{ Pair(it, Properties.get("abbreviate", it.typeName)) }
-                .filter{ it.second!=null }
-                .forEach{ classKeys.addOne(Keyword(it.second!!, attribute=it.first)) }
             if (result.isEmpty) {
                 classKeys.add(initialExtras)
                 classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
             } else {
                 classKeys.add(finalExtras)
             }
+            classKeys.addAbbreviations()
             keywordAdder(curMd, classKeys)
             val classKey = findKeyword(classKeys, missOk=true)
                 ?: if (missOk) break

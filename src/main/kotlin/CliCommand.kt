@@ -117,7 +117,7 @@ class CliCommand(line: String) {
     }
 
     private fun doNo() {
-        val extras = KeywordList()
+        val extras = KeywordList(KeywordFn("server", { doNoServer() }))
         val (objName, key) = parser.getObjectName(initialExtras = extras, missOk=true)
         if (objName.isEmpty) {
             if (key==null) {
@@ -132,7 +132,18 @@ class CliCommand(line: String) {
     }
 
     private fun doServer() {
+        val serverName = parser.nextToken(tokenType=Parser.TokenType.ttName)!!
+        val target = parser.nextToken(tokenType = Parser.TokenType.ttNonBlank, endOk = true)
+        if (target == null) {
+            Server.getLast()?.saveAs(serverName)
+        } else {
+            Server(target).saveAs(serverName)
+        }
+    }
 
+    private fun doNoServer() {
+        val serverName = parser.nextToken(tokenType=Parser.TokenType.ttName)!!
+        Server.remove(serverName)
     }
 
     fun makeDisplayName(classMd: ClassMetadata, name: String, value: String): String {

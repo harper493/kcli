@@ -7,6 +7,7 @@ data class Server (
     private val defaultPort = 5000
     constructor(text: String) : this() {
         val rx = Regex("""^(?:([^:@]+)(?::([^@]+))?@)?(.*)$""")
+        port = -1
         val m = rx.find(text)
         if (m!=null) {
             val (u, p, s) = m.groupValues.let { Triple(it[1], it[2], it[3]) }
@@ -14,17 +15,24 @@ data class Server (
             this.password = p
             when (s.filter { it == ':' }.count()) {
                 0 -> { this.host = s; this.port = defaultPort }
-                1 -> s.split(":").let { this.host = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
-                2 -> s.split("@").let { this.host = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
+                1 -> s.split(":")
+                    .let { this.host = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
+                2 -> s.split("@")
+                    .let { this.host = it[0]; this.port = it[1].toIntOrNull() ?: -1 }
             }
         }
-        if (this.port < 0) {
-            throw Exception("Invalid server string '${text}'")
-        }
+        CliException.throwIf("Invalid server string '${text}'"){ port<0 }
     }
-    private fun strIf(text: String, pred: String) = if (pred.isEmpty()) "" else text
-    override fun toString() = "$username${strIf(":", password)}$password" +
-            "${strIf("@", username)}$host:$port"
+    override fun toString() =
+        (if (username.isNotEmpty()) "$username@" else "") + host +
+        (if (port!=defaultPort) ":$port" else "")
+
+    fun toFullString() =
+        (if (username.isNotEmpty()) "$username" +
+                (if (password.isNotEmpty()) ":$password" else "") + "@" else "") +
+                host +
+                (if (port!=defaultPort) ":$port" else "")
+
     fun saveAs(name: String) =
         also {
             servers[name] = this
@@ -34,10 +42,10 @@ data class Server (
     companion object {
         private val servers = mutableMapOf<String,Server>()
         private val filename get() = "${Cli.kcliDir}/targets"
-        private const val lastName = "_last"
+        const val lastName = "_last"
 
         fun saveAll() {
-            servers.map{ "${it.key} = ${it.value}" }
+            servers.map{ "${it.key} = ${it.value.toFullString()}" }
                 .joinToString("\n")
                 .writeToFile(filename)
         }
@@ -64,5 +72,16 @@ data class Server (
 
         operator fun get(name: String) =
             servers[name]
+
+        fun remove(name: String) {
+            ignoreException { servers.remove(name) }
+            saveAll()
+        }
+
+        fun getLast() = get(lastName)
+
+        operator fun iterator() = servers.iterator()
+
+        fun isEmpty() = servers.isEmpty()
     }
 }

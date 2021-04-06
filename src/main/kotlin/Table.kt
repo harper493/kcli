@@ -87,6 +87,8 @@ class Table (
         return this
     }
 
+    fun isEmpty() = columns.isEmpty()
+
     private fun finalize(): Table {
         columns.values.map{it.padTo(depth)}
         sortedCols = columns.values.sortedBy { it.position }

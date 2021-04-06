@@ -65,7 +65,11 @@ class ObjectName(val newUrl: String="") {
             split.removeFirst()
         }
         if (split.size %2 != 0) {
-            split += ""
+            if (split.last().isEmpty()) {
+                split.removeLast()
+            } else {
+                split += ""
+            }
         }
         if (split[0]=="rest") {
             split.removeFirst()

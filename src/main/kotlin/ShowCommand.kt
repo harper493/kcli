@@ -9,19 +9,20 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private var descending: Boolean? = null
     private var limit = 100
     private var level = ""
-    private val optionsMap = mutableMapOf<String,String>()
+    private val optionsMap = mutableMapOf<String, String>()
     private lateinit var objectName: ObjectName
     private val levels = listOf("brief", "full", "detail", "debug")
     private var result = StyledText("")
     private val pageSize = Properties.getInt("parameter", "page_size")
     private val finalExtras = KeywordList()
     private val initialExtras = KeywordList(
-        KeywordFn("health"){ result = showHealth() },
-        KeywordFn("license"){ result = showLicense() },
-        KeywordFn("metadata"){ result = showMetadata() },
-        KeywordFn("parameters"){ result = showParameters() },
-        KeywordFn("system"){ result = showSystem() },
-        KeywordFn("version"){ result = showVersion() },
+        KeywordFn("health") { result = showHealth() },
+        KeywordFn("license") { result = showLicense() },
+        KeywordFn("metadata") { result = showMetadata() },
+        KeywordFn("parameters") { result = showParameters() },
+        KeywordFn("servers") { result = showServers() },
+        KeywordFn("system") { result = showSystem() },
+        KeywordFn("version") { result = showVersion() },
     )
     private val finalExtraTemplate = KeywordList(
         KeywordFn("select") { doSelect() },
@@ -40,7 +41,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         var (envelope, coll) = Rest.get(objectName, options = optionsMap)
         if (coll.size == 0) {
             throw CliException("no matching objects found")
-        } else if (objectName.isWild || coll.size>1) {
+        } else if (objectName.isWild || coll.size > 1) {
             cli.outputln(showCollection(objectName, coll).render())
             var start = 0
             while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
@@ -48,7 +49,8 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                     cli.output(StyledText().render())
                     true
                 }
-                && readYesNo("Show more", defaultNo = false, allowQuit=true)) {
+                && readYesNo("Show more", defaultNo = false, allowQuit = true)
+            ) {
                 start += pageSize
                 optionsMap["start"] = "$start"
                 coll = Rest.getCollection(objectName, options = optionsMap)
@@ -60,42 +62,49 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     }
 
     fun doCount() {
-        getShowInput(exclude=listOf("select", "top", "bottom", "limit", "level"))
+        getShowInput(exclude = listOf("select", "top", "bottom", "limit", "level"))
         optionsMap["limit"] = "1"
         optionsMap["level"] = "list"
         makeOptions()
         val (envelope, _) = Rest.get(objectName, options = optionsMap)
         val quantity = envelope["size"]?.toInt() ?: 0
-        val result = StyledText("$quantity matching ${classMd.name.makePlural(quantity)} found",
-                                color = Properties.get("parameter", "result_color"))
+        val result = StyledText(
+            "$quantity matching ${classMd.name.makePlural(quantity)} found",
+            color = Properties.get("parameter", "result_color")
+        )
         cli.outputln(result.render())
     }
 
     fun doTotal() {
-        getShowInput(exclude=listOf("level"))
+        getShowInput(exclude = listOf("level"))
         optionsMap["limit"] = "1"
         optionsMap["total"] = "post"
-        CliException.throwIf("must use 'select' for attributes in total command"){ selections.isEmpty() }
-        makeOptions(doColor=false)
+        CliException.throwIf("must use 'select' for attributes in total command") { selections.isEmpty() }
+        makeOptions(doColor = false)
         val totals = Rest.getTotals(objectName, options = optionsMap)
         CliException.throwIf("no matching objects found")
-            { totals.filter{ it.key.startsWith("_count") }
-                .values.map{ it.toIntOrNull()?: 0}.sum() == 0 }
+        {
+            totals.filter { it.key.startsWith("_count") }
+                .values.map { it.toIntOrNull() ?: 0 }.sum() == 0
+        }
         val table = cli.makeTable()
         selections
-            .filter{ it.name in totals }
-            .sortedBy{ it.displayName }
-            .forEach{ attr ->
+            .filter { it.name in totals }
+            .sortedBy { it.displayName }
+            .forEach { attr ->
                 val count = maxOf(1, ((totals["_count_${attr.name}"] ?: "1").toIntOrNull() ?: 1))
                 val total = attr.type.convert((totals[attr.name] ?: "0"))
                 table.append(
                     "Attribute" to attr.displayName,
                     "Count" to "$count",
-                    "Total" to (attr.total=="sum").ifElse( "$total ${attr.unit}", ""),
-                    "Average" to "${when(attr.total) {
-                        "average" -> "$total"
-                        "sum" -> attr.type.formatter(total.toFloat() / count.toFloat())
-                        else -> ""}} ${attr.unit}"
+                    "Total" to (attr.total == "sum").ifElse("$total ${attr.unit}", ""),
+                    "Average" to "${
+                        when (attr.total) {
+                            "average" -> "$total"
+                            "sum" -> attr.type.formatter(total.toFloat() / count.toFloat())
+                            else -> ""
+                        }
+                    } ${attr.unit}"
                 )
             }
         cli.outputln(table.layoutText().render())
@@ -104,13 +113,13 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
         optionsMap["link"] = "name"
         finalExtraTemplate.keywords
-            .forEach{ if (it.second.key !in exclude) finalExtras.add(it.second) }
+            .forEach { if (it.second.key !in exclude) finalExtras.add(it.second) }
         if ("levels" !in exclude) {
             levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
         }
-        val (oname, terminator) = parser.getObjectName(initialExtras=initialExtras,
-            finalExtras=finalExtras,
-            initialPred={ !it.name.startsWith("parameter")})
+        val (oname, terminator) = parser.getObjectName(initialExtras = initialExtras,
+            finalExtras = finalExtras,
+            initialPred = { !it.name.startsWith("parameter") })
         classMd = oname.leafClass ?: Metadata.getClass("configuration")!!
         var myKey: Keyword? = terminator
         while (myKey != null) {
@@ -123,7 +132,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         objectName = oname
     }
 
-    private fun makeOptions(doColor: Boolean=true) {
+    private fun makeOptions(doColor: Boolean = true) {
         fun addOption(option: String, value: String) {
             if (value.isNotEmpty()) {
                 optionsMap[option] = value
@@ -135,8 +144,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         addOption("select",
             (if (onlySelect || selections.isEmpty()) "" else "+") +
                     selections.joinToString(",") { it.name })
-        var with = filters.joinToString((filterConjunction == "and")
-            .ifElse(",","|"))
+        var with = filters.joinToString(
+            (filterConjunction == "and")
+                .ifElse(",", "|")
+        )
         val converted = objectName.convertWild().joinToString(",")
         if (converted.isNotEmpty()) {
             with = if (with.isEmpty()) {
@@ -160,7 +171,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 else -> ">$order"
             }
         )
-        addOption("limit", "${minOf(limit, pageSize).takeIf{it>0}?:pageSize}")
+        addOption("limit", "${minOf(limit, pageSize).takeIf { it > 0 } ?: pageSize}")
     }
 
     private fun doSelect() {
@@ -169,7 +180,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             .copy()
             .addKeys("only")
         while (true) {
-            val kw = cli.readAttribute(classMd, extras = myExtras, endOk=selections.isNotEmpty())
+            val kw = cli.readAttribute(classMd, extras = myExtras, endOk = selections.isNotEmpty())
             if (kw?.attribute != null) {
                 selections.add(kw.attribute)
             } else if (kw?.key == "only") {
@@ -179,7 +190,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 break
             }
         }
-        CliException.throwIf("no attributes found after 'select'"){ selections.isEmpty() }
+        CliException.throwIf("no attributes found after 'select'") { selections.isEmpty() }
     }
 
     private fun doWith() {
@@ -188,7 +199,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val myExtras = finalExtras
         while (true) {
             val negated = parser.skipToken("!")
-            val kw = cli.readAttribute(classMd, extras = myExtras, endOk=true)
+            val kw = cli.readAttribute(classMd, extras = myExtras, endOk = true)
             if (kw?.value in listOf("and", "or")) {
                 if (filterConjunction.isNotEmpty() && filterConjunction != kw!!.asString()) {
                     throw CliException("cannot mix 'and' and 'or' in the same command")
@@ -235,7 +246,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         limit = parser.getInt()
         val myExtras = KeywordList("by")
         while (true) {
-            val (str, attrMd, kw) = cli.readComplexAttribute(classMd, extras=myExtras)
+            val (str, attrMd, kw) = cli.readComplexAttribute(classMd, extras = myExtras)
             if (attrMd == null) {
                 if (kw?.asString() == "by") {
                     finalExtras.remove("by")
@@ -248,7 +259,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             descending = desc
             break
         }
-        parser.findKeyword(finalExtras, endOk=true)
+        parser.findKeyword(finalExtras, endOk = true)
     }
 
     private fun doLevel(l: String) {
@@ -257,10 +268,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             throw CliException("invalid show level '$l'")
         }
         level = l
-        parser.findKeyword(finalExtras, endOk=true)
+        parser.findKeyword(finalExtras, endOk = true)
     }
 
-    private fun showOne(obj: ObjectData, header: String?=null): StyledText {
+    private fun showOne(obj: ObjectData, header: String? = null): StyledText {
         val display = ColumnLayout(
             columns = Properties.getInt("parameter", "show_columns"),
             separator = "=",
@@ -279,9 +290,13 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         for ((name, attributeData) in sortedValues) {
             display.append(
                 name,
-                "${cli.makeDisplayName(classMd, 
-                    attributeData.name, 
-                    attributeData.value)} ${attributeData.attributeMd.unit}"
+                "${
+                    cli.makeDisplayName(
+                        classMd,
+                        attributeData.name,
+                        attributeData.value
+                    )
+                } ${attributeData.attributeMd.unit}"
             )
         }
         return StyledText(heading, display.layoutText().renderStyled())
@@ -291,11 +306,11 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val table = cli.makeTable()
         var namePosition = -1000000
         val nameColumns = oname.elements.takeLast(oname.wildDepth)
-            .map{ Pair(it.attrMd.containedClass?.displayName ?: "", ++namePosition)}
+            .map { Pair(it.attrMd.containedClass?.displayName ?: "", ++namePosition) }
             .toMap()
-        CliException.throwIf("no matching objects found"){ coll.isEmpty() }
+        CliException.throwIf("no matching objects found") { coll.isEmpty() }
         for (obj in coll) {
-            val color = obj.getOr("color")?.value?.ifBlank{ null }
+            val color = obj.getOr("color")?.value?.ifBlank { null }
             for (elem in obj.name.elements.takeLast(oname.wildDepth)) {
                 table.append(elem.attrMd.containedClass?.displayName ?: "", elem.name, color)
             }
@@ -317,16 +332,22 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     }
 
     private fun showHealth() =
-        StyledText(makeHeading("System Health Information"),
-            StyledText(Rest.getAttribute("rest/top", "last_log_entry")
-                ?: "No health information available",
-                color=Properties.get("color", "even_row")))
+        StyledText(
+            makeHeading("System Health Information"),
+            StyledText(
+                Rest.getAttribute("rest/top", "last_log_entry")
+                    ?: "No health information available",
+                color = Properties.get("color", "even_row")
+            )
+        )
 
     private fun showLicense(): StyledText {
-        val licenses = Rest.getCollection("rest/top/licenses/",
-            mapOf("order" to "<issue_time", "limit" to "1"))
+        val licenses = Rest.getCollection(
+            "rest/top/licenses/",
+            mapOf("order" to "<issue_time", "limit" to "1")
+        )
         if (licenses.isNotEmpty()) {
-            return showOne(licenses.first()!!, header="License Information")
+            return showOne(licenses.first()!!, header = "License Information")
         } else {
             throw CliException("No license installed")
         }
@@ -334,27 +355,34 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
 
     private fun showMetadata(): StyledText {
         val classKw = parser.findKeyword(
-            KeywordList(*Metadata.classes.map{ it.name }.toTypedArray()),
-            endOk=true
+            KeywordList(*Metadata.classes.map { it.name }.toTypedArray()),
+            endOk = true
         )
-        if (classKw==null) {
-            val layout = ColumnLayout(4,
+        if (classKw == null) {
+            val layout = ColumnLayout(
+                4,
                 stripeColors = Properties.getColors("even_row", "odd_row")
             )
-            Metadata.classes.map{ layout.append(it.name) }
-            return StyledText(makeHeading("Available Classes", includeTime = false),
-                layout.layoutText().renderStyled())
+            Metadata.classes.map { layout.append(it.name) }
+            return StyledText(
+                makeHeading("Available Classes", includeTime = false),
+                layout.layoutText().renderStyled()
+            )
         } else {
             val classMd = Metadata[classKw.asString()]!!
-            val headings = ColumnLayout(1,
-                valueColumnWidth=80,
-                stripeColors=Properties.getColors("heading"))
+            val headings = ColumnLayout(
+                1,
+                valueColumnWidth = 80,
+                stripeColors = Properties.getColors("heading")
+            )
             val parent = classMd.parentClass
-            if (parent==null) {
+            if (parent == null) {
                 headings.append("Parent", "None")
             } else {
-                headings.append("Parent:",
-                    "${parent.name}.${classMd.container?.name?:""}")
+                headings.append(
+                    "Parent:",
+                    "${parent.name}.${classMd.container?.name ?: ""}"
+                )
             }
             if (classMd.derivedClasses.isNotEmpty()) {
                 headings.append("Subclasses:",
@@ -365,10 +393,11 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             headings.append("All Base Classes:",
                 classMd.allBaseClasses.joinToString(", ") { it.name })
             val body = Table(
-                maxColumnWidth=Properties.getInt("parameter", "metadata_column_width"),
-                headingColor=Properties.get("parameter", "heading_color"),
-                stripeColors=Properties.getColors("even_row", "odd_row"))
-            classMd.ownAttributes.map{ attr ->
+                maxColumnWidth = Properties.getInt("parameter", "metadata_column_width"),
+                headingColor = Properties.get("parameter", "heading_color"),
+                stripeColors = Properties.getColors("even_row", "odd_row")
+            )
+            classMd.ownAttributes.map { attr ->
                 body.append(
                     "Name" to attr.displayName,
                     "Rest Name" to attr.name,
@@ -377,10 +406,11 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                     "Type" to attr.type.name,
                     "Filter Type" to attr.filterType.name,
                     "Unit" to attr.unit,
-                    "Range" to attr.range)
+                    "Range" to attr.range
+                )
             }
             return StyledText(
-                makeHeading("Metadata for Class '${classMd.displayName}' (${classMd.name})", includeTime=false),
+                makeHeading("Metadata for Class '${classMd.displayName}' (${classMd.name})", includeTime = false),
                 headings.layoutText().renderStyled(),
                 StyledText("\n"),
                 body.layoutText().renderStyled()
@@ -391,10 +421,11 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private fun showParameters(): StyledText {
         val paramClass = Metadata.getClass("parameter_info")!!
         val param = parser.findKeyword(
-            KeywordList(paramClass.attributes), endOk=true)
+            KeywordList(paramClass.attributes), endOk = true
+        )
         val raw = Rest.getJson("parameters")
         val params = raw.asDict()["collection"]?.asArray()?.get(0)
-        if (param==null) {
+        if (param == null) {
             val display = ColumnLayout(
                 columns = Properties.getInt("parameter", "parameter_columns"),
                 separator = "=",
@@ -402,19 +433,29 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 valueColumnWidth = Properties.getInt("parameter", "parameter_value_width"),
                 stripeColors = Properties.getColors("even_row", "odd_row")
             )
-            for((name, value) in params!!.asDict()) {
-                val displayName = paramClass.getAttribute(name)?.displayName ?:
-                                    makeNameHuman(name)
+            for ((name, value) in params!!.asDict()) {
+                val displayName = paramClass.getAttribute(name)?.displayName ?: makeNameHuman(name)
                 display.append(displayName, value.asString())
             }
             result = display.layoutText().renderStyled()
         } else {
             val name = param.attribute!!.displayName
             val value = params?.asDict()?.get(param.attribute!!.name)?.asString()
-            result = StyledText("$name = $value", color=Properties.get("color", "result_color"))
+            result = StyledText("$name = $value", color = Properties.get("color", "result_color"))
         }
         return result
     }
+
+    private fun showServers(): StyledText =
+        cli.makeTable().also { table ->
+            for ((name, server) in Server) {
+                if (name != Server.lastName) {
+                    table.append("Server Name" to name, "Target" to "$server")
+                }
+            }
+        }.also {
+            CliException.throwIf("no servers configured"){ it.isEmpty() }
+        }.layoutText().renderStyled()
 
     private fun showSystem(): StyledText {
         return showOne(Rest.getObject("rest/top",

@@ -177,5 +177,6 @@ abbreviate.application                               = ap
 abbreviate.system                                    = sys
 abbreviate.geolocation                               = geo
 abbreviate.user                                      = user
+abbreviate.show                                      = sh
 
 """

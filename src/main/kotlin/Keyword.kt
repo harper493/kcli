@@ -27,6 +27,12 @@ class KeywordList()
     operator fun contains(key: Keyword): Boolean = keywords.getExact(key.key) != null
     fun toStrings() = keywords.map{ it.second.key }
     fun copy(): KeywordList = KeywordList().add(this)
+    fun addAbbreviations() {
+        keywords.map{ it.second }
+            .map{ Pair(it.function, Properties.get("abbreviate", it.key)) }
+            .filter{ it.second!=null }
+            .forEach{ addOne(Keyword(it.second!!, function=it.first)) }
+    }
 
     /*
     From here on are "convenience functions" to simplify usage
