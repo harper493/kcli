@@ -34,7 +34,8 @@ object Cli {
             .load(ResourceCache.get("attributes.properties")
                 { Rest.getRaw("files/props/attributes.properties") })
             .load(ResourceCache.getStable("cli.properties", { defaultProperties }))
-        if ((args.color || args.output.isBlank()) && !args.noColor) {
+        val windows = "windows" in System.getProperty("os.name").toLowerCase()
+        if ((args.color || args.output.isBlank()) && (!args.noColor || windows)) {
             StyledText.setRenderer("ISO6429")
         } else {
             StyledText.setRenderer("plain")
@@ -65,7 +66,8 @@ object Cli {
         if (args.output.isBlank() && args.command.isEmpty()) {
             outputln(StyledText("User '${target.username}' logged on to '$systemName'" +
                     " (${target.host}) with privilege level $privilege",
-                color=Properties.get("parameter", "login_color")).render())
+                color=Properties.get("parameter", "login_color"),
+                style="italic").render())
             output(StyledText().render())
         }
         CommandReader.setPrompt("$systemName# ")
