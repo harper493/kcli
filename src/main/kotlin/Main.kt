@@ -22,7 +22,7 @@ object Cli {
         Server.restore()
         Server.make(args.server).let { t ->
             if (t == null) {
-                outputError("No information for server '${args.server}'")
+                println("No information for server '${args.server}'")
                 return@run
             }
             target = getCredentials(t.copy())
@@ -34,11 +34,18 @@ object Cli {
             .load(ResourceCache.get("attributes.properties")
                 { Rest.getRaw("files/props/attributes.properties") })
             .load(ResourceCache.getStable("cli.properties", { defaultProperties }))
-        if (args.output.isBlank()) {
+        if ((args.color || args.output.isBlank()) && !args.noColor) {
             StyledText.setRenderer("ISO6429")
         } else {
             StyledText.setRenderer("plain")
-            outFile = PrintWriter(args.output)
+        }
+        if (!args.output.isBlank()) {
+            try {
+                outFile = PrintWriter(args.output)
+            } catch (exc: Exception) {
+                println("Failed to open output file '${args.output}': $exc")
+                return@run
+            }
         }
         try {
             Metadata.load()
@@ -112,45 +119,50 @@ object Cli {
         if (args.output.isBlank()) {
             print(text)
         } else {
-            outFile.append(text)
-        }
-    }
-         fun outputError(text: String) {
-            outputln(
-                StyledText(
-                    text.uppercaseFirst(),
-                    color = Properties.get("color", "error")
-                )
-                    .render()
-            )
-            output(StyledText("").render())
-        }
-        val isSuperuser get() = privilege=="superuser"
-        val isConfig get() = privilege=="config"
-        val username get() = target.username
-        fun getPassword(): String {
-            val password = CommandReader.readPassword("New Password? ")
-            val repeatPassword = CommandReader.readPassword("Repeat Password? ")
-            CliException.throwIf("passwords do not match") { password != repeatPassword }
-            return password
-        }
-        private var lastInterrupt: LocalTime? = null
-        var interrupted = false; private set
-        private fun establishSignals() {
-            Signal.handle(Signal("INT")) { doInterrupt() }
-        }
-        private fun doInterrupt() {
-            if (lastInterrupt != null
-                && Duration.between(LocalTime.now(), lastInterrupt).toSeconds() < 1.0
-            ) {
-                exitProcess(0)
-            } else {
-                interrupted = true
-                lastInterrupt = LocalTime.now()
+            try {
+                outFile.append(text)
+            } catch (exc: Exception) {
+                println("Error writing output file '${args.output}': $exc")
+                exitProcess(1)
             }
         }
-        fun clearInterrupted() { interrupted = false }
     }
+    fun outputError(text: String) {
+        outputln(
+            StyledText(
+                text.uppercaseFirst(),
+                color = Properties.get("color", "error")
+            )
+                .render()
+        )
+        output(StyledText("").render())
+    }
+    val isSuperuser get() = privilege=="superuser"
+    val isConfig get() = privilege=="config"
+    val username get() = target.username
+    fun getPassword(): String {
+        val password = CommandReader.readPassword("New Password? ")
+        val repeatPassword = CommandReader.readPassword("Repeat Password? ")
+        CliException.throwIf("passwords do not match") { password != repeatPassword }
+        return password
+    }
+    private var lastInterrupt: LocalTime? = null
+    var interrupted = false; private set
+    private fun establishSignals() {
+        Signal.handle(Signal("INT")) { doInterrupt() }
+    }
+    private fun doInterrupt() {
+        if (lastInterrupt != null
+            && Duration.between(LocalTime.now(), lastInterrupt).toSeconds() < 1.0
+        ) {
+            exitProcess(0)
+        } else {
+            interrupted = true
+            lastInterrupt = LocalTime.now()
+        }
+    }
+    fun clearInterrupted() { interrupted = false }
+}
 
 
 

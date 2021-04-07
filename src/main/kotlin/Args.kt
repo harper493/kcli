@@ -13,6 +13,8 @@ class Args (
     ).default("")
     val output by parser.storing("-o", "--output", help = "specify output file")
         .default("")
+    val color by parser.flagging("-c", "--color", help = "force color in output")
+    val noColor by parser.flagging("-C", "--nocolor", help = "disable color in output")
     private val commandOpt by parser.positionalList(help = "command to execute", 0..Int.MAX_VALUE)
     var command: String; private set
     var server: String; private set

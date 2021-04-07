@@ -1,4 +1,4 @@
-class Keyword(
+data class Keyword(
     val key: String,
     val value: String?=null,
     val attribute: AttributeMetadata?=null,
@@ -29,9 +29,9 @@ class KeywordList()
     fun copy(): KeywordList = KeywordList().add(this)
     fun addAbbreviations() {
         keywords.map{ it.second }
-            .map{ Pair(it.function, Properties.get("abbreviate", it.key)) }
+            .map{ Pair(it, Properties.get("abbreviate", it.key)) }
             .filter{ it.second!=null }
-            .forEach{ addOne(Keyword(it.second!!, function=it.first)) }
+            .forEach{ addOne(it.first.copy(key=it.second!!)) }
     }
 
     /*
