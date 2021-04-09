@@ -18,6 +18,7 @@ class CliCommand(line: String) {
             parser = Parser(line)
             val extras = KeywordList(
                 KeywordFn("capture")  { doCapture() },
+                KeywordFn("columns")  { ColumnsCommand(this).doColumns() },
                 KeywordFn("count")    { ShowCommand(this, "count").doCount() },
                 KeywordFn("dump")     { doDump() },
                 KeywordFn("no")       { doNo() },
@@ -110,7 +111,7 @@ class CliCommand(line: String) {
     }
 
     private fun doDump() {
-        val keywords = KeywordList(*Metadata.getConfigMd()
+        val keywords = KeywordList(*CliMetadata.getConfigMd()
             .settableAttributes
             .filter{ it.name.startsWith("dump_")}
             .map{ it.name.split("_").drop(1).joinToString("_")}

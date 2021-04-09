@@ -17,7 +17,7 @@ class ObjectName(val newUrl: String="") {
     val elements: MutableList<Element> = mutableListOf()
     val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
     val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
-        ?: Metadata.getClass("policy_manager")
+        ?: CliMetadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isQuiteWild || e.isWild }
@@ -29,8 +29,8 @@ class ObjectName(val newUrl: String="") {
     }
 
     fun append(attrMd: AttributeMetadata, name: String): ObjectName {
-        if (isEmpty && attrMd.myClass != Metadata.getPolicyManagerMd()) {
-            elements.add(Element(Metadata.getAttribute("policy_manager", "configurations")!!,
+        if (isEmpty && attrMd.myClass != CliMetadata.getPolicyManagerMd()) {
+            elements.add(Element(CliMetadata.getAttribute("policy_manager", "configurations")!!,
                 "running"))
         }
         elements.add(Element(attrMd, name))
@@ -80,7 +80,7 @@ class ObjectName(val newUrl: String="") {
         val attributes = split.filterIndexed{ index, _ -> index % 2 == 0 }
         val names = split.filterIndexed{ index, _ -> index % 2 == 1 }
         elements.clear()
-        var curMd = Metadata.getPolicyManagerMd()
+        var curMd = CliMetadata.getPolicyManagerMd()
         for ((a,n) in attributes.zip(names)) {
             val collMd = curMd.getAttribute(a)
             if (collMd?.containedClass == null) {

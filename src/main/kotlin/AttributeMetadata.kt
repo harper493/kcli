@@ -25,9 +25,10 @@ open class AttributeMetadata(
     val isRelation: Boolean = getMd("usage_type") == "related"
     val isPseudonym: Boolean = "pseudonym" in natures
     val isEnum: Boolean get() = typeName=="enum"
+    val isBrief get() = level=="brief" || level=="list"
     val relativeUrl: String = getMd("relative_url")
     val typeName: String = getMd("type_name")
-    val containedClass get() = Metadata.getClass(typeName)
+    val containedClass get() = CliMetadata.getClass(typeName)
     val range get() = getMd("range")
     val level get() = getMd("level")
     val default get() = natures["default"]

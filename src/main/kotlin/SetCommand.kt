@@ -13,7 +13,7 @@ class SetCommand(val cli: CliCommand) {
     private fun setParameters() {
         val param = parser.findKeyword(
             KeywordList(
-                Metadata.getClass("parameter_info")!!.attributes))!!.attribute!!
+                CliMetadata.getClass("parameter_info")!!.attributes))!!.attribute!!
         val value = parser.nextToken(attribute=param)!!
         parser.checkFinished()
         Rest.put("parameters", mapOf(param.name to value))

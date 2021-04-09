@@ -58,7 +58,7 @@ abstract class Datatype (
                         else -> StringDatatype(name)
                     }
                 } else {
-                    if (Metadata.getClass(name) == null) {
+                    if (CliMetadata.getClass(name) == null) {
                         StringDatatype(name)
                     } else {
                         ClassDatatype(name)
@@ -392,7 +392,7 @@ class ClassDatatype(
     name: String,
 ): StringDatatype(name) {
     override fun isClassType(): Boolean = true
-    override fun getClass(): ClassMetadata? = Metadata.getClass(name)
+    override fun getClass(): ClassMetadata? = CliMetadata.getClass(name)
 }
 
 open class CompoundDatatype(

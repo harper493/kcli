@@ -126,15 +126,15 @@ class Parser (
                       finalExtras: KeywordList=KeywordList(),
                       missOk: Boolean=false,
                       initialPred: (AttributeMetadata)->Boolean={ true },
-                      keywordAdder: (ClassMetadata, KeywordList)->Unit={_,_ -> }): Pair<ObjectName, Keyword?> {
+                      keywordAdder: (ClassMetadata, KeywordList)->Unit={ _, _ -> }): Pair<ObjectName, Keyword?> {
         val result = ObjectName()
         var terminator: Keyword? = null
-        var curMd = Metadata.getConfigMd()
+        var curMd = CliMetadata.getConfigMd()
         while (true) {
             val classKeys = KeywordList(curMd.collections.filter{initialPred(it)})
             if (result.isEmpty) {
                 classKeys.add(initialExtras)
-                classKeys.addAttributes(Metadata.getPolicyManagerMd().getAttribute("configurations")!!)
+                classKeys.addAttributes(CliMetadata.getPolicyManagerMd().getAttribute("configurations")!!)
             } else {
                 classKeys.add(finalExtras)
             }

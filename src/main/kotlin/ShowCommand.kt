@@ -1,6 +1,6 @@
 class ShowCommand(val cli: CliCommand, val verb: String) {
     private val parser get() = cli.parser
-    private var classMd: ClassMetadata = Metadata.getClass("configuration")!!
+    private var classMd: ClassMetadata = CliMetadata.getClass("configuration")!!
     private val selections = mutableListOf<AttributeMetadata>()
     private var onlySelect = false
     private val filters = mutableListOf<String>()
@@ -18,7 +18,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private val initialExtras = KeywordList(
         KeywordFn("health") { result = showHealth() },
         KeywordFn("license") { result = showLicense() },
-        KeywordFn("metadata") { result = showMetadata() },
+        KeywordFn("metadata") { result = showCliMetadata() },
         KeywordFn("parameters") { result = showParameters() },
         KeywordFn("servers") { result = showServers() },
         KeywordFn("system") { result = showSystem() },
@@ -121,7 +121,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val (oname, terminator) = parser.getObjectName(initialExtras = initialExtras,
             finalExtras = finalExtras,
             initialPred = { !it.name.startsWith("parameter") })
-        classMd = oname.leafClass ?: Metadata.getClass("configuration")!!
+        classMd = oname.leafClass ?: CliMetadata.getClass("configuration")!!
         var myKey: Keyword? = terminator
         while (myKey != null) {
             myKey.function!!.invoke()
@@ -142,6 +142,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         if (doColor) {
             classMd.getAttribute("color")?.let { selections.add(it) }
         }
+        (ColumnOrder.get(classMd.name)?.usedFields ?: listOf())
+            .map{ classMd.getAttribute(it)!! }
+            .filter{ !it.isBrief }
+            .forEach{ selections.add(it) }
         addOption("select",
             (if (onlySelect || selections.isEmpty()) "" else "+") +
                     selections.joinToString(",") { it.name })
@@ -321,12 +325,14 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 }
             }
         }
+        var columnOrder = ColumnOrder[classMd.name]
         table.setColumns { name, col ->
             if (name in nameColumns) {
                 col.position = nameColumns[name]!!
             } else {
-                col.position = -(classMd.getAttribute(name)?.preference ?: 0)
-                col.heading = cli.abbreviateHeader((classMd.getAttribute(name)?.displayName ?: makeNameHuman(name)))
+                var attrMd = classMd.getAttribute(name)
+                col.position = columnOrder?.getPosition(attrMd?.name ?: "") ?: 0
+                col.heading = cli.abbreviateHeader((attrMd?.displayName ?: makeNameHuman(name)))
             }
         }
         return table.layoutText().renderStyled()
@@ -357,9 +363,9 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         }
     }
 
-    private fun showMetadata(): StyledText {
+    private fun showCliMetadata(): StyledText {
         val classKw = parser.findKeyword(
-            KeywordList(*Metadata.classes.map { it.name }.toTypedArray()),
+            KeywordList(*CliMetadata.classes.map { it.name }.toTypedArray()),
             endOk = true
         )
         parser.checkFinished()
@@ -368,13 +374,13 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 4,
                 stripeColors = Properties.getColors("even_row", "odd_row")
             )
-            Metadata.classes.map { layout.append(it.name) }
+            CliMetadata.classes.map { layout.append(it.name) }
             return StyledText(
                 makeHeading("Available Classes", includeTime = false),
                 layout.layoutText().renderStyled()
             )
         } else {
-            val classMd = Metadata[classKw.asString()]!!
+            val classMd = CliMetadata[classKw.asString()]!!
             val headings = ColumnLayout(
                 1,
                 valueColumnWidth = 80,
@@ -415,7 +421,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 )
             }
             return StyledText(
-                makeHeading("Metadata for Class '${classMd.displayName}' (${classMd.name})", includeTime = false),
+                makeHeading("CliMetadata for Class '${classMd.displayName}' (${classMd.name})", includeTime = false),
                 headings.layoutText().renderStyled(),
                 StyledText("\n"),
                 body.layoutText().renderStyled()
@@ -424,7 +430,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     }
 
     private fun showParameters(): StyledText {
-        val paramClass = Metadata.getClass("parameter_info")!!
+        val paramClass = CliMetadata.getClass("parameter_info")!!
         val param = parser.findKeyword(
             KeywordList(paramClass.attributes), endOk = true
         )

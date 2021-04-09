@@ -47,20 +47,32 @@ class KeywordList()
     fun addAttributes(vararg attrs: AttributeMetadata,
                       pred: (AttributeMetadata)->Boolean={ true }) =
         addAttributes(attrs.asIterable(), pred)
-    fun addKeys(keys: Iterable<String>) = keys.map{ addOne(Keyword(it, value=it)) }
-    fun addKeys(vararg keys: String): KeywordList {
-        keys.forEach { addOne(Keyword(it, value = it)) }
-        return this
-    }
-    fun add(vararg fns: KeywordFn) = fns.map{ addOne(Keyword(it.key, function=it.function)) }
-    fun add(keys: KeywordList): KeywordList {
-        keys.keywords.map{ addOne(it.second) }
-        return this
-    }
-    fun add(vararg keys: Keyword) = keys.map{ addOne(it) }
+    fun addKeys(keys: Iterable<String>) =
+        also {
+            keys.map{ addOne(Keyword(it, value=it)) }
+        }
+    fun addKeys(vararg keys: String) =
+        also {
+            keys.forEach { addOne(Keyword(it, value = it)) }
+        }
+    fun add(vararg fns: KeywordFn) =
+        also {
+            fns.forEach{ addOne(Keyword(it.key, function=it.function)) }
+        }
+    fun add(keys: KeywordList) =
+        also {
+            keys.keywords.map{ addOne(it.second) }
+        }
+    fun add(vararg keys: Keyword) =
+        also {
+            keys.forEach { addOne(it) }
+        }
 
     constructor(vararg fns: KeywordFn) : this() {
         add(*fns)
+    }
+    constructor(vararg keys: Keyword) : this() {
+        add(*keys)
     }
     constructor(vararg keys: String) : this() {
         addKeys(*keys)

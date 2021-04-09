@@ -8,9 +8,9 @@ fun CliCommand.doCapture() {
 }
 
 fun CliCommand.doCaptureStart() {
-    val classMd = Metadata["packet_captor"]!!
-    val attrMd = Metadata.getAttribute("configuration", "packet_captors")!!
-    val namedObjectAttrs = Metadata["named_object_base"]!!.settableAttributes.map { it.name }
+    val classMd = CliMetadata["packet_captor"]!!
+    val attrMd = CliMetadata.getAttribute("configuration", "packet_captors")!!
+    val namedObjectAttrs = CliMetadata["named_object_base"]!!.settableAttributes.map { it.name }
     val values = readAttributes(classMd,
                                 exists=false,
                                 exclude = { it !in namedObjectAttrs && it !in listOf("capture")})
@@ -30,7 +30,7 @@ fun CliCommand.doCaptureStart() {
 }
 
 fun CliCommand.doCaptureStop() {
-    val attrMd = Metadata.getAttribute("configuration", "packet_captors")!!
+    val attrMd = CliMetadata.getAttribute("configuration", "packet_captors")!!
     val captorObjName = ObjectName().append(attrMd, "")
     val captorName = parser.nextToken(completer=ObjectCompleter(captorObjName), endOk=true) ?: "default"
     captorObjName.addLeafName(captorName)

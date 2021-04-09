@@ -35,7 +35,7 @@ object Cli {
                 { Rest.getRaw("files/props/attributes.properties") })
             .load(ResourceCache.getStable("cli.properties", { defaultProperties }))
         val windows = "windows" in System.getProperty("os.name").toLowerCase()
-        if ((args.color || args.output.isBlank()) && (!args.noColor || windows)) {
+        if (args.color || (args.output.isBlank() && !args.noColor && !windows)) {
             StyledText.setRenderer("ISO6429")
         } else {
             StyledText.setRenderer("plain")
@@ -49,7 +49,7 @@ object Cli {
             }
         }
         try {
-            Metadata.load()
+            CliMetadata.load()
         } catch (exc: RestException) {
             when {
                 HttpStatus.timeout(exc.status) ->
@@ -61,6 +61,7 @@ object Cli {
             }
             return
         }
+        ColumnsCommand.initialize()
         privilege = Rest.getAttribute("administrators/${target.username}", "privilege") ?: ""
         systemName = Rest.getAttribute("configurations/running", "system_name") ?: "stm"
         if (args.output.isBlank() && args.command.isEmpty()) {

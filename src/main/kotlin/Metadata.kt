@@ -1,4 +1,4 @@
-class Metadata {
+class CliMetadata {
     val classMap: Map<String, ClassMetadata> =
         JsonObject.load(ResourceCache.get("metadata")
         { Rest.getRaw("rest/top/metadata/",
@@ -24,10 +24,10 @@ class Metadata {
     fun getAttribute(className: String, aname: String) = getClass(className)?.getAttribute(aname)
 
     companion object {
-        private lateinit var theMetadata: Metadata
+        private lateinit var theMetadata: CliMetadata
         val classes get() = theMetadata.classes
         operator fun get(className: String) = theMetadata.classMap[className]
-        fun load() = Metadata().also { theMetadata = it }
+        fun load() = CliMetadata().also { theMetadata = it }
         fun getClass(className: String) = theMetadata.getClass(className)
         fun getAttribute(className: String, aname: String) = theMetadata.getAttribute(className, aname)
         fun getConfigMd() = getClass("configuration")!!

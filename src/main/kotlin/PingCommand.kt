@@ -1,6 +1,6 @@
 fun CliCommand.doPing() {
     val target = parser.nextToken(tokenType=Parser.TokenType.ttNonBlank)!!
-    val values = readAttributes(Metadata.getClass("ping_request")!!,
+    val values = readAttributes(CliMetadata.getClass("ping_request")!!,
         false)
     values["destination_host"] = target
     val pingUrl = ObjectName("ping_requests/")
@@ -8,7 +8,7 @@ fun CliCommand.doPing() {
     val pingName = pingUrl.copy()
         .addLeafName(result["name"]?.asString()!!)
     val replyName = pingName.copy().append(
-        Metadata.getAttribute("ping_request", "replies")!!
+        CliMetadata.getAttribute("ping_request", "replies")!!
         , "")
     val pingObj = Rest.getObject(pingName.url,
         mapOf("select" to "destination_address,count"))

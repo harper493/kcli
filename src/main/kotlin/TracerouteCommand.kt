@@ -1,6 +1,6 @@
 fun CliCommand.doTraceroute() {
     val target = parser.nextToken(tokenType=Parser.TokenType.ttNonBlank)!!
-    val values = readAttributes(Metadata.getClass("traceroute")!!,
+    val values = readAttributes(CliMetadata.getClass("traceroute")!!,
         false)
     values["destination_host"] = target
     val tracerouteUrl = ObjectName("traceroutes/")
@@ -8,7 +8,7 @@ fun CliCommand.doTraceroute() {
     val tracerouteName = tracerouteUrl.copy()
         .addLeafName(result["name"]?.asString()!!)
     val replyName = tracerouteName.copy().append(
-        Metadata.getAttribute("traceroute", "replies")!!
+        CliMetadata.getAttribute("traceroute", "replies")!!
         , "")
     val tracerouteObj = Rest.getObject(tracerouteName.url,
         mapOf("select" to "destination_address,max_hops"))

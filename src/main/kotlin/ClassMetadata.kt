@@ -1,10 +1,10 @@
 data class ClassMetadata(
     val name: String,
-    val jsonMetadata: JsonObject
+    val jsonCliMetadata: JsonObject
 ) {
     val displayName = Properties.get("class", name) ?: makeNameHuman(name)
     private val attributeMap: Map<String, AttributeMetadata> =
-        (jsonMetadata["metadata"]
+        (jsonCliMetadata["metadata"]
             ?.get("collection")
             ?.asArray()
             ?.filter{ it["name"] !=null }
@@ -15,7 +15,7 @@ data class ClassMetadata(
             .filter{ !it.second.isPseudonym }
             .toMap()
     private var derivedAttributeMap: Map<String, AttributeMetadata> = mapOf()
-    val baseClassNames = jsonMetadata["metadata"]?.asDict()?.get("base_classes")
+    val baseClassNames = jsonCliMetadata["metadata"]?.asDict()?.get("base_classes")
         ?.asArray()
         ?.map{it.asString()} ?: listOf()
 
@@ -40,12 +40,12 @@ data class ClassMetadata(
             isRoot = true
         }
         for (a in collections.filter{!it.isAlternate}) {
-            Metadata.getClass(a.typeName)?.setContainer(a)
+            CliMetadata.getClass(a.typeName)?.setContainer(a)
         }
     }
     fun completeClassData(): Boolean {
         if (baseClassNames.isNotEmpty() && baseClasses.isEmpty()) {
-            baseClasses = baseClassNames.mapNotNull { Metadata.getClass(it) }
+            baseClasses = baseClassNames.mapNotNull { CliMetadata.getClass(it) }
             allBaseClasses = setOf(*baseClasses.toTypedArray())
         }
         val newBases: Set<ClassMetadata> = mutableSetOf(*allBaseClasses.map{it.allBaseClasses}
