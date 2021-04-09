@@ -301,6 +301,8 @@ class CliCommand(line: String) {
 
     fun output(text: String) = Cli.output(text)
     fun outputln(text: String) = Cli.outputln(text)
+    fun output(text: StyledText) = Cli.output(text.render())
+    fun outputln(text: StyledText) = Cli.outputln(text.render())
 }
 
 /*

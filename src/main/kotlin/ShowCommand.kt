@@ -16,6 +16,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private val pageSize = Properties.getInt("parameter", "page_size")
     private val finalExtras = KeywordList()
     private val initialExtras = KeywordList(
+        KeywordFn("columns") { result = ColumnsCommand(cli).makeShow(needClass=true) },
         KeywordFn("health") { result = showHealth() },
         KeywordFn("license") { result = showLicense() },
         KeywordFn("metadata") { result = showCliMetadata() },
@@ -453,7 +454,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         } else {
             val name = param.attribute!!.displayName
             val value = params?.asDict()?.get(param.attribute!!.name)?.asString()
-            result = StyledText("$name = $value", color = Properties.get("color", "result_color"))
+            result = StyledText("$name = $value", color = Properties.getParameter("result_color"))
         }
         return result
     }
@@ -481,14 +482,14 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         parser.checkFinished()
         return StyledText(Rest.getAttribute("configurations/running",
             "build_version") ?: "unknown",
-            color = Properties.get("parameter", "result_color"))
+            color = Properties.getParameter("result_color"))
     }
 
     private fun makeHeading(text: String, includeTime: Boolean=true): StyledText {
         val time = if (includeTime) " at ${getDateTime()}" else ""
         return StyledText(
             "$text$time\n",
-            color=Properties.get("parameter", "heading_color"),
+            color=Properties.getParameter("heading_color"),
             style="underline")
     }
 
