@@ -9,15 +9,6 @@ autoexpand.*.entries                                 = entry
 autoexpand.configuration.policies                    = 
 autoexpand.*.policies                                = policy
 
-prompt.egress_policy_map                             = epm
-prompt.egress_policy                                 = policy
-prompt.egress_flow_class                             = efc
-prompt.ingress_policy_map                            = ipm
-prompt.ingress_policy                                = policy
-prompt.ingress_flow_class                            = ifc
-prompt.acl_entry                                     = entry
-prompt.netflow_sender                                = netflow_sink
-
 brief_name.*.rtt                                     = rtt
 brief_name.*.mac                                     = mac_address
 brief_name.*.descr                                   = description
@@ -106,54 +97,6 @@ help.*.by                                            = Select attribute to be us
 help.*.select                                        = Choose attributes to be shown
 help.*.only                                          = Show only selected attributes
 help.*.with                                          = Filter objects based on attribute values
-
-column_sort.interface.sys_name                       = 5
-column_sort.interface.type                           = 10
-column_sort.interface.adr                            = 20
-column_sort.interface.state                          = 30
-column_sort.interface.rate                           = 35
-column_sort.interface.active_flows                   = 40
-column_sort.interface.rx_pkt_rate                    = 50
-column_sort.interface.rx_rate                        = 60
-column_sort.interface.tx_pkt_rate                    = 70
-column_sort.interface.tx_rate                        = 80
-
-column_sort.administrator.privilege                  = 10
-column_sort.administrator.enabled                    = 20
-column_sort.administrator.uses                       = 30
-column_sort.administrator.failures                   = 40
-
-column_sort.application.protocol                     = 10
-column_sort.application.server                       = 20
-column_sort.application.priority                     = 30
-column_sort.application.distress                     = 35
-column_sort.application.act_flows                    = 40
-column_sort.application.total_flows                  = 50
-column_sort.application.flow_rate                    = 55
-column_sort.application.dst_rate                     = 60
-column_sort.application.src_rate                     = 70
-column_sort.application.rtt                          = 80
-
-column_sort.egress_policy.efc                        = 10
-column_sort.egress_policy.parent                     = 20
-column_sort.egress_policy.agg_parent                 = 30
-column_sort.egress_policy.host_eq                    = 40
-column_sort.egress_policy.ass                        = 50
-column_sort.egress_policy.rate                       = 60
-column_sort.egress_policy.mult                       = 70
-
-column_sort.host_policy.efc                        = 10
-column_sort.host_policy.parent                     = 20
-column_sort.host_policy.ass                        = 50
-column_sort.host_policy.rate                       = 60
-column_sort.host_policy.mult                       = 70
-column_sort.host_policy.flow_limit                 = 80
-column_sort.host_policy.flow_cap                   = 90
-
-column_sort.arp_entry.mac_address                    = 10
-column_sort.arp_entry.last_refresh                   = 20
-column_sort.arp_entry.type                           = 30
-column_sort.arp_entry.next_hop                       = 40
 
 format.name_width                                    = 25
 format.value_width                                   = 25

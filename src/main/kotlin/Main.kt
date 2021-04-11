@@ -8,6 +8,7 @@ import kotlin.system.exitProcess
 object Cli {
     val homeDir: String = System.getProperty("user.home")
     val kcliDir: String = "$homeDir/.kcli"
+    val loginUser = System.getProperty("user.name")
     private lateinit var outFile: PrintWriter
     private lateinit var args: Args
     private lateinit var privilege: String
@@ -19,13 +20,17 @@ object Cli {
         File(kcliDir).mkdirs()
         establishSignals()
         Datatype.load()
-        Server.restore()
-        Server.make(args.server).let { t ->
-            if (t == null) {
-                println("No information for server '${args.server}'")
-                return@run
+        if (args.remote) {
+            target = Server(host="localhost", username="cli_$loginUser", password="cli_$loginUser")
+        } else {
+            Server.restore()
+            Server.make(args.server).let { t ->
+                if (t == null) {
+                    println("No information for server '${args.server}'")
+                    return@run
+                }
+                target = getCredentials(t.copy())
             }
-            target = getCredentials(t.copy())
         }
         Rest.connect(target, trace=args.trace)
         Properties
@@ -142,7 +147,7 @@ object Cli {
     }
     val isSuperuser get() = privilege=="superuser"
     val isConfig get() = privilege=="config"
-    val username get() = target.username
+    val username get() = if (args.remote) loginUser else target.username
     fun getPassword(): String {
         val password = CommandReader.readPassword("New Password? ")
         val repeatPassword = CommandReader.readPassword("Repeat Password? ")
