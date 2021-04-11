@@ -275,3 +275,10 @@ fun String.writeToFile(filename: String) {
 fun readFile(filename: String) =
     java.io.File(filename).readText()
 
+fun readFileOrEmpty(filename: String) =
+    try {
+        readFile(filename)
+    } catch(exc: Exception) {
+        ""
+    }
+

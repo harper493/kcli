@@ -15,7 +15,7 @@ object Cli {
     private lateinit var systemName: String
 
     fun run(cmdargs: Array<String>) {
-        args = Args(cmdargs)
+        args = Args.parse(cmdargs)
         File(kcliDir).mkdirs()
         establishSignals()
         Datatype.load()

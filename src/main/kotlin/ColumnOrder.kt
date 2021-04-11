@@ -1,4 +1,4 @@
-class ColumnOrder {
+class ColumnOrder(val name: String) {
 
     data class Position(
         val where: String = "",
@@ -18,6 +18,7 @@ class ColumnOrder {
 
     private val fieldMap = mutableMapOf<String,FieldData>()
     var orderedFields = listOf<FieldData>(); private set
+    var defaultFields = orderedFields
 
     val fields get() = fieldMap.keys
     val usedFields get() = orderedFields.map{ it.name }
@@ -34,6 +35,13 @@ class ColumnOrder {
                 .sortedByDescending { it.preference }
                 .also { fields -> fields.withIndex()
                     .forEach { it.value.position = it.index } }
+        }
+
+    fun setValue(value: String) =
+        also {
+            orderedFields = value.split(",")
+                .map{makeField(it)}
+            setPositions()
         }
 
     fun setFields(position: Position,
@@ -59,8 +67,15 @@ class ColumnOrder {
             }
             else -> orderedFields       // should never happen
         }
-        orderedFields.withIndex().forEach{ it.value.position = it.index }
+        setPositions()
     }
+
+    private fun setDefault() {
+        defaultFields = orderedFields
+    }
+
+    private fun setPositions() =
+        orderedFields.withIndex().forEach{ it.value.position = it.index }
 
     fun removeFields(fields: Iterable<String>) {
         orderedFields = orderedFields.filter{ it.name !in fields }
@@ -68,15 +83,28 @@ class ColumnOrder {
 
     fun getPosition(name: String) = fieldMap[name]?.position ?: defaultPosition
 
+    override fun toString() =
+        "$name = ${usedFields.joinToString(",")}"
+
+    fun toStringIfNotDefault() =
+        if (orderedFields==defaultFields) null else toString()
+
     companion object {
         private val columns = mutableMapOf<String,ColumnOrder>()
         private const val defaultPosition = 10000
         val classes get() = columns.keys
         operator fun get(name: String) = columns[name]
-        fun create(name: String, info: Map<String,FieldInfo>) {
-            ColumnOrder().setPreferences(info).also{ columns[name] = it }
-        }
+        private fun make(name: String) =
+            get(name) ?: ColumnOrder(name).also { columns[name] = it }
+        fun create(name: String, info: Map<String,FieldInfo>) =
+            make(name).setPreferences(info).setDefault()
+        fun update(name: String, value: String) =
+            make(name).setValue(value)
         fun getPosition(className: String, attrName: String) =
             get(className)?.getPosition(attrName)  ?: defaultPosition
+        override fun toString() =
+            columns.values
+                .mapNotNull{ it.toStringIfNotDefault() }
+                .joinToString(";")
     }
 }

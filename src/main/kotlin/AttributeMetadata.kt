@@ -26,6 +26,7 @@ open class AttributeMetadata(
     val isPseudonym: Boolean = "pseudonym" in natures
     val isEnum: Boolean get() = typeName=="enum"
     val isBrief get() = level=="brief" || level=="list"
+    val isNoShow get() = "noshow" in natures
     val relativeUrl: String = getMd("relative_url")
     val typeName: String = getMd("type_name")
     val containedClass get() = CliMetadata.getClass(typeName)

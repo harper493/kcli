@@ -1,6 +1,14 @@
-class Properties (
+class Properties(
     private val content: String? = null
-) {
+): Iterable<Pair<String,String>> {
+    class PropertyIterator(val myIter: Trie.TrieIterator<String,String>):
+        Iterator<Pair<String,String>> {
+        override fun hasNext() = myIter.hasNext()
+        override fun next() = myIter.next()
+            .let{ Pair(it.first.joinToString("."), it.second) }
+
+    }
+
     private val myTrie = Trie<String, String>("*")
     fun addValue(value: String, keys: Iterable<String>) {
         myTrie.add(value, keys)
@@ -11,7 +19,7 @@ class Properties (
     fun getFloat(vararg keys: String, default: Double = 0.0) = get(*keys)?.toDoubleOrNull() ?: default
     fun loadFile(filename: String): Properties =
         also {
-            java.io.File(filename).readText().split("\n")
+            readFileOrEmpty(filename).split("\n")
                 .forEach { loadOneLine(it) }
         }
     fun load(content: String) =
@@ -32,6 +40,8 @@ class Properties (
         } catch (exc: Exception) {
         }   // ignore parsing error
     }
+
+    override operator fun iterator() = PropertyIterator(myTrie.iterator())
 
     init {
         if (content != null) {
