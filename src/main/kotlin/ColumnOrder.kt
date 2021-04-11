@@ -18,7 +18,7 @@ class ColumnOrder(val name: String) {
 
     private val fieldMap = mutableMapOf<String,FieldData>()
     var orderedFields = listOf<FieldData>(); private set
-    var defaultFields = orderedFields
+    private var defaultFields = orderedFields
 
     val fields get() = fieldMap.keys
     val usedFields get() = orderedFields.map{ it.name }

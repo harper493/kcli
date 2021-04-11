@@ -57,6 +57,7 @@ class ColumnsCommand(val cli: CliCommand) {
     private fun getRemainder(
         className: String,
         getPosition: Boolean = true,
+        onlyExisting: Boolean = false,
         endOk: Boolean = false
     ): Pair<List<String>, ColumnOrder.Position> {
         position = ColumnOrder.Position(where = "end")
@@ -66,7 +67,8 @@ class ColumnsCommand(val cli: CliCommand) {
             KeywordFn("before") { position = getPosition(where = "before", endOk = endOk) },
             KeywordFn("after") { position = getPosition(where = "after", endOk = endOk) },
         )
-        val keywords = KeywordList(*ColumnOrder[className]!!.fields.toTypedArray())
+        val keywords = KeywordList(*ColumnOrder[className]!!.let{
+            if (onlyExisting) it.usedFields else it.fields }.toTypedArray())
         if (getPosition) {
             keywords.add(positions)
         }
@@ -101,7 +103,7 @@ class ColumnsCommand(val cli: CliCommand) {
     }
 
     private fun doRemove() {
-        val (attributes, _) = getRemainder(className, getPosition = false)
+        val (attributes, _) = getRemainder(className, getPosition = false, onlyExisting=true)
         ColumnOrder[className]?.removeFields(attributes)
     }
 
@@ -179,12 +181,10 @@ class ColumnsCommand(val cli: CliCommand) {
             Properties(props)
                 .forEach { (key, value) ->
                     ColumnOrder.update(key,
-                        value.let {
-                            it.split(",")
-                                .mapNotNull{ aname ->
-                                    CliMetadata.getAttribute(key, aname)?.name }
-                                .joinToString( "," )
-                        }
+                        value.split(",")
+                            .mapNotNull{ aname ->
+                                CliMetadata.getAttribute(key, aname)?.name }
+                            .joinToString( "," )
                     )
                 }
 

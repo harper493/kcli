@@ -326,12 +326,12 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 }
             }
         }
-        var columnOrder = ColumnOrder[classMd.name]
+        val columnOrder = ColumnOrder[classMd.name]
         table.setColumns { name, col ->
             if (name in nameColumns) {
                 col.position = nameColumns[name]!!
             } else {
-                var attrMd = classMd.getAttribute(name)
+                val attrMd = classMd.getAttribute(name)
                 col.position = columnOrder?.getPosition(attrMd?.name ?: "") ?: 0
                 col.heading = cli.abbreviateHeader((attrMd?.displayName ?: makeNameHuman(name)))
             }
