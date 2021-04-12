@@ -38,7 +38,8 @@ object Cli {
                 { Rest.getRaw("files/props/objects.properties") })
             .load(ResourceCache.get("attributes.properties")
                 { Rest.getRaw("files/props/attributes.properties") })
-            .load(ResourceCache.getStable("cli.properties", { defaultProperties }))
+            //.load(ResourceCache.getStable("cli.properties", { defaultProperties }))
+            .load(defaultProperties)
         val windows = "windows" in System.getProperty("os.name").toLowerCase()
         if (args.color || (args.output.isBlank() && !args.noColor && !windows)) {
             StyledText.setRenderer("ISO6429")

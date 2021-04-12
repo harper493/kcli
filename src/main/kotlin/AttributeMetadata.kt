@@ -34,12 +34,30 @@ open class AttributeMetadata(
     val level get() = getMd("level")
     val default get() = natures["default"]
     val total get() = natures["total"] ?: "none"
-    var reformatter: ((String)->String)? = null; private set
+    val reformatter: ((AttributeMetadata, String)->String)? by lazy {
+        makeReformatter(Properties.get("formatter", myClass.name, name))
+    }
     fun getMd(mname: String) = md[mname]?.asString() ?: ""
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)
     fun completer() = if (isEnum) EnumCompleter(this) else CliCompleter()
-    fun setReformatter(fn: (String)->String) { reformatter = fn }
     fun reformat(value: String): String =
-        if (reformatter==null) type.reformat(value) else reformatter!!(value)
+        if (reformatter==null) type.reformat(value) else reformatter!!(this, value)
+
+    companion object {
+        fun makeReformatter(what: String?): ((AttributeMetadata, String)->String)? =
+            when (what) {
+                "display_class" -> { _, value -> displayClass(value) }
+                "display_attribute" -> { _, value -> displayAttribute(value) }
+                "truncate_url" -> { _, value -> truncateUrl(value) }
+                else -> null
+            }
+        fun displayClass(name: String?) =
+            (name?.let{ CliMetadata.getClass(name) }?.displayName) ?: name ?: ""
+        fun displayAttribute(name: String) =
+            Properties.get("attribute", name) ?: name
+        fun truncateUrl(url: String) =
+            ObjectName(url).shortUrl
+
+    }
 }

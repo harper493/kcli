@@ -124,4 +124,9 @@ abbreviate.user                                      = user
 abbreviate.show                                      = sh
 abbreviate.pointers                                  = poin
 
+formatter.pointer_class.attribute_name               = display_attribute
+formatter.pointer_class.pointer_object_class         = display_class
+formatter.pointer_class.pointer_url                  = truncate_url
+
+
 """

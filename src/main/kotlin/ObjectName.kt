@@ -18,9 +18,9 @@ class ObjectName(val newUrl: String="") {
     val url get() = "rest/top/" + elements.map(Element::url)
         .joinToString("/")
         .dropLastWhile{ it=='*' }
-    val shortUrl = elements.drop(1).map(Element::url)
+    val shortUrl by lazy { elements.drop(if (elements.size<=1) 0 else 1).map(Element::url)
         .joinToString("/")
-        .dropLastWhile{ it=='*' }
+        .dropLastWhile{ it=='*' }}
     val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
         ?: CliMetadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
