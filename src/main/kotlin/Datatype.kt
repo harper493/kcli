@@ -29,6 +29,7 @@ abstract class Datatype (
     val formatter: (value: Any) -> String,
     val validator: Validator,
     val unit: String,
+    val reformatter: (String) -> String = { it }
 ) {
     abstract fun convert(s: String): GenericVariable
     open fun validate(value: String): Boolean = validator.validate(value)
@@ -37,6 +38,7 @@ abstract class Datatype (
     open fun hasNull(): Boolean = false
     open fun getClass(): ClassMetadata? = null
     open fun isNumeric(): Boolean = false
+    open fun reformat(value: String): String = reformatter(value)
     fun validateCheck(value: String) =
         if (validate(value)) value else throw CliException("invalid value '$value' for type '$name'")
     companion object {
@@ -129,6 +131,9 @@ abstract class Datatype (
                 (value - value % 60)
             )
 
+        fun formatEnum(value: String) =
+            Properties.get("value", "enum", value) ?: value
+
         fun validateIpV4Address(value: String): Boolean =
             value.split(".").run{
                 size==4
@@ -168,6 +173,7 @@ abstract class Datatype (
             IntDatatype("counter", properties="counter"),
             IntDatatype("byte_counter", properties="counter"),
             StringDatatype("string"),
+            EnumDatatype("enum"),
             StringDatatype("text", description="human-readable text"),
             FloatDatatype("percentage", unit="%"),
             IntDatatype("uid"),
@@ -281,7 +287,8 @@ open class TypedDatatype<T: Comparable<T>>(
     val converter: (String)->T,
     val gvFactory: (String)->GenericVariable,
     val wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
-) : Datatype (name, description, formatter, validator, unit)  {
+    reformatter: (String)->String = { it }
+) : Datatype (name, description, formatter, validator, unit, reformatter)  {
     override fun convert(s: String): GenericVariable {
         return gvFactory(s)
     }
@@ -295,6 +302,7 @@ open class StringDatatype(
     unit: String = "",
     properties: String = "",
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
+    reformatter: (String)->String = { it }
 ) : TypedDatatype<String>(name,
     description,
     formatter,
@@ -304,6 +312,7 @@ open class StringDatatype(
     { it },
     { TypedGenericVariable(it) },
     wrapper,
+    reformatter,
 ) {
     override fun hasNull(): Boolean = true
 }
@@ -366,15 +375,28 @@ open class BooleanDatatype(
     name: String,
     description: String = name,
     properties: String = "",
-    wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
 ) : TypedDatatype<Boolean>(name,
     description,
-    properties = "$properties",
+    properties = properties,
     converter =  { toBoolean(it) },
-    gvFactory = { TypedGenericVariable<Boolean>( toBoolean(it) ) },
+    gvFactory = { TypedGenericVariable( toBoolean(it) ) },
 ) {
     override fun validate(value: String) =
         conversionValidator(value, this)
+}
+
+class EnumDatatype(
+    name: String,
+    description: String = name,
+    formatter: (value: Any) -> String = { formatEnum(it.toString()) },
+    reformatter: (value: Any) -> String = { formatEnum(it.toString()) },
+): StringDatatype(
+    name,
+    description,
+    formatter=formatter,
+    reformatter=reformatter
+) {
+    override fun hasNull() = false
 }
 
 class DurationDatatype(    name: String,

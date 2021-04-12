@@ -72,7 +72,7 @@ object Cli {
         if (args.output.isBlank() && args.command.isEmpty()) {
             outputln(StyledText("User '${target.username}' logged on to '$systemName'" +
                     " (${target.host}) with privilege level $privilege",
-                color=Properties.get("parameter", "login_color"),
+                color=Properties.getParameter("login_color"),
                 style="italic").render())
             output(StyledText().render())
         }

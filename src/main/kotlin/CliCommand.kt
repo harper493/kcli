@@ -295,8 +295,8 @@ class CliCommand(line: String) {
 
     fun makeTable() = Table(
             maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
-            headingColor = Properties.get("parameter", "heading_color"),
-            headingStyle = Properties.get("parameter", "heading_style"),
+            headingColor = Properties.getParameter("heading_color"),
+            headingStyle = Properties.getParameter("heading_style"),
             stripeColors = Properties.getColors("even_row", "odd_row"))
 
     fun output(text: String) = Cli.output(text)
@@ -311,5 +311,5 @@ Extension functions for other classes
 
 fun Properties.Companion.getColor(color: String) = properties.get("color", color)
 fun Properties.Companion.getColors(vararg colors: String) = colors.mapNotNull { getColor(it) }
-fun Properties.Companion.getParameter(color: String) = properties.get("parameter", color)
+fun Properties.Companion.getParameter(name: String) = properties.get("parameter", name)
 

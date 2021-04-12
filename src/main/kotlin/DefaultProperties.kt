@@ -38,6 +38,7 @@ suppress.configuration.save_config                   = 1
 suppress.configuration.text                          = 1
 suppress.configuration.traceroutes                   = 1
 suppress.flow.description                            = 1
+suppress.pointer_class.description                   = 1
 
 extra.configuration.terminal                         = 1
 
@@ -121,5 +122,6 @@ abbreviate.system                                    = sys
 abbreviate.geolocation                               = geo
 abbreviate.user                                      = user
 abbreviate.show                                      = sh
+abbreviate.pointers                                  = poin
 
 """

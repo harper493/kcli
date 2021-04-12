@@ -21,6 +21,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         KeywordFn("license") { result = showLicense() },
         KeywordFn("metadata") { result = showCliMetadata() },
         KeywordFn("parameters") { result = showParameters() },
+        KeywordFn("pointers") { result = showPointers() },
         KeywordFn("servers") { result = showServers() },
         KeywordFn("system") { result = showSystem() },
         KeywordFn("version") { result = showVersion() },
@@ -72,7 +73,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val quantity = envelope["size"]?.toInt() ?: 0
         val result = StyledText(
             "$quantity matching ${classMd.name.makePlural(quantity)} found",
-            color = Properties.get("parameter", "result_color")
+            color = Properties.getParameter("result_color")
         )
         cli.outputln(result.render())
     }
@@ -300,7 +301,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                     cli.makeDisplayName(
                         classMd,
                         attributeData.name,
-                        attributeData.value
+                        attributeData.displayValue
                     )
                 } ${attributeData.attributeMd.unit}"
             )
@@ -322,7 +323,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             }
             for ((name, attributeData) in obj) {
                 if (Properties.get("suppress", classMd.name, name) == null && name != "name") {
-                    table.append(name, attributeData.value, color = color)
+                    table.append(name, attributeData.displayValue, color = color)
                 }
             }
         }
@@ -406,7 +407,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 classMd.allBaseClasses.joinToString(", ") { it.name })
             val body = Table(
                 maxColumnWidth = Properties.getInt("parameter", "metadata_column_width"),
-                headingColor = Properties.get("parameter", "heading_color"),
+                headingColor = Properties.getParameter("heading_color"),
                 stripeColors = Properties.getColors("even_row", "odd_row")
             )
             classMd.ownAttributes.map { attr ->
@@ -485,6 +486,104 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             color = Properties.getParameter("result_color"))
     }
 
+    private fun showPointers(): StyledText {
+        val (on, kw) = parser.getObjectName(initialExtras=KeywordList("url"))
+        var objName = on
+        if (kw?.asString()=="url") {
+            objName = ObjectName(parser.nextToken(tokenType=Parser.TokenType.ttNonBlank)!!)
+        }
+        parser.checkFinished()
+        classMd = CliMetadata.getClass("pointer_class")!!
+        val refCount = Rest.getAttribute(objName,"reference_count")
+        CliException.throwIf("Object '${objName.url}' not found") {refCount==null}
+        val coll = Rest.getCollection("pointers/", mapOf("level" to "brief",
+            "with" to "pointer=${objName.url}"))
+        val header1 = "Reference count for '${objName.leafName}' is $refCount"
+        if (coll.isNotEmpty()) {
+            return showCollection(objName, coll)
+            /*
+            val table = cli.makeTable()
+            coll.objects.forEach{ (_, data) ->
+                data.attributes.values.map{ attr ->
+                    Pair(attr.name,
+                        when (attr.name) {
+                            "pointer_object_class" ->
+                                (CliMetadata.getClass(attr.value)?.displayName ?: attr.value)
+                            "attribute_name" ->
+                                Properties.get("attribute", attr.value) ?: attr.value
+                            "pointer_url" ->
+                                ObjectName(attr.value).shortUrl
+                            else ->
+                                attr.value
+                        })}.let{ (name, value) -> table.append(name, value) }
+
+
+            }
+            val pointerMd = CliMetadata.getClass("pointer_class")!!
+            table.setHeaders{ pointerMd.getAttribute(it)?.displayName ?: it }
+            val header = StyledText("$header1, ${coll.size} ${"reference".makePlural()} found",
+                        color=Properties.getParameter("heading_color"))
+            return StyledText(header, table.layoutText().renderStyled())
+
+             */
+        } else {
+            return StyledText("$header1, no references found",
+                color=Properties.getParameter("heading_color"))
+        }
+    }
+
+    /*
+        def show_pointers(self, reader) :
+
+        def format_object(n, v) :
+            if n=='pointer_object_class' :
+                return self.api.get_class_metadata(v).display_name
+            elif n=='attribute_name' :
+                return self.api.translate_attribute(v)
+            elif n=='pointer_url' :
+                m = re.match(r'^.* /configurations/.*?/(.*)', v)
+    return m.group(1)
+             else :
+                return v
+
+        def format_collection(n, v) :
+            v.update_values(format_object)
+
+        def do_url() :          # dummy function used to recognise URL keyword
+            pass
+
+        obj_name = self._get_object_name(reader, leaf_name_required=True, base_extra={'url' : do_url})
+        if obj_name==do_url :
+            url = reader.take_all()
+            obj_name = object_name(url)
+        rc = self.api.get_attribute_metadata(obj_name.get_class_names(1)[0], 'reference_count')
+        target = self.api.get_object(obj_name, attributes=[rc])
+        if target :
+            refcount = int(target['reference_count'])
+            pointers = object_name('pointers/')
+            opts = { 'with' : 'pointer=' + obj_name.url(),
+                     'level' : 'brief' }
+            coll = self.api.get_collection(pointers, options=opts)
+            if coll :
+                coll.visit_values(format_collection)
+                title = "Reference count for %s is %d, %d %s found" \
+                        % (obj_name.leaf_string(), refcount, len(coll), make_plural("reference", len(coll)))
+                output(title, color='magenta')
+                self.size_limit = None
+                self.show_collection(coll, max_width=None, show_heading=False, show_names=False, reload=False,
+                                     right_align=[False, True])
+            elif refcount :
+                error_output("Reference count for %s is %d but no references found" \
+                             % (objname.leaf_string(), refcount))
+            else :
+                output("No references found for %s'" \
+                       % (objname.leaf_string()))
+        else :
+            self._not_found_error(obj_name)
+
+
+
+    */
     private fun makeHeading(text: String, includeTime: Boolean=true): StyledText {
         val time = if (includeTime) " at ${getDateTime()}" else ""
         return StyledText(

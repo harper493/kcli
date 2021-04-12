@@ -34,8 +34,12 @@ open class AttributeMetadata(
     val level get() = getMd("level")
     val default get() = natures["default"]
     val total get() = natures["total"] ?: "none"
+    var reformatter: ((String)->String)? = null; private set
     fun getMd(mname: String) = md[mname]?.asString() ?: ""
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)
     fun completer() = if (isEnum) EnumCompleter(this) else CliCompleter()
+    fun setReformatter(fn: (String)->String) { reformatter = fn }
+    fun reformat(value: String): String =
+        if (reformatter==null) type.reformat(value) else reformatter!!(value)
 }

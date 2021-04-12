@@ -15,13 +15,19 @@ class ObjectName(val newUrl: String="") {
         }
     }
     val elements: MutableList<Element> = mutableListOf()
-    val url get() = "rest/top/" + elements.map(Element::url).joinToString("/").dropLastWhile{ it=='*' }
+    val url get() = "rest/top/" + elements.map(Element::url)
+        .joinToString("/")
+        .dropLastWhile{ it=='*' }
+    val shortUrl = elements.drop(1).map(Element::url)
+        .joinToString("/")
+        .dropLastWhile{ it=='*' }
     val leafClass get() = elements.lastOrNull()?.attrMd?.containedClass
         ?: CliMetadata.getClass("policy_manager")
     val leafAttribute get() = elements.lastOrNull()?.attrMd
     val leafName get() = elements.lastOrNull()?.name ?: ""
     val isWild get() = elements.fold(false) { acc, e -> acc || e.isQuiteWild || e.isWild }
-    val wildDepth get() = elements.fold(0) { result, elem -> result + elem.isWild.ifElse(1, 0) }
+    val wildDepth get() = elements
+        .fold(0) { result, elem -> result + elem.isWild.ifElse(1, 0) }
     val isEmpty get() = elements.isEmpty()
 
     init {
