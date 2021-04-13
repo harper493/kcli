@@ -79,7 +79,7 @@ class Parser (
         if (ch==completerCh){
             throw CompletionException(
                 completer.complete(
-                    line.take(if (tokenIndex < 0) 0 else tokenStarts[tokenIndex]),
+                    line.dropLast(1),
                     token!!.dropLast(1)
                 )
             )

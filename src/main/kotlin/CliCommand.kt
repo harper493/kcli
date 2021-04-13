@@ -1,4 +1,4 @@
-class CliException(text: String="") : Exception(text)
+open class CliException(text: String="") : Exception(text)
 {
     companion object {
         fun throwIf(text: String, pred: ()->Boolean) {
@@ -8,6 +8,8 @@ class CliException(text: String="") : Exception(text)
         }
     }
 }
+
+class CommandException(val terminate: Boolean=false) : CliException("")
 
 class CliCommand(line: String) {
 
@@ -84,7 +86,7 @@ class CliCommand(line: String) {
     }
 
     private fun doQuit() {
-        throw CliException()
+        throw CommandException(terminate=true)
     }
 
     private fun doReboot() {

@@ -18,7 +18,7 @@ class CommandCompleter : Completer {
         try {
             CliCommand("${line.line()}${Parser.completerCh}")
         } catch (exc: CompletionException) {
-            exc.completions.map{ candidates.add(Candidate(it))}
+            exc.completions.map { candidates.add(Candidate(it)) }
         } catch (exc: Exception) {
             // do nothing
         }
@@ -32,7 +32,8 @@ object CommandReader {
     private val builder: TerminalBuilder = TerminalBuilder.builder()
     private val terminal: Terminal = builder.build()
     private val completer = CommandCompleter()
-    private var prompt: String = ""; private set
+    private var prompt: String = ""
+    var lastPrompt: String = ""; private set
 
     private val reader: LineReader = LineReaderBuilder.builder()
         .terminal(terminal)
@@ -44,11 +45,12 @@ object CommandReader {
 
     fun read(myPrompt: String? = null): String =
         try {
-            reader.readLine(myPrompt ?: prompt)
+            lastPrompt = myPrompt ?: prompt
+            reader.readLine(lastPrompt)
         } catch (exc: UserInterruptException) {
             throw CliException("")
         } catch (exc: EndOfFileException) {
-            throw CliException("")
+            throw CommandException(terminate=true)
         }
 
     fun readPassword(myPrompt: String? = null): String {

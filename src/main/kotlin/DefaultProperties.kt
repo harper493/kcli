@@ -71,6 +71,7 @@ parameter.parameter_label_width                      = 40
 parameter.parameter_value_width                      = 25
 parameter.metadata_column_width                      = 35
 parameter.ping_timeout                               = 5
+parameter.help_color                                 = mid_blue
 
 color.odd_row                                        = yucky_green
 color.even_row                                       = yucky_brown

@@ -86,12 +86,12 @@ object Cli {
                 } else {
                     CliCommand(CommandReader.read())
                 }
-            } catch (exc: CliException) {
-                if (exc.message ?: "" != "") {
-                    error = exc.message ?: ""
-                } else {
+            } catch (exc: CommandException) {
+                if (exc.terminate) {
                     break
                 }
+            } catch (exc: CliException) {
+                error = exc.message ?: ""
             } catch (exc: RestException) {
                 error = if (HttpStatus.forbidden(exc.status)) "incorrect username or password"
                         else  exc.message ?: ""
@@ -146,6 +146,8 @@ object Cli {
         )
         output(StyledText("").render())
     }
+    fun output(text: StyledText) = output(text.render())
+    fun outputln(text: StyledText) = outputln(text.render())
     val isSuperuser get() = privilege=="superuser"
     val isConfig get() = privilege=="config"
     val username get() = if (args.remote) loginUser else target.username
