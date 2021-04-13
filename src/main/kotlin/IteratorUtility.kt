@@ -255,3 +255,5 @@ fun<T> Iterable<T>.splitBefore(pred: (T)->Boolean) =
 fun<T> List<T>.splitAfter(pred: (T)->Boolean) =
     Pair(dropLastWhile{!pred(it)}, takeLastWhile{!pred(it)})
 
+
+

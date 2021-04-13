@@ -9,6 +9,7 @@ object Cli {
     val homeDir: String = System.getProperty("user.home")
     val kcliDir: String = "$homeDir/.kcli"
     val loginUser = System.getProperty("user.name")
+    var helpLevel: ShowLevel = ShowLevel.detail; private set
     private lateinit var outFile: PrintWriter
     private lateinit var args: Args
     private lateinit var privilege: String
@@ -173,6 +174,7 @@ object Cli {
         }
     }
     fun clearInterrupted() { interrupted = false }
+    fun setHelp(h: ShowLevel) { helpLevel = h }
 }
 
 

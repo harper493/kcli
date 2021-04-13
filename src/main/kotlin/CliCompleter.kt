@@ -1,26 +1,55 @@
 open class CliCompleter {
-    fun complete(line: String, token: String): List<String> {
-        return if (token.isEmpty()) {
-            Cli.outputln(StyledText(StyledText("\n${subclassHelp(line)}",
-                color=Properties.getParameter("help_color")),StyledText()))
+    fun complete(line: String, token: String): List<String> =
+        subclassComplete(line, token).removePrefixes()
+    fun help(hctx: HelpContext, line: String) =
+        run {
+            Cli.outputln(
+                StyledText(
+                    StyledText("\n"),
+                    StyledText(
+                        subclassHelp(hctx)
+                            ?: StyledText(Properties.get("help.no_help")!!,
+                                color=Properties.getParameter("help_help_color")
+                            )
+                    ),
+                    StyledText()
+                )
+            )
             print("${CommandReader.lastPrompt}$line")
-            listOf()
+            listOf<String>()
         }
-        else subclassComplete(line, token).removePrefixes()
-    }
     open fun subclassComplete(line: String, token: String): List<String> {
         return listOf()
     }
-    open fun subclassHelp(line: String): String {
-        return "Sorry, no help available here"
-    }
+    open fun subclassHelp(hctx: HelpContext): StyledText? = null
 }
 
 class KeywordCompleter(
     private val keywords: KeywordList
 ): CliCompleter() {
     override fun subclassComplete(line: String, token: String): List<String> =
-        keywords.toStrings().filter{ it.startsWith(token) }.map{ "$line$it" }
+        keywords.toStrings().filter{ it.startsWith(token) }
+    override fun subclassHelp(hctx: HelpContext) =
+        keywords.keywords
+            .map{ it.second }
+            .removeDuplicates{ a,b -> b.key.startsWith(a.key) }
+            .sortedBy{ it.key }
+            .filter{ kw -> if (kw.attribute!=null) kw.attribute.level <= Cli.helpLevel else true }
+            .let{ keywords ->
+                val table = Table(showHeadings=false)
+                keywords.forEach{
+                    table.append("key", it.key,
+                        color=Properties.getParameter("help_key_color"))
+                    table.append("help", it.getHelp(hctx),
+                        color=Properties.getParameter("help_help_color"))
+                    }
+                table
+                    .setColumnWidths { when (it) {
+                        "key" -> Properties.getParameterInt("help_key_width")
+                        else ->  Properties.getParameterInt("help_help_width")
+                    }}
+                    .layoutText().renderStyled()
+            }
 }
 
 class ObjectCompleter(

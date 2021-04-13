@@ -415,7 +415,8 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 body.append(
                     "Name" to attr.displayName,
                     "Rest Name" to attr.name,
-                    "Level" to attr.level,
+                    "Class" to attr.myClass.name,
+                    "Level" to attr.level.toString(),
                     "Nature" to attr.nature,
                     "Type" to attr.type.name,
                     "Filter Type" to attr.filterType.name,

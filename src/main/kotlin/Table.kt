@@ -70,17 +70,21 @@ class Table (
             color=color, background=background, style=style) }
     }
 
-    fun orderColumns(fn: (String) -> Int) {
-        for (col in columns.keys) columns[col]!!.position = fn(col)
-    }
+    fun orderColumns(fn: (String) -> Int) =
+        also {
+            for (col in columns.keys) columns[col]!!.position = fn(col)
+        }
 
-    fun setColumnWidths(fn: (String) -> Int) {
-        for (col in columns.keys) columns[col]!!.maxWidth = fn(col)
-    }
+    fun setColumnWidths(fn: (String) -> Int) =
+        also {
+            for (col in columns.keys) columns[col]!!.maxWidth = fn(col)
+        }
 
-    fun setHeaders(fn: (String) -> String) {
-        for (col in columns.keys) columns[col]!!.heading = fn(col)
-    }
+    fun setHeaders(fn: (String) -> String) =
+        also {
+            for (col in columns.keys) columns[col]!!.heading = fn(col)
+        }
+
 
     fun setColumns(fn: (String, Column) -> Unit): Table {
         for ((name, col) in columns) fn(name, col)

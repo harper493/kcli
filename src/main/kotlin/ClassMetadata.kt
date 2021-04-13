@@ -1,10 +1,11 @@
 data class ClassMetadata(
     val name: String,
-    val jsonCliMetadata: JsonObject
+    val jsonMetadata: JsonObject
 ) {
     val displayName = Properties.get("class", name) ?: makeNameHuman(name)
+    override fun toString() = name
     private val attributeMap: Map<String, AttributeMetadata> =
-        (jsonCliMetadata["metadata"]
+        (jsonMetadata["metadata"]
             ?.get("collection")
             ?.asArray()
             ?.filter{ it["name"] !=null }
@@ -15,7 +16,7 @@ data class ClassMetadata(
             .filter{ !it.second.isPseudonym }
             .toMap()
     private var derivedAttributeMap: Map<String, AttributeMetadata> = mapOf()
-    val baseClassNames = jsonCliMetadata["metadata"]?.asDict()?.get("base_classes")
+    val baseClassNames = jsonMetadata["metadata"]?.asDict()?.get("base_classes")
         ?.asArray()
         ?.map{it.asString()} ?: listOf()
 
@@ -28,8 +29,9 @@ data class ClassMetadata(
     val parentClass: ClassMetadata? get() { return container?.myClass }
     var allBaseClasses: Set<ClassMetadata> = setOf(); private set
     var derivedClasses: MutableSet<ClassMetadata> = mutableSetOf(); private set
-    var settableAttributes: List<AttributeMetadata> = listOf(); private set
-    var modifiableAttributes: List<AttributeMetadata> = listOf(); private set
+    lateinit var settableAttributes: List<AttributeMetadata>; private set
+    lateinit var modifiableAttributes: List<AttributeMetadata>; private set
+    var containedClass: ClassMetadata? = null; private set
     var isRoot: Boolean = false; private set
 
     fun getAttribute(aname: String) = derivedAttributeMap[aname]
@@ -63,6 +65,7 @@ data class ClassMetadata(
         derivedAttributeMap = mapOf(*derivedAttributes.map{Pair(it.name, it)}.toList().toTypedArray())
         settableAttributes = derivedAttributeMap.values.filter{it.isSettable}
         modifiableAttributes = derivedAttributeMap.values.filter{it.isModifiable}
+        containedClass = (allBaseClasses.append(this)).filter{ it.container!=null }.firstOrNull()
     }
     private fun addDerived(classMd: ClassMetadata): Boolean = derivedClasses.add(classMd)
 }

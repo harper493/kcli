@@ -14,6 +14,7 @@ class TrieNode<KE, V>(
 
     val wild = key == wildKey
     val wildness: Int = (parent?.wildness ?: 0) + (if (wild) 1 else 0)
+    val depth get(): Int = (parent?.depth?.plus(1)) ?: 0
     fun getName(): MutableList<KE> = parent?.getName()?.apply { add(key!!) } ?: mutableListOf()
     fun addValue(v: V, keys: Iterable<KE>) {
         when {
@@ -79,6 +80,10 @@ open class Trie<KE,V>(val wildKey: KE? = null) : Iterable<Pair<Iterable<KE>,V>> 
     fun getAll(keys: Iterable<KE>) = root.getAll(keys).map { it.value }
     fun getShorter(keys: Iterable<KE>) = root.getShorter(keys)
     fun getExact(keys: Iterable<KE>) = root.getExact(keys)
+    fun getExactWild(keys: List<KE>) =
+        root.getAll(keys)
+            .filter{ it.depth==keys.size }
+            .minByOrNull { it.wildness }?.value
     override fun iterator() = TrieIterator(root)
     fun visit(keys: Iterable<KE>, fn: (Iterable<KE>, V) -> Unit) =
         root.getAll(keys).filter { it.value != null }.forEach { fn(it.getName(), it.value!!) }

@@ -314,4 +314,5 @@ Extension functions for other classes
 fun Properties.Companion.getColor(color: String) = properties.get("color", color)
 fun Properties.Companion.getColors(vararg colors: String) = colors.mapNotNull { getColor(it) }
 fun Properties.Companion.getParameter(name: String) = properties.get("parameter", name)
-
+fun Properties.Companion.getParameterInt(name: String, default: Int = 0) =
+    properties.get("parameter", name)?.toIntOrNull() ?: default

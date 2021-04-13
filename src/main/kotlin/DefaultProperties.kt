@@ -71,13 +71,17 @@ parameter.parameter_label_width                      = 40
 parameter.parameter_value_width                      = 25
 parameter.metadata_column_width                      = 35
 parameter.ping_timeout                               = 5
-parameter.help_color                                 = mid_blue
+parameter.help_key_color                             = mid_blue
+parameter.help_help_color                            = deep_blue
+parameter.help_key_width                             = 30
+parameter.help_help_width                            = 80
 
 color.odd_row                                        = yucky_green
 color.even_row                                       = yucky_brown
 color.error                                          = red
 color.show_heading                                   = magenta
 
+help.no_help                                         = Sorry, no help available here
 help.mode_command.exit                               = Save changes and exit this object
 help.base_command.exit                               = Exit the CLI
 help.mode_command.quit                               = Exit this object without saving changes

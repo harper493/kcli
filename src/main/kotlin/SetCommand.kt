@@ -1,9 +1,10 @@
 class SetCommand(val cli: CliCommand) {
     val commands = KeywordList(
-        KeywordFn("parameters", { setParameters() }),
-        KeywordFn("logging", { setLogging() }),
-        KeywordFn("password", { setPassword() }),
         KeywordFn("configuration", { setConfiguration() }),
+        KeywordFn("help", { setHelp() }),
+        KeywordFn("logging", { setLogging() }),
+        KeywordFn("parameters", { setParameters() }),
+        KeywordFn("password", { setPassword() }),
         KeywordFn("trace", { setTrace() }),
     )
     private val parser get() = cli.parser
@@ -67,6 +68,18 @@ class SetCommand(val cli: CliCommand) {
         val onOff = parser.nextToken(type=Datatype["boolean"]) ?: "F"
         parser.checkFinished()
         Rest.setTrace(Datatype.toBoolean(onOff))
+    }
+
+    private fun setHelp() {
+        val levels = mapOf(
+            "normal" to ShowLevel.full,
+            "detail" to ShowLevel.detail,
+            "expert" to ShowLevel.expert,
+            "debug" to ShowLevel.debug,
+        )
+        val k = parser.findKeyword(KeywordList(*levels.map{it.key}.toTypedArray()))
+        parser.checkFinished()
+        Cli.setHelp(levels[k!!.asString()]!!)
     }
 }
 

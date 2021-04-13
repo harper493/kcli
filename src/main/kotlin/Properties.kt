@@ -13,7 +13,8 @@ class Properties(
     fun addValue(value: String, keys: Iterable<String>) {
         myTrie.add(value, keys)
     }
-    fun get(vararg keys: String) = myTrie.get(keys.toList())
+    fun get(vararg keys: String) = myTrie.getExactWild(keys.toList())
+    fun get(keys: Iterable<String>) = myTrie.getExactWild(keys.toList())
 
     fun getInt(vararg keys: String, default: Int = 0) = get(*keys)?.toIntOrNull() ?: default
     fun getFloat(vararg keys: String, default: Double = 0.0) = get(*keys)?.toDoubleOrNull() ?: default
@@ -55,6 +56,7 @@ class Properties(
         fun load(content: String) = properties.load(content)
 
         fun get(vararg keys: String) = properties.get(*keys)
+        fun get(keys: Iterable<String>) = properties.get(keys)
         fun getInt(vararg keys: String, default: Int = 0) = properties.getInt(*keys, default = default)
         fun getFloat(vararg keys: String, default: Double = 0.0) = properties.getFloat(*keys, default = default)
     }

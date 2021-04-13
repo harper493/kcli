@@ -1,3 +1,11 @@
+class HelpContext(val prefix: Iterable<String> = listOf()) {
+    fun nestedHelp(next: String) =
+        HelpContext(prefix.append(next))
+    fun helpFor(key: String, useDefault: Boolean = false) =
+        Properties.get(listOf("help").append(prefix).append(key))
+            ?: (if (useDefault) Properties.get("help", "no_help")!! else "")
+}
+
 class Parser (
     private var line: String
     ) {
@@ -7,6 +15,7 @@ class Parser (
     private var lineIndex = 0
     private var tokenIndex = -1
     private var finished = false
+    private var helpContext = HelpContext()
     enum class TokenType { ttName, ttNumber, ttInt, ttAny, ttExplicit, ttGeneral, ttAll, ttNonBlank }
     var curToken: String? = null
 
@@ -78,10 +87,14 @@ class Parser (
         }
         if (ch==completerCh){
             throw CompletionException(
-                completer.complete(
-                    line.dropLast(1),
-                    token!!.dropLast(1)
-                )
+                if (token!!.length<=1) {
+                    completer.help(helpContext, line.dropLast(1))
+                } else {
+                    completer.complete(
+                        line.dropLast(1),
+                        token!!.dropLast(1)
+                    )
+                }
             )
         }
         CliException.throwIf("unexpected end of line"){ !endOk && curToken==null }

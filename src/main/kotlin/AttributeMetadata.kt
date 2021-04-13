@@ -25,24 +25,30 @@ open class AttributeMetadata(
     val isRelation: Boolean = getMd("usage_type") == "related"
     val isPseudonym: Boolean = "pseudonym" in natures
     val isEnum: Boolean get() = typeName=="enum"
-    val isBrief get() = level=="brief" || level=="list"
+    val isBrief get() = level <= ShowLevel.brief
     val isNoShow get() = "noshow" in natures
     val relativeUrl: String = getMd("relative_url")
     val typeName: String = getMd("type_name")
     val containedClass get() = CliMetadata.getClass(typeName)
     val range get() = getMd("range")
-    val level get() = getMd("level")
+    val level by lazy {
+        ShowLevel.values().find{ it.name==getMd("level") } ?: ShowLevel.detail
+    }
     val default get() = natures["default"]
     val total get() = natures["total"] ?: "none"
     val reformatter: ((AttributeMetadata, String)->String)? by lazy {
-        makeReformatter(Properties.get("formatter", myClass.name, name))
+        makeReformatter(Properties.get("formatter", this.myClass.name, name))
     }
+    val myHelpClass by lazy { myClass.containedClass ?: myClass }
     fun getMd(mname: String) = md[mname]?.asString() ?: ""
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)
     fun completer() = if (isEnum) EnumCompleter(this) else CliCompleter()
     fun reformat(value: String): String =
         if (reformatter==null) type.reformat(value) else reformatter!!(this, value)
+    fun getHelp(): String? =
+        Properties.get("help", myHelpClass.name, name)
+                ?: Properties.get("tip", myHelpClass.name, name)
 
     companion object {
         fun makeReformatter(what: String?): ((AttributeMetadata, String)->String)? =
