@@ -1,6 +1,11 @@
 open class CliCompleter(
-    val helpText: String? = null
+    val typeName: String = "",
+    val primaryHelp: String? = null,
+    val backupHelp: String ? = null
 ) {
+    var helpText =
+        primaryHelp.takeIf{ (it?.isNotEmpty() ?: false) && it!=typeName} ?: backupHelp ?: ""
+        private set
     fun complete(line: String, token: String): List<String> =
         subclassComplete(line, token).removePrefixes()
     fun help(hctx: HelpContext, line: String) =
@@ -25,6 +30,9 @@ open class CliCompleter(
     }
     open fun subclassHelp(hctx: HelpContext): StyledText? =
         helpText?.let{ StyledText(helpText, color=Properties.getParameter("help_help_color"))}
+    open fun clone() = CliCompleter(typeName, primaryHelp, backupHelp)
+    fun setHelp(newHelp: String) = also { helpText = newHelp }
+    fun addHelp(newHelp: String) = also { helpText += newHelp }
 }
 
 class KeywordCompleter(
@@ -47,7 +55,7 @@ class KeywordCompleter(
                     .map{ Pair(it.key, it.getHelp(hctx)) }
                     .toMap())
             .renderStyled()
-
+    override fun clone() = KeywordCompleter(keywords)
 }
 
 class ObjectCompleter(
@@ -77,6 +85,7 @@ class ObjectCompleter(
                 " or one of: ${extras.keywords.joinToString(", ") { it.first }}"
                     .orBlankIf{extras.isEmpty()},
             color=Properties.getParameter("help_color"))
+    override fun clone() = ObjectCompleter(objName, extras)
 }
 
 class EnumCompleter(
@@ -88,5 +97,6 @@ class EnumCompleter(
     override fun subclassHelp(hctx: HelpContext) =
         StyledText("Enter one of: ${attrMd.range.split("|").joinToString(", ")}",
             color=Properties.getParameter("help_color"))
+    override fun clone() = EnumCompleter(attrMd)
 }
 

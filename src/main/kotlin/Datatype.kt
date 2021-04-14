@@ -176,27 +176,27 @@ abstract class Datatype (
             IntDatatype("byte_counter", properties="counter"),
             StringDatatype("string"),
             EnumDatatype("enum"),
-            StringDatatype("text", description="human-readable text"),
+            StringDatatype("text"),
             FloatDatatype("percentage", unit="%"),
             IntDatatype("uid"),
-            FloatDatatype("rate", description="traffic rate in Kbit/sec",
+            FloatDatatype("rate", description="Traffic rate in Kbit/sec",
                 converter={ toFloat(it) * if ((it.lastOrNull()?:' ').isLetter()) 1.0 else 0.001 }),
-            StringDatatype("mac_address", description="MAC address",
+            StringDatatype("mac_address", description="MAC address in form 00:11:22:33:44:55",
                 validator = Validator(fn={ value, _ -> validateMacAddress(value) },
                     prefixRx="""[\w:]+""")),
             TypedDatatype<Boolean>("bool",
                 converter={ toBoolean(it) },
                 gvFactory = { TypedGenericVariable(toBoolean(it))}),
-            StringDatatype("ip_address", description="IP address",
+            StringDatatype("ip_address", description="IP address in form 1.2.3.4 or 5a15:e100::9abc:def0",
                 validator = Validator(fn={ value, _ -> validateIpAddress(value) },
                                       prefixRx="""[\w:]+|[0-9\.]+""")),
-            StringDatatype("ip_subnet", description="IP address",
+            StringDatatype("ip_subnet", description="IP subnet in form 1.2.3.0/24 or 5a15:e100:abcd::/48",
                 validator = Validator(fn={ value, _ -> validateIpSubnet(value) },
                     prefixRx="""[\w:/]+|[0-9\./]+""")),
-            StringDatatype("ipv4_address", description="IPV4 address",
+            StringDatatype("ipv4_address", description="IPv4 address in form 1.2.3.4",
                 validator = Validator(fn={ value, _ -> validateIpV4Address(value) },
                     prefixRx="""[\d\.]+""")),
-            DurationDatatype("duration", description="time duration in hh:mm:ss.ssss format")
+            DurationDatatype("duration")
         )
     }
 }
@@ -306,7 +306,7 @@ open class StringDatatype(
     properties: String = "",
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
     reformatter: (String)->String = { it },
-    completer: CliCompleter = CliCompleter(description)
+    completer: CliCompleter = CliCompleter(name, description, "Any character sequence")
 ) : TypedDatatype<String>(name,
     description,
     formatter,
@@ -341,7 +341,7 @@ open class IntDatatype(
     converter,
     { IntGenericVariable( toInt(it)) },
     wrapper,
-    completer = CliCompleter("An integer")
+    completer = CliCompleter(name, description, "An integer")
 ) {
     override fun validate(value: String) =
         if (validator.isNull) conversionValidator(value, this)
@@ -360,7 +360,8 @@ open class FloatDatatype(
     converter: (String)->Double = { toFloat(it) },
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
     gvFactory: (String)->GenericVariable = { NumericGenericVariable( toFloat(it)) },
-    completer: CliCompleter = CliCompleter("Number, possibly followed by u/m/k/M/G/T as a multiplier")
+    completer: CliCompleter = CliCompleter(name, description,
+        "Number, possibly followed by u/m/k/M/G/T as a multiplier")
 ) : TypedDatatype<Double>(name,
     description,
     formatter,
@@ -409,10 +410,10 @@ class EnumDatatype(
     override fun hasNull() = false
 }
 
-class DurationDatatype(    name: String,
-                           description: String = name,
-                           completer: CliCompleter = CliCompleter("Time duration in the form hh:mm:ss " +
-                                   "or a number followed by u, mS, S, m, h, d with the obvious meaning"),
+class DurationDatatype(name: String,
+                       description: String = name,
+                       completer: CliCompleter = CliCompleter(name, description,
+                           "Time duration in the form hh:mm:ss or a number followed by u, mS, S, m, h, d with the obvious meaning"),
 ): FloatDatatype(
     name,
     description,
@@ -441,7 +442,7 @@ open class CompoundDatatype(
 class OptDatatype(
     name: String,
     baseType: Datatype,
-    completer: CliCompleter = CliCompleter(baseType.completer.helpText + " (optional)")
+    completer: CliCompleter = CliCompleter(name, baseType.completer.helpText + " (optional)")
 ): CompoundDatatype(name, baseType, completer=completer) {
     override fun validate(value: String) = value.isEmpty() || baseType.validate(value)
     override fun hasNull(): Boolean = true
@@ -450,7 +451,7 @@ class OptDatatype(
 class SetDatatype(
     name: String,
     baseType: Datatype,
-    completer: CliCompleter = CliCompleter("Comma-separated list of: " + baseType.completer.helpText)
+    completer: CliCompleter = CliCompleter(name, "Comma-separated list of: " + baseType.completer.helpText)
 ): CompoundDatatype(name, baseType, completer=completer) {
     override fun validate(value: String) =
         value.isEmpty()
@@ -461,7 +462,7 @@ class SetDatatype(
 class ListDatatype(
     name: String,
     baseType: Datatype,
-    completer: CliCompleter = CliCompleter("Comma-separated list of: " + baseType.completer.helpText)
+    completer: CliCompleter = CliCompleter(name, "Comma-separated list of: " + baseType.completer.helpText)
 ): CompoundDatatype(name, baseType, completer=completer) {
     override fun validate(value: String) =
         value.isEmpty()

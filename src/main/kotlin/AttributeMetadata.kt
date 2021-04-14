@@ -43,7 +43,9 @@ open class AttributeMetadata(
     fun getMd(mname: String) = md[mname]?.asString() ?: ""
     fun getNature(n: String) = natures[n]
     fun convert(value: String) = type.convert(value)
-    fun completer() = if (isEnum) EnumCompleter(this) else type.completer
+    fun completer() =
+        if (isEnum) EnumCompleter(this)
+        else type.completer.clone().addHelp(if (range.isNullOrBlank()) "" else " in range $range")
     fun reformat(value: String): String =
         if (reformatter==null) type.reformat(value) else reformatter!!(this, value)
     fun getHelp(): String? =
