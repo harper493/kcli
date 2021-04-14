@@ -1,6 +1,6 @@
 import kotlin.math.absoluteValue
 
-class Table (
+open class Table (
     private val maxColumnWidth: Int = 0,
     private val columnSpacing: Int = 2,
     private val squishHeadings: Boolean = true,
@@ -56,16 +56,18 @@ class Table (
         color: String? = null,
         background: String? = null,
         style: String? = null
-    ) = (columns[columnName]
-        ?: Column(columnName, breadth, maxColumnWidth)
-            .also { columns[columnName] = it })
-        .padTo(depth - 1)
-        .append(text, color, background, style)
+    ) = also {
+        (columns[columnName]
+            ?: Column(columnName, breadth, maxColumnWidth)
+                .also { columns[columnName] = it })
+            .padTo(depth - 1)
+            .append(text, color, background, style)
+    }
 
     fun append(vararg values: Pair<String,String>,
                color: String? = null,
                background: String? = null,
-               style: String? = null) {
+               style: String? = null) = also {
         values.map{ append(it.first, it.second,
             color=color, background=background, style=style) }
     }
@@ -86,32 +88,13 @@ class Table (
         }
 
 
-    fun setColumns(fn: (String, Column) -> Unit): Table {
-        for ((name, col) in columns) fn(name, col)
-        return this
-    }
+    fun setColumns(fn: (String, Column) -> Unit) =
+        also {
+            for ((name, col) in columns) fn(name, col)
+            return this
+        }
 
     fun isEmpty() = columns.isEmpty()
-
-    private fun finalize(): Table {
-        columns.values.map{it.padTo(depth)}
-        sortedCols = columns.values.sortedBy { it.position }
-        sortedCols.map { col ->
-            val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width)
-            else col.width
-            val s = if (col.maxWidth<0) -1 else 1
-            col.maxWidth = s * maxOf(w,
-                if (squishHeadings) wrap(col.heading, maxOf(w, 1)).map { it.length }.maxOrNull() ?: 0
-                else col.heading.length) }
-        headings = sortedCols.map{
-            StyledText(it.heading, headingColor, headingBackground, headingStyle)
-        }
-        sortedCols.map{ col->
-            val colorIterator = (stripeColors?.anyOrNull() ?: listOf(null)).cycle().iterator()
-            col.content.map{ it.underride(newColor=colorIterator.next()) }
-        }
-        return this
-    }
 
     private fun splitCells(row: Iterable<StyledText>, padAtEnd: Boolean): List<List<StyledText>> {
         val splitRows = zip(sortedCols, row).map { colCell ->
@@ -129,8 +112,23 @@ class Table (
         }
     }
 
-    fun layoutText(): Table {
-        finalize()
+    private fun complete(): Table {
+        columns.values.map{it.padTo(depth)}
+        sortedCols = columns.values.sortedBy { it.position }
+        sortedCols.map { col ->
+            val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width)
+            else col.width
+            val s = if (col.maxWidth<0) -1 else 1
+            col.maxWidth = s * maxOf(w,
+                if (squishHeadings) wrap(col.heading, maxOf(w, 1)).map { it.length }.maxOrNull() ?: 0
+                else col.heading.length) }
+        headings = sortedCols.map{
+            StyledText(it.heading, headingColor, headingBackground, headingStyle)
+        }
+        sortedCols.map{ col->
+            val colorIterator = (stripeColors?.anyOrNull() ?: listOf(null)).cycle().iterator()
+            col.content.map{ it.underride(newColor=colorIterator.next()) }
+        }
         if (showHeadings) {
             wrappedHeadings = splitCells(headings, padAtEnd = false)
             if (underlineHeadings && wrappedHeadings.isNotEmpty()) {
@@ -147,16 +145,19 @@ class Table (
         return this
     }
 
-    fun render() =
-        listOf(wrappedHeadings, body).flatMap { rows ->
+    fun render(): String {
+        complete()
+        return listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->
                 zip(sortedCols, row).joinToString(" ".repeat(columnSpacing)) { colRow ->
                     colRow.second.justify(colRow.first.maxWidth).render()
                 }
             }
         }.joinToString("\n")
+    }
 
     fun renderStyled(): StyledText {
+        complete()
         val spacer = StyledText(" ".repeat(columnSpacing))
         return listOf(wrappedHeadings, body).flatMap { rows ->
             rows.map { row ->

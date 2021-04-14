@@ -88,11 +88,11 @@ class ObjectName(val newUrl: String="") {
         elements.clear()
         var curMd = CliMetadata.getPolicyManagerMd()
         for ((a,n) in attributes.zip(names)) {
-            val collMd = curMd.getAttribute(a)
+            val collMd = curMd.collectionsByUrl[a]
             if (collMd?.containedClass == null) {
                 throw UrlException("no collection '$a' in class '${curMd.name}")
             }
-            elements.add(Element(curMd.getAttribute(a)!!, n))
+            elements.add(Element(collMd!!, n))
             curMd = collMd.containedClass!!
         }
     }

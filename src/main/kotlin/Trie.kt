@@ -7,7 +7,7 @@ class TrieNode<KE, V>(
     var children = mutableMapOf<KE, TrieNode<KE, V>>()
     private fun makeChild(key: KE): TrieNode<KE, V> {
         if (children[key] == null) {
-            children[key] = TrieNode<KE, V>(key, this, wildKey)
+            children[key] = TrieNode(key, this, wildKey)
         }
         return children[key]!!
     }
@@ -63,10 +63,10 @@ class TrieNode<KE, V>(
     }
 }
 
-open class Trie<KE,V>(val wildKey: KE? = null) : Iterable<Pair<Iterable<KE>,V>> {
-    class TrieIterator<KE, V>(var here: TrieNode<KE, V>) : Iterator<Pair<Iterable<KE>,V>> {
-        val myList = here.getAll(listOf())
-        val myIter = myList.iterator()
+open class Trie<KE,V>(wildKey: KE? = null) : Iterable<Pair<Iterable<KE>,V>> {
+    class TrieIterator<KE, V>(here: TrieNode<KE, V>) : Iterator<Pair<Iterable<KE>,V>> {
+        private val myList = here.getAll(listOf())
+        private val myIter = myList.iterator()
 
         override fun hasNext() = myIter.hasNext()
         override fun next() = myIter.next().let{ Pair(it.getName(), it.value!!) }
@@ -88,4 +88,6 @@ open class Trie<KE,V>(val wildKey: KE? = null) : Iterable<Pair<Iterable<KE>,V>> 
     fun visit(keys: Iterable<KE>, fn: (Iterable<KE>, V) -> Unit) =
         root.getAll(keys).filter { it.value != null }.forEach { fn(it.getName(), it.value!!) }
     fun visit(fn: (Iterable<KE>, V) -> Unit) = visit(listOf(), fn)
+    fun isEmpty() = root.getAll(listOf()).isEmpty()
+    fun isNotEmpty() = root.getAll(listOf()).isNotEmpty()
 }

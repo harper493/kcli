@@ -268,6 +268,12 @@ fun String.writeToFile(filename: String) {
     }
 }
 
+/*
+
+ */
+
+fun String.orBlankIf(pred: ()->Boolean) = if(pred()) "" else this
+
 /**
  * Read the content of a file
  */

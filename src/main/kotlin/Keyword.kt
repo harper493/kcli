@@ -30,6 +30,8 @@ class KeywordList()
     operator fun contains(key: Keyword): Boolean = keywords.getExact(key.key) != null
     fun toStrings() = keywords.map{ it.second.key }
     fun copy(): KeywordList = KeywordList().add(this)
+    fun isEmpty() = keywords.isEmpty()
+    fun isNotEmpty() = keywords.isNotEmpty()
     fun addAbbreviations() {
         keywords.map{ it.second }
             .map{ Pair(it, Properties.get("abbreviate", it.key)) }

@@ -143,7 +143,7 @@ object Cli {
                 text.uppercaseFirst(),
                 color = Properties.get("color", "error")
             )
-                .render()
+               .render()
         )
         output(StyledText("").render())
     }

@@ -29,7 +29,8 @@ abstract class Datatype (
     val formatter: (value: Any) -> String,
     val validator: Validator,
     val unit: String,
-    val reformatter: (String) -> String = { it }
+    val reformatter: (String) -> String = { it },
+    val completer: CliCompleter = CliCompleter()
 ) {
     abstract fun convert(s: String): GenericVariable
     open fun validate(value: String): Boolean = validator.validate(value)
@@ -40,7 +41,8 @@ abstract class Datatype (
     open fun isNumeric(): Boolean = false
     open fun reformat(value: String): String = reformatter(value)
     fun validateCheck(value: String) =
-        if (validate(value)) value else throw CliException("invalid value '$value' for type '$name'")
+        if (validate(value)) value
+        else throw CliException("invalid value '$value' for type '$name'")
     companion object {
         private var types = mutableMapOf<String, Datatype>()
         operator fun get(index: String): Datatype {
@@ -287,8 +289,9 @@ open class TypedDatatype<T: Comparable<T>>(
     val converter: (String)->T,
     val gvFactory: (String)->GenericVariable,
     val wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
-    reformatter: (String)->String = { it }
-) : Datatype (name, description, formatter, validator, unit, reformatter)  {
+    reformatter: (String)->String = { it },
+    completer: CliCompleter = CliCompleter()
+) : Datatype (name, description, formatter, validator, unit, reformatter, completer)  {
     override fun convert(s: String): GenericVariable {
         return gvFactory(s)
     }
@@ -302,7 +305,8 @@ open class StringDatatype(
     unit: String = "",
     properties: String = "",
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
-    reformatter: (String)->String = { it }
+    reformatter: (String)->String = { it },
+    completer: CliCompleter = CliCompleter(description)
 ) : TypedDatatype<String>(name,
     description,
     formatter,
@@ -313,6 +317,7 @@ open class StringDatatype(
     { TypedGenericVariable(it) },
     wrapper,
     reformatter,
+    completer,
 ) {
     override fun hasNull(): Boolean = true
 }
@@ -336,6 +341,7 @@ open class IntDatatype(
     converter,
     { IntGenericVariable( toInt(it)) },
     wrapper,
+    completer = CliCompleter("An integer")
 ) {
     override fun validate(value: String) =
         if (validator.isNull) conversionValidator(value, this)
@@ -353,7 +359,8 @@ open class FloatDatatype(
     properties: String = "",
     converter: (String)->Double = { toFloat(it) },
     wrapper: (String, Int)->List<String> = { value, width -> value.chunked(width) },
-    gvFactory: (String)->GenericVariable = { NumericGenericVariable( toFloat(it)) }
+    gvFactory: (String)->GenericVariable = { NumericGenericVariable( toFloat(it)) },
+    completer: CliCompleter = CliCompleter("Number, possibly followed by u/m/k/M/G/T as a multiplier")
 ) : TypedDatatype<Double>(name,
     description,
     formatter,
@@ -363,6 +370,7 @@ open class FloatDatatype(
     converter,
     gvFactory,
     wrapper,
+    completer = completer
 ) {
     override fun validate(value: String) =
         if (validator.isNull) conversionValidator(value, this)
@@ -375,11 +383,13 @@ open class BooleanDatatype(
     name: String,
     description: String = name,
     properties: String = "",
+    completer: CliCompleter = CliCompleter("'t(rue)' or 'f(alse)'"),
 ) : TypedDatatype<Boolean>(name,
     description,
     properties = properties,
     converter =  { toBoolean(it) },
     gvFactory = { TypedGenericVariable( toBoolean(it) ) },
+    completer = completer
 ) {
     override fun validate(value: String) =
         conversionValidator(value, this)
@@ -401,13 +411,16 @@ class EnumDatatype(
 
 class DurationDatatype(    name: String,
                            description: String = name,
+                           completer: CliCompleter = CliCompleter("Time duration in the form hh:mm:ss " +
+                                   "or a number followed by u, mS, S, m, h, d with the obvious meaning"),
 ): FloatDatatype(
     name,
     description,
     formatter = { formatDuration(it.toString().toDoubleOrNull() ?: 0.0) },
     unit = "S",
     converter = { fromDuration(it) },
-    gvFactory = { NumericGenericVariable(fromDuration(it)) }
+    gvFactory = { NumericGenericVariable(fromDuration(it)) },
+    completer = completer
 )
 
 class ClassDatatype(
@@ -419,23 +432,26 @@ class ClassDatatype(
 
 open class CompoundDatatype(
     name: String,
-    val baseType: Datatype
-): StringDatatype(name) {
+    val baseType: Datatype,
+    completer: CliCompleter = CliCompleter()
+): StringDatatype(name, completer=completer) {
     override fun hasNull(): Boolean = true
 }
 
 class OptDatatype(
     name: String,
-    baseType: Datatype
-): CompoundDatatype(name, baseType) {
+    baseType: Datatype,
+    completer: CliCompleter = CliCompleter(baseType.completer.helpText + " (optional)")
+): CompoundDatatype(name, baseType, completer=completer) {
     override fun validate(value: String) = value.isEmpty() || baseType.validate(value)
     override fun hasNull(): Boolean = true
 }
 
 class SetDatatype(
     name: String,
-    baseType: Datatype
-): CompoundDatatype(name, baseType) {
+    baseType: Datatype,
+    completer: CliCompleter = CliCompleter("Comma-separated list of: " + baseType.completer.helpText)
+): CompoundDatatype(name, baseType, completer=completer) {
     override fun validate(value: String) =
         value.isEmpty()
                 || (value.first() in listOf("+", "-") && baseType.validate(value.drop(1)))
@@ -444,8 +460,9 @@ class SetDatatype(
 
 class ListDatatype(
     name: String,
-    baseType: Datatype
-): CompoundDatatype(name, baseType) {
+    baseType: Datatype,
+    completer: CliCompleter = CliCompleter("Comma-separated list of: " + baseType.completer.helpText)
+): CompoundDatatype(name, baseType, completer=completer) {
     override fun validate(value: String) =
         value.isEmpty()
                 || (value.split(",").fold(true){acc, v -> acc && baseType.validate(v) })

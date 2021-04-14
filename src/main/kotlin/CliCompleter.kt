@@ -1,4 +1,6 @@
-open class CliCompleter {
+open class CliCompleter(
+    val helpText: String? = null
+) {
     fun complete(line: String, token: String): List<String> =
         subclassComplete(line, token).removePrefixes()
     fun help(hctx: HelpContext, line: String) =
@@ -21,7 +23,8 @@ open class CliCompleter {
     open fun subclassComplete(line: String, token: String): List<String> {
         return listOf()
     }
-    open fun subclassHelp(hctx: HelpContext): StyledText? = null
+    open fun subclassHelp(hctx: HelpContext): StyledText? =
+        helpText?.let{ StyledText(helpText, color=Properties.getParameter("help_help_color"))}
 }
 
 class KeywordCompleter(
@@ -30,26 +33,21 @@ class KeywordCompleter(
     override fun subclassComplete(line: String, token: String): List<String> =
         keywords.toStrings().filter{ it.startsWith(token) }
     override fun subclassHelp(hctx: HelpContext) =
-        keywords.keywords
-            .map{ it.second }
-            .removeDuplicates{ a,b -> b.key.startsWith(a.key) }
-            .sortedBy{ it.key }
-            .filter{ kw -> if (kw.attribute!=null) kw.attribute.level <= Cli.helpLevel else true }
-            .let{ keywords ->
-                val table = Table(showHeadings=false)
-                keywords.forEach{
-                    table.append("key", it.key,
-                        color=Properties.getParameter("help_key_color"))
-                    table.append("help", it.getHelp(hctx),
-                        color=Properties.getParameter("help_help_color"))
-                    }
-                table
-                    .setColumnWidths { when (it) {
-                        "key" -> Properties.getParameterInt("help_key_width")
-                        else ->  Properties.getParameterInt("help_help_width")
-                    }}
-                    .layoutText().renderStyled()
-            }
+        HelpTable()
+            .append(
+                keywords.keywords
+                    .map{ it.second }
+                    .removeDuplicates{ a,b -> b.key.startsWith(a.key) && a.attribute==b.attribute }
+                    .filter{ kw ->
+                        kw.attribute==null
+                                || (kw.attribute.level <= Cli.helpLevel
+                                && Properties.get("suppress",
+                            kw.attribute.myHelpClass.name,
+                            kw.attribute.name)==null) }
+                    .map{ Pair(it.key, it.getHelp(hctx)) }
+                    .toMap())
+            .renderStyled()
+
 }
 
 class ObjectCompleter(
@@ -74,6 +72,11 @@ class ObjectCompleter(
             }
         } catch (exc: RestException) { listOf() }
     }
+    override fun subclassHelp(hctx: HelpContext) =
+        StyledText("Enter an object name of class ${objName.leafClass?.displayName}" +
+                " or one of: ${extras.keywords.joinToString(", ") { it.first }}"
+                    .orBlankIf{extras.isEmpty()},
+            color=Properties.getParameter("help_color"))
 }
 
 class EnumCompleter(
@@ -82,5 +85,8 @@ class EnumCompleter(
     override fun subclassComplete(line: String, token: String): List<String> =
         KeywordCompleter(KeywordList(*attrMd.range.split("|").toTypedArray()))
             .subclassComplete(line, token)
+    override fun subclassHelp(hctx: HelpContext) =
+        StyledText("Enter one of: ${attrMd.range.split("|").joinToString(", ")}",
+            color=Properties.getParameter("help_color"))
 }
 

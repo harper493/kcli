@@ -31,6 +31,7 @@ data class ClassMetadata(
     var derivedClasses: MutableSet<ClassMetadata> = mutableSetOf(); private set
     lateinit var settableAttributes: List<AttributeMetadata>; private set
     lateinit var modifiableAttributes: List<AttributeMetadata>; private set
+    lateinit var collectionsByUrl: Map<String,AttributeMetadata>; private set
     var containedClass: ClassMetadata? = null; private set
     var isRoot: Boolean = false; private set
 
@@ -66,6 +67,10 @@ data class ClassMetadata(
         settableAttributes = derivedAttributeMap.values.filter{it.isSettable}
         modifiableAttributes = derivedAttributeMap.values.filter{it.isModifiable}
         containedClass = (allBaseClasses.append(this)).filter{ it.container!=null }.firstOrNull()
+        collectionsByUrl = collections
+            .map{ it.getMd("relative_url").dropLastWhile { it=='/' } to it }
+            .filter{ it.first.isNotEmpty() }
+            .toMap()
     }
     private fun addDerived(classMd: ClassMetadata): Boolean = derivedClasses.add(classMd)
 }

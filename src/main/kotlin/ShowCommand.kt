@@ -110,7 +110,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                     } ${attr.unit}"
                 )
             }
-        cli.outputln(table.layoutText().render())
+        cli.outputln(table.render())
     }
 
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
@@ -306,7 +306,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 } ${attributeData.attributeMd.unit}"
             )
         }
-        return StyledText(heading, display.layoutText().renderStyled())
+        return StyledText(heading, display.renderStyled())
     }
 
     private fun showCollection(oname: ObjectName, coll: CollectionData, header: StyledText?=null): StyledText {
@@ -337,7 +337,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 col.heading = cli.abbreviateHeader((attrMd?.displayName ?: makeNameHuman(name)))
             }
         }
-        val styled = table.layoutText().renderStyled()
+        val styled = table.renderStyled()
         return if (header==null) styled else StyledText(header, StyledText(), styled)
     }
 
@@ -380,7 +380,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             CliMetadata.classes.map { layout.append(it.name) }
             return StyledText(
                 makeHeading("Available Classes", includeTime = false),
-                layout.layoutText().renderStyled()
+                layout.renderStyled()
             )
         } else {
             val classMd = CliMetadata[classKw.asString()]!!
@@ -426,9 +426,9 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             }
             return StyledText(
                 makeHeading("CliMetadata for Class '${classMd.displayName}' (${classMd.name})", includeTime = false),
-                headings.layoutText().renderStyled(),
+                headings.renderStyled(),
                 StyledText("\n"),
-                body.layoutText().renderStyled()
+                body.renderStyled()
             )
         }
     }
@@ -453,7 +453,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 val displayName = paramClass.getAttribute(name)?.displayName ?: makeNameHuman(name)
                 display.append(displayName, value.asString())
             }
-            result = display.layoutText().renderStyled()
+            result = display.renderStyled()
         } else {
             val name = param.attribute!!.displayName
             val value = params?.asDict()?.get(param.attribute!!.name)?.asString()
@@ -472,7 +472,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             }
         }.also {
             CliException.throwIf("no servers configured"){ it.isEmpty() }
-        }.layoutText().renderStyled()
+        }.renderStyled()
 
     private fun showSystem(): StyledText {
         parser.checkFinished()

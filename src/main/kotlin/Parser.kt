@@ -25,7 +25,7 @@ class Parser (
     private val nullCh = 0.toChar()
 
     fun nextToken(help: String="",
-                  tokenType: TokenType=TokenType.ttGeneral,
+                  tokenType: TokenType=TokenType.ttNonBlank,
                   validator: Validator=Validator(),
                   completer: CliCompleter=CliCompleter(),
                   type: Datatype?=null,
@@ -39,13 +39,13 @@ class Parser (
         val myValidator =
             myDatatype?.validator
                 ?: when (if (validator.isNull) tokenType else TokenType.ttExplicit) {
-                    TokenType.ttName -> Validator("""\*?[a-zA-Z0-9-_$]*\*?""")
+                    TokenType.ttName -> Validator("""\*?[a-zA-Z0-9-_$\.]*\*?""")
                     TokenType.ttNumber -> Validator("""[+-]?\d+(\.\d*)?[a-zA-z]*""")
                     TokenType.ttInt -> Validator("""[+-]?\d+""")
                     TokenType.ttGeneral -> Validator("""\w+|[=<>!]+|\d[\w\.]*""")
-                    TokenType.ttAll -> Validator(".*")
+                    TokenType.ttAll, TokenType.ttAny -> Validator(".*")
                     TokenType.ttExplicit -> validator
-                    else -> Validator("""\S+""")  // ttNonBlank
+                    TokenType.ttNonBlank -> Validator("""\S+""")
                 }
         fun good() = lineIndex < line.length
 

@@ -40,7 +40,7 @@ class ColumnsCommand(val cli: CliCommand) {
                     "Rest Name" to it
                 )
             }
-        return StyledText(heading, table.layoutText().renderStyled())
+        return StyledText(heading, table.renderStyled())
     }
 
     fun getClass(extras: KeywordList = KeywordList()) =
