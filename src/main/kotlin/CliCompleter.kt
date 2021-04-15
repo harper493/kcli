@@ -8,7 +8,7 @@ open class CliCompleter(
         private set
     fun complete(line: String, token: String): List<String> =
         subclassComplete(line, token).removePrefixes()
-    fun help(hctx: HelpContext, line: String) =
+    fun help(hctx: HelpContext?, line: String) =
         run {
             Cli.outputln(
                 StyledText(
@@ -28,7 +28,7 @@ open class CliCompleter(
     open fun subclassComplete(line: String, token: String): List<String> {
         return listOf()
     }
-    open fun subclassHelp(hctx: HelpContext): StyledText? =
+    open fun subclassHelp(hctx: HelpContext?): StyledText? =
         helpText?.let{ StyledText(helpText, color=Properties.getParameter("help_help_color"))}
     open fun clone() = CliCompleter(typeName, primaryHelp, backupHelp)
     fun setHelp(newHelp: String) = also { helpText = newHelp }
@@ -40,7 +40,7 @@ class KeywordCompleter(
 ): CliCompleter() {
     override fun subclassComplete(line: String, token: String): List<String> =
         keywords.toStrings().filter{ it.startsWith(token) }
-    override fun subclassHelp(hctx: HelpContext) =
+    override fun subclassHelp(hctx: HelpContext?) =
         HelpTable()
             .append(
                 keywords.keywords
@@ -50,8 +50,8 @@ class KeywordCompleter(
                         kw.attribute==null
                                 || (kw.attribute.level <= Cli.helpLevel
                                 && Properties.get("suppress",
-                            kw.attribute.myHelpClass.name,
-                            kw.attribute.name)==null) }
+                                                  kw.attribute.myHelpClass.name,
+                                                  kw.attribute.name)==null) }
                     .map{ Pair(it.key, it.getHelp(hctx)) }
                     .toMap())
             .renderStyled()
@@ -80,7 +80,7 @@ class ObjectCompleter(
             }
         } catch (exc: RestException) { listOf() }
     }
-    override fun subclassHelp(hctx: HelpContext) =
+    override fun subclassHelp(hctx: HelpContext?) =
         StyledText("Enter an object name of class ${objName.leafClass?.displayName}" +
                 " or one of: ${extras.keywords.joinToString(", ") { it.first }}"
                     .orBlankIf{extras.isEmpty()},
@@ -94,7 +94,7 @@ class EnumCompleter(
     override fun subclassComplete(line: String, token: String): List<String> =
         KeywordCompleter(KeywordList(*attrMd.range.split("|").toTypedArray()))
             .subclassComplete(line, token)
-    override fun subclassHelp(hctx: HelpContext) =
+    override fun subclassHelp(hctx: HelpContext?) =
         StyledText("Enter one of: ${attrMd.range.split("|").joinToString(", ")}",
             color=Properties.getParameter("help_color"))
     override fun clone() = EnumCompleter(attrMd)

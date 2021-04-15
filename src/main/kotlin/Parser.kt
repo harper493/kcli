@@ -1,21 +1,10 @@
-class HelpContext(val prefix: Iterable<String> = listOf()) {
-    fun nestedHelp(next: String) =
-        HelpContext(prefix.append(next))
-    fun helpFor(key: String, useDefault: Boolean = false) =
-        Properties.get(listOf("help").append(prefix).append(key))
-            ?: (if (useDefault) Properties.get("help", "no_help")!! else "")
-}
-
 class Parser (
     private var line: String
     ) {
     private var tokens: MutableList<String?> = mutableListOf()
     private var tokenStarts: MutableList<Int> = mutableListOf()
-    var helpText: String = ""
     private var lineIndex = 0
-    private var tokenIndex = -1
     private var finished = false
-    private var helpContext = HelpContext()
     enum class TokenType { ttName, ttNumber, ttInt, ttAny, ttExplicit, ttGeneral, ttAll, ttNonBlank }
     var curToken: String? = null
 
@@ -30,6 +19,7 @@ class Parser (
                   completer: CliCompleter=CliCompleter(),
                   type: Datatype?=null,
                   attribute: AttributeMetadata?=null,
+                  helpContext: HelpContext? = null,
                   endOk: Boolean=false): String? {
         val myDatatype = attribute?.type ?: type
         var escape = false
@@ -137,6 +127,7 @@ class Parser (
 
     fun getObjectName(initialExtras: KeywordList=KeywordList(),
                       finalExtras: KeywordList=KeywordList(),
+                      helpContext: HelpContext?=null,
                       missOk: Boolean=false,
                       initialPred: (AttributeMetadata)->Boolean={ true },
                       keywordAdder: (ClassMetadata, KeywordList)->Unit={ _, _ -> }): Pair<ObjectName, Keyword?> {
@@ -153,7 +144,7 @@ class Parser (
             }
             classKeys.addAbbreviations()
             keywordAdder(curMd, classKeys)
-            val classKey = findKeyword(classKeys, missOk=true)
+            val classKey = findKeyword(classKeys, helpContext=helpContext, missOk=true)
                 ?: if (missOk) break
                 else throw if (curToken==null) CliException("end of line found where object name or keyword expected")
                            else CliException("unknown collection or keyword '$curToken'")
@@ -180,11 +171,12 @@ class Parser (
     }
 
     fun findKeyword(keys: KeywordList,
+                    helpContext: HelpContext?=null,
                     missOk: Boolean=false,
                     endOk: Boolean=false,
                     errFn: ((String)->Unit)?=null): Keyword? {
         var result: Keyword? = null
-        val token = nextToken(completer=KeywordCompleter(keys), endOk=missOk || endOk)
+        val token = nextToken(completer=KeywordCompleter(keys), helpContext=helpContext, endOk=missOk || endOk)
         if ((token?:"").isNotEmpty()) {
             val exact = keys.exactMatch(token!!)
             if (exact!=null) {

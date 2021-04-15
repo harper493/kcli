@@ -83,6 +83,7 @@ color.error                                          = red
 color.show_heading                                   = magenta
 
 help.no_help                                         = Sorry, no help available here
+help.command.capture                                 = Control packet capture
 help.mode_command.exit                               = Save changes and exit this object
 help.base_command.exit                               = Exit the CLI
 help.mode_command.quit                               = Exit this object without saving changes

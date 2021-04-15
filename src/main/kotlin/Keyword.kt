@@ -8,8 +8,8 @@ data class Keyword(
     fun sameReferent(other: Keyword) =
         value==other.value && attribute==other.attribute && function==other.function
     fun asString() = value ?: ""
-    fun getHelp(hctx: HelpContext) =
-        help ?: attribute?.getHelp() ?: hctx.helpFor(key)
+    fun getHelp(hctx: HelpContext?) =
+        help ?: attribute?.getHelp() ?: hctx?.helpFor(key) ?: ""
 }
 
 class KeywordFn(

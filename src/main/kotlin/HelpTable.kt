@@ -2,12 +2,12 @@ class HelpTable(values: Map<String,String> = mapOf()) {
     val table = Table(showHeadings=false)
     val content = mutableMapOf<String,String>()
 
-    fun append(values: Map<String, String>) =
+    fun append(values: Map<String, String?>) =
         also {
             values.forEach{ append(it.key, it.value) }
         }
 
-    fun append(vararg values: Pair<String, String>) =
+    fun append(vararg values: Pair<String, String?>) =
         also {
             values.forEach{ append(it.first, it.second) }
         }
@@ -49,3 +49,14 @@ class HelpTable(values: Map<String,String> = mapOf()) {
         append(values)
     }
 }
+
+class HelpContext(val prefix: Iterable<String> = listOf()) {
+    fun nestedHelp(next: String) =
+        HelpContext(prefix.append(next))
+    fun helpFor(key: String, useDefault: Boolean = false) =
+        Properties.get(listOf("help").append(prefix).append(key))
+            ?: (if (useDefault) Properties.get("help", "no_help")!! else "")
+
+    constructor(term: String): this(listOf(term))
+}
+

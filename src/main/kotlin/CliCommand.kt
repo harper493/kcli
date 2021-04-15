@@ -36,6 +36,7 @@ class CliCommand(line: String) {
                 KeywordFn("traceroute"){ doTraceroute() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
+                helpContext=HelpContext("command"),
                 keywordAdder={ classMd, keywords ->
                     if (classMd.name != "configuration")
                         classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },

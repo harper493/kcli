@@ -121,6 +121,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
         }
         val (oname, terminator) = parser.getObjectName(initialExtras = initialExtras,
+            helpContext = HelpContext("show"),
             finalExtras = finalExtras,
             initialPred = { !it.name.startsWith("parameter") })
         classMd = oname.leafClass ?: CliMetadata.getClass("configuration")!!
@@ -144,7 +145,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         if (doColor) {
             classMd.getAttribute("color")?.let { selections.add(it) }
         }
-        (ColumnOrder.get(classMd.name)?.usedFields ?: listOf())
+        (ColumnOrder[classMd.name]?.usedFields ?: listOf())
             .map{ classMd.getAttribute(it)!! }
             .filter{ !it.isBrief }
             .forEach{ selections.add(it) }
@@ -501,11 +502,11 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val coll = Rest.getCollection("pointers/", mapOf("level" to "brief",
             "with" to "pointer=${objName.url}"))
         val header1 = "Reference count for '${objName.leafName}' is $refCount"
-        if (coll.isNotEmpty()) {
+        return if (coll.isNotEmpty()) {
             val header = makeHeading("$header1, ${coll.size} ${"reference".makePlural(coll.size)} found")
-            return showCollection(objName, coll, header=header)
+            showCollection(objName, coll, header=header)
         } else {
-            return StyledText("$header1, no references found",
+            StyledText("$header1, no references found",
                 color=Properties.getParameter("heading_color"))
         }
     }
