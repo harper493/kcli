@@ -16,9 +16,9 @@ open class CliCompleter(
                     StyledText(
                         subclassHelp(hctx)
                             ?: StyledText(
-                                Properties.get("help.no_help")!!,
-                                color = "help_help"
-                            )
+                                Properties.get("help.no_help")!!
+                            ),
+                        color = "help"
                     ),
                     StyledText()
                 )
@@ -83,10 +83,18 @@ class ObjectCompleter(
         } catch (exc: RestException) { listOf() }
     }
     override fun subclassHelp(hctx: HelpContext?) =
-        StyledText("Enter an object name of class ${objName.leafClass?.displayName}" +
-                " or one of: ${extras.keywords.joinToString(", ") { it.first }}"
-                    .orBlankIf{extras.isEmpty()},
-            color="help")
+        run {
+            val header = "Enter an object name of class ${objName.leafClass?.displayName}"
+            if (extras.isEmpty()) {
+                StyledText(header)
+            } else {
+                HelpTable(
+                    extras.keywords.map { it.first to it.second.getHelp(hctx) }.toMap(),
+                    header = header + " or one of:\n"
+                ).renderStyled()
+            }
+        }
+
     override fun clone() = ObjectCompleter(objName, extras)
 }
 

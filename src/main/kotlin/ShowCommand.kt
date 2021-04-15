@@ -492,7 +492,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     }
 
     private fun showPointers(): StyledText {
-        val (on, kw) = parser.getObjectName(initialExtras=KeywordList("url"))
+        val (on, kw) = parser.getObjectName(initialExtras=KeywordList("url"), wildOk=false)
         var objName = on
         if (kw?.asString()=="url") {
             objName = ObjectName(parser.nextToken(tokenType=Parser.TokenType.ttNonBlank)!!)

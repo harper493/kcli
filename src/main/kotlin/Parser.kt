@@ -128,6 +128,7 @@ class Parser (
     fun getObjectName(initialExtras: KeywordList=KeywordList(),
                       finalExtras: KeywordList=KeywordList(),
                       helpContext: HelpContext?=null,
+                      wildOk: Boolean=true,
                       missOk: Boolean=false,
                       initialPred: (AttributeMetadata)->Boolean={ true },
                       keywordAdder: (ClassMetadata, KeywordList)->Unit={ _, _ -> }): Pair<ObjectName, Keyword?> {
@@ -150,15 +151,22 @@ class Parser (
                            else CliException("unknown collection or keyword '$curToken'")
             val attrMd = classKey.attribute
             if (attrMd != null && attrMd.isCollection) {
-                val name = nextToken(endOk=true,
+                val name = nextToken(endOk=wildOk,
+                    helpContext=helpContext,
                     tokenType=TokenType.ttName,
                     completer=ObjectCompleter(result.copy().append(attrMd, ""),
-                        finalExtras))
-                val key = finalExtras.exactMatch(name?:"")
-                result.append(attrMd, if (key==null) name?:"" else "")
-                if (key!=null) {
-                    terminator = key
-                    break
+                        (if (wildOk) finalExtras else KeywordList())))
+                if (wildOk) {
+                    val key = finalExtras.exactMatch(name ?: "")
+                    result.append(attrMd, if (key == null) name ?: "" else "")
+                    if (key != null) {
+                        terminator = key
+                        break
+                    }
+                } else {
+                    CliException.throwIf("wildcard name '$name' not permitted here")
+                        { "*" in name!! }
+                    result.append(attrMd, name!!)
                 }
                 curMd = attrMd.containedClass!!
             } else {

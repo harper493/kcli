@@ -36,11 +36,14 @@ class CliCommand(line: String) {
                 KeywordFn("traceroute"){ doTraceroute() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
-                helpContext=HelpContext("command"),
+                helpContext=HelpContext(listOf("command"),
+                        { collName-> Properties.get("nav", collName)
+                            ?.let { "Create or modify objects in $it" }}),
                 keywordAdder={ classMd, keywords ->
                     if (classMd.name != "configuration")
                         classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },
-                missOk=true)
+                missOk=true,
+                wildOk=false)
             if (objName.isEmpty) {
                 if (key==null) {
                     throw CliException("unknown command or collection '${parser.curToken}'")
@@ -56,7 +59,6 @@ class CliCommand(line: String) {
     }
 
     private fun doModify(obj: ObjectName) {
-        CliException.throwIf("object name cannot use wildcards in modify command"){ obj.isWild }
         val exists = try { Rest.getJson(obj.url, mapOf("select" to "name")); true }
         catch (exc: RestException) {
             if (HttpStatus.notFound(exc.status)) false else throw exc
@@ -126,7 +128,7 @@ class CliCommand(line: String) {
 
     private fun doNo() {
         val extras = KeywordList(KeywordFn("server", { doNoServer() }))
-        val (objName, key) = parser.getObjectName(initialExtras = extras, missOk=true)
+        val (objName, key) = parser.getObjectName(initialExtras = extras, missOk=true, wildOk=false)
         if (objName.isEmpty) {
             if (key==null) {
                 throw CliException("unknown command or collection '${parser.curToken}'")
