@@ -1,3 +1,7 @@
+/**
+ * 
+ */
+
 class StyledText (
     private var text: String = "",
     private var color: String? = null,
