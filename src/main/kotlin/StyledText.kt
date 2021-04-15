@@ -94,20 +94,24 @@ class StyledText (
         text = text.justify(width)
     }
 
-    private fun renderColor(op: Int, color: String?): String {
-        val code = colors[color ?: ""]
-            ?: color?.let { Properties.getColor(color)?.let{ colors[it] } }
-        return if (code == null) "${escape}[${op + 1}m"
-        else "${escape}[${op}:5:${code}m"
-    }
+    private fun translateColor(color: String?): Int? =
+        colors[color ?: ""]
+            ?: color?.let{
+                Properties.getColor(color)
+                    ?.let {
+                        it.toIntOrNull() ?: translateColor(it)
+                    }
+            }
 
-    private fun renderStyle(): String {
-        return when (style) {
-            null, "" -> "${escape}[0m"
-            else -> return style!!.split(",")
+    private fun renderColor(op: Int, color: String?) =
+        translateColor(color)?.let{ "${escape}[${op}:5:${it}m" }
+            ?: "${escape}[${op + 1}m"
+
+    private fun renderStyle() =
+        style?.let {
+            style!!.split(",")
                 .joinToString("", transform = { "${escape}[${styles[it] ?: 0}m" })
-        }
-    }
+        } ?: "${escape}[0m"
 
     private fun renderPlain(): String =
         if (nestedText.isEmpty()) {

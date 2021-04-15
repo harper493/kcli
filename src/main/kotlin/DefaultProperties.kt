@@ -62,6 +62,7 @@ parameter.markup                                     = 1
 parameter.show_columns                               = 3
 parameter.label_column_width                         = 25
 parameter.value_column_width                         = 30
+parameter.heading_style                              = bold
 parameter.parameter_columns                          = 2
 parameter.parameter_label_width                      = 40
 parameter.parameter_value_width                      = 25
