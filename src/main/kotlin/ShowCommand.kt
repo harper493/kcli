@@ -73,7 +73,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val quantity = envelope["size"]?.toInt() ?: 0
         val result = StyledText(
             "$quantity matching ${classMd.name.makePlural(quantity)} found",
-            color = Properties.getParameter("result_color")
+            color = "result"
         )
         cli.outputln(result.render())
     }
@@ -121,7 +121,9 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
         }
         val (oname, terminator) = parser.getObjectName(initialExtras = initialExtras,
-            helpContext = HelpContext("show"),
+            helpContext = HelpContext(listOf("show"),
+                { collName-> Properties.get("nav", collName)
+                    ?.let { "Select objects from $it" }}),
             finalExtras = finalExtras,
             initialPred = { !it.name.startsWith("parameter") })
         classMd = oname.leafClass ?: CliMetadata.getClass("configuration")!!
@@ -409,8 +411,8 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 classMd.allBaseClasses.joinToString(", ") { it.name })
             val body = Table(
                 maxColumnWidth = Properties.getInt("parameter", "metadata_column_width"),
-                headingColor = Properties.getParameter("heading_color"),
-                stripeColors = Properties.getColors("even_row", "odd_row")
+                headingColor = "heading",
+                stripeColors = listOf("even_row", "odd_row")
             )
             classMd.ownAttributes.map { attr ->
                 body.append(
@@ -458,7 +460,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         } else {
             val name = param.attribute!!.displayName
             val value = params?.asDict()?.get(param.attribute!!.name)?.asString()
-            result = StyledText("$name = $value", color = Properties.getParameter("result_color"))
+            result = StyledText("$name = $value", color = "result")
         }
         return result
     }
@@ -486,7 +488,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         parser.checkFinished()
         return StyledText(Rest.getAttribute("configurations/running",
             "build_version") ?: "unknown",
-            color = Properties.getParameter("result_color"))
+            color = "result")
     }
 
     private fun showPointers(): StyledText {
@@ -507,7 +509,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             showCollection(objName, coll, header=header)
         } else {
             StyledText("$header1, no references found",
-                color=Properties.getParameter("heading_color"))
+                color="heading")
         }
     }
 
@@ -515,7 +517,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         val time = if (includeTime) " at ${getDateTime()}" else ""
         return StyledText(
             "$text$time\n",
-            color=Properties.getParameter("heading_color"),
+            color="heading",
             style="underline")
     }
 

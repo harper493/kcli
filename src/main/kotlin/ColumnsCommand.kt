@@ -29,7 +29,7 @@ class ColumnsCommand(val cli: CliCommand) {
         val heading = StyledText(
             "Columns for class '${CliMetadata.getClass(className)!!.displayName}'" +
                     " at ${getDateTime()}\n",
-            color = Properties.getParameter("heading_color"),
+            color = "heading",
             style = "underline"
         )
         val table = Table()

@@ -107,7 +107,7 @@ class CliCommand(line: String) {
     }
 
     private fun doSave() {
-        val values = readPartitionConfig(allowBoth=true)
+        val values = readPartitionConfig(helpContext=HelpContext("save"), allowBoth=true)
         parser.checkFinished()
         values["save_config"] = "1"
         Rest.put("configurations/running", values)
@@ -219,7 +219,9 @@ class CliCommand(line: String) {
         return values
     }
 
-    fun readPartitionConfig(getConfig:Boolean = false, allowBoth: Boolean = false): MutableMap<String,String> {
+    fun readPartitionConfig(helpContext: HelpContext = HelpContext(),
+                            getConfig:Boolean = false,
+                            allowBoth: Boolean = false): MutableMap<String,String> {
         val values = mutableMapOf<String,String>()
         val keywords = KeywordList("partition")
         if (getConfig) {
@@ -298,9 +300,9 @@ class CliCommand(line: String) {
 
     fun makeTable() = Table(
             maxColumnWidth = Properties.getInt("parameter", "show_collection_max_field_width"),
-            headingColor = Properties.getParameter("heading_color"),
+            headingColor = "heading",
             headingStyle = Properties.getParameter("heading_style"),
-            stripeColors = Properties.getColors("even_row", "odd_row"))
+            stripeColors = listOf("even_row", "odd_row"))
 
     fun output(text: String) = Cli.output(text)
     fun outputln(text: String) = Cli.outputln(text)

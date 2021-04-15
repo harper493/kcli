@@ -62,9 +62,9 @@ class Cli () {
     private fun showCollection(classMd: ClassMetadata, json: JsonObject): String {
         val table = Table(
             maxColumnWidth = 20, // Properties.getInt("parameter", "show_collection_max_field_width"),
-            headingColor = Properties.get("parameter", "heading_color"),
+            headingColor = "heading",
             headingStyle = Properties.get("parameter", "heading_style"),
-            stripeColors = listOfNotNull(Properties.get("color", "even_row"), Properties.get("color", "odd_row"))
+            stripeColors = listOf("even_row", "odd_row"))
         )
         if (json.asArray().isNotEmpty()) {
             for (obj in json.asArray().map { it.asDict() }) {

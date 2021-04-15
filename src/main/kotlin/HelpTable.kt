@@ -1,4 +1,5 @@
-class HelpTable(values: Map<String,String> = mapOf()) {
+class HelpTable(values: Map<String,String> = mapOf(),
+                val header: String? = null) {
     val table = Table(showHeadings=false)
     val content = mutableMapOf<String,String>()
 
@@ -19,9 +20,13 @@ class HelpTable(values: Map<String,String> = mapOf()) {
             }
         }
 
-    fun render() = complete().table.render()
+    fun renderStyled() =
+        if (header==null) complete().table.renderStyled()
+        else StyledText(
+            StyledText(header, color="help"),
+            complete().table.renderStyled())
 
-    fun renderStyled() = complete().table.renderStyled()
+    fun render() = renderStyled().render()
 
     private fun complete() =
         also {
@@ -30,10 +35,10 @@ class HelpTable(values: Map<String,String> = mapOf()) {
                 .forEach {
                     table.append(
                         "key", it.key,
-                        color = Properties.getParameter("help_key_color")
+                        color = "help_key"
                     ).append(
                         "help", it.value,
-                        color = Properties.getParameter("help_help_color")
+                        color = "help_help"
                     )
                 }
             table
@@ -50,13 +55,16 @@ class HelpTable(values: Map<String,String> = mapOf()) {
     }
 }
 
-class HelpContext(val prefix: Iterable<String> = listOf()) {
+class HelpContext(val prefix: Iterable<String> = listOf(),
+                  val fn: (String)->String?={ null }) {
     fun nestedHelp(next: String) =
         HelpContext(prefix.append(next))
     fun helpFor(key: String, useDefault: Boolean = false) =
-        Properties.get(listOf("help").append(prefix).append(key))
+        fn(key)
+            ?: Properties.get(listOf("help").append(prefix).append(key))
             ?: (if (useDefault) Properties.get("help", "no_help")!! else "")
 
     constructor(term: String): this(listOf(term))
+    constructor(fn: (String)->String?): this(prefix=listOf(), fn=fn)
 }
 

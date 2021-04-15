@@ -4,11 +4,17 @@ class StyledText (
     private var background: String? = null,
     private var style: String? = null
         ) {
-    constructor(input: Iterable<StyledText>): this() {
-        input.map{ append(it) }
+    constructor(input: Iterable<StyledText>,
+                color: String? = null,
+                background: String? = null,
+                style: String? = null): this(color=color, background=background, style=style) {
+        input.map{ append(it.underrideFrom(this)) }
     }
-    constructor(vararg input: StyledText): this() {
-        input.map{ append(it) }
+    constructor(vararg input: StyledText,
+                color: String? = null,
+                background: String? = null,
+                style: String? = null): this(color=color, background=background, style=style) {
+        input.map{ append(it.underrideFrom(this)) }
     }
     private val nestedText = mutableListOf<StyledText>()
     private val isNested get() = nestedText.isNotEmpty()
@@ -18,13 +24,29 @@ class StyledText (
 
     fun render() = renderer(this)
 
-    private fun append(st: StyledText) {
-        if (st.isNested) {
-            st.nestedText.map{ nestedText.add(it) }
-        } else {
-            nestedText.add(st.clone())
+    fun append(st: StyledText): StyledText =
+        also {
+            when {
+                isNested && st.isNested ->
+                    st.nestedText.map { nestedText.add(it.underrideFrom(this)) }
+                isNested ->
+                    nestedText.add(st.underrideFrom(this))
+                else -> {
+                    nestedText.add(clone())
+                    text = ""
+                    append(st.underrideFrom(this))
+                }
+            }
         }
-    }
+
+    fun append(text: String = "",
+               color: String? = null,
+               background: String? = null,
+               style: String? = null) =
+        also {
+            append(StyledText(text, color, background, style)
+                .underrideFrom(this))
+        }
 
     fun isEmpty() = text.isEmpty() && nestedText.isEmpty()
     fun isNotEmpty() = text.isNotEmpty() || nestedText.isNotEmpty()
@@ -45,35 +67,36 @@ class StyledText (
         newColor: String? = null,
         newBackground: String? = null,
         newStyle: String? = null
-    ): StyledText {
+    ) = also {
         color = color ?: newColor
         background = background ?: newBackground
         style = style ?: newStyle
-        return this
     }
+
+    fun underrideFrom(other: StyledText) =
+        underride(other.color, other.background, other.style)
 
     fun override(
         newColor: String? = null,
         newBackground: String? = null,
         newStyle: String? = null
-    ): StyledText {
+    ) = also {
         color = newColor ?: color
         background = newBackground ?: background
         style = newStyle ?: style
-        return this
     }
 
-    fun addStyle(newStyle: String) {
+    fun addStyle(newStyle: String) = also {
         style = addStyle(style, newStyle)
     }
 
-    fun justify(width: Int): StyledText {
+    fun justify(width: Int)= also {
         text = text.justify(width)
-        return this
     }
 
     private fun renderColor(op: Int, color: String?): String {
         val code = colors[color ?: ""]
+            ?: color?.let { Properties.getColor(color)?.let{ colors[it] } }
         return if (code == null) "${escape}[${op + 1}m"
         else "${escape}[${op}:5:${code}m"
     }
@@ -90,15 +113,17 @@ class StyledText (
         if (nestedText.isEmpty()) {
             text
         } else {
-            nestedText.map{ it.renderPlain() }.joinToString("")
+            nestedText.joinToString("") { it.renderPlain() }
         }
 
     private fun renderISO6429(): String =
         if (nestedText.isEmpty()) {
             "${renderStyle()}${renderColor(fgOp, color)}${renderColor(bgOp, background)}$text"
         } else {
-            nestedText.map{ it.renderISO6429() }.joinToString("")
+            nestedText.joinToString("") { it.renderISO6429() }
         }
+
+    fun renderStyled() = this
 
     companion object {
         private val colors = mapOf(
@@ -125,7 +150,6 @@ class StyledText (
             "even_label" to 28,
             "value" to 52,
             "even_value" to 22,
-            "heading" to 232
         )
 
         private val styles = mapOf(

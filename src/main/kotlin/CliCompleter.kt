@@ -15,8 +15,9 @@ open class CliCompleter(
                     StyledText("\n"),
                     StyledText(
                         subclassHelp(hctx)
-                            ?: StyledText(Properties.get("help.no_help")!!,
-                                color=Properties.getParameter("help_help_color")
+                            ?: StyledText(
+                                Properties.get("help.no_help")!!,
+                                color = "help_help"
                             )
                     ),
                     StyledText()
@@ -29,7 +30,7 @@ open class CliCompleter(
         return listOf()
     }
     open fun subclassHelp(hctx: HelpContext?): StyledText? =
-        helpText?.let{ StyledText(helpText, color=Properties.getParameter("help_help_color"))}
+        helpText?.let{ StyledText(helpText, color="help_help")}
     open fun clone() = CliCompleter(typeName, primaryHelp, backupHelp)
     fun setHelp(newHelp: String) = also { helpText = newHelp }
     fun addHelp(newHelp: String) = also { helpText += newHelp }
@@ -45,7 +46,8 @@ class KeywordCompleter(
             .append(
                 keywords.keywords
                     .map{ it.second }
-                    .removeDuplicates{ a,b -> b.key.startsWith(a.key) && a.attribute==b.attribute }
+                    .removeDuplicates{ a,b -> a.attribute==b.attribute
+                            && (b.key.startsWith(a.key) || a.key.makePlural()==b.key) }
                     .filter{ kw ->
                         kw.attribute==null
                                 || (kw.attribute.level <= Cli.helpLevel
@@ -84,7 +86,7 @@ class ObjectCompleter(
         StyledText("Enter an object name of class ${objName.leafClass?.displayName}" +
                 " or one of: ${extras.keywords.joinToString(", ") { it.first }}"
                     .orBlankIf{extras.isEmpty()},
-            color=Properties.getParameter("help_color"))
+            color="help")
     override fun clone() = ObjectCompleter(objName, extras)
 }
 
@@ -96,7 +98,7 @@ class EnumCompleter(
             .subclassComplete(line, token)
     override fun subclassHelp(hctx: HelpContext?) =
         StyledText("Enter one of: ${attrMd.range.split("|").joinToString(", ")}",
-            color=Properties.getParameter("help_color"))
+            color="help")
     override fun clone() = EnumCompleter(attrMd)
 }
 
