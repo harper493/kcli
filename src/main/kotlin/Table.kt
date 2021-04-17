@@ -112,37 +112,41 @@ open class Table (
         }
     }
 
-    private fun complete(): Table {
-        columns.values.map{it.padTo(depth)}
-        sortedCols = columns.values.sortedBy { it.position }
-        sortedCols.map { col ->
-            val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width)
-            else col.width
-            val s = if (col.maxWidth<0) -1 else 1
-            col.maxWidth = s * maxOf(w,
-                if (squishHeadings) wrap(col.heading, maxOf(w, 1)).map { it.length }.maxOrNull() ?: 0
-                else col.heading.length) }
-        headings = sortedCols.map{
-            StyledText(it.heading, headingColor, headingBackground, headingStyle)
-        }
-        sortedCols.map{ col->
-            val colorIterator = (stripeColors?.anyOrNull() ?: listOf(null)).cycle().iterator()
-            col.content.map{ it.underride(newColor=colorIterator.next()) }
-        }
-        if (showHeadings) {
-            wrappedHeadings = splitCells(headings, padAtEnd = false)
-            if (underlineHeadings && wrappedHeadings.isNotEmpty()) {
-                for (h in wrappedHeadings.last()) h.addStyle("underline")
+    private fun complete() = also {
+        if (sortedCols.isEmpty()) {
+            columns.values.map { it.padTo(depth) }
+            sortedCols = columns.values.sortedBy { it.position }
+            sortedCols.map { col ->
+                val w = if (col.maxWidth != 0) minOf(col.maxWidth.absoluteValue, col.width)
+                else col.width
+                val s = if (col.maxWidth < 0) -1 else 1
+                col.maxWidth = s * maxOf(
+                    w,
+                    if (squishHeadings) wrap(col.heading, maxOf(w, 1)).map { it.length }.maxOrNull() ?: 0
+                    else col.heading.length
+                )
             }
-        } else {
-            wrappedHeadings = listOf()
+            headings = sortedCols.map {
+                StyledText(it.heading, headingColor, headingBackground, headingStyle)
+            }
+            sortedCols.map { col ->
+                val colorIterator = (stripeColors?.anyOrNull() ?: listOf(null)).cycle().iterator()
+                col.content.map { it.underride(newColor = colorIterator.next()) }
+            }
+            if (showHeadings) {
+                wrappedHeadings = splitCells(headings, padAtEnd = false)
+                if (underlineHeadings && wrappedHeadings.isNotEmpty()) {
+                    for (h in wrappedHeadings.last()) h.addStyle("underline")
+                }
+            } else {
+                wrappedHeadings = listOf()
+            }
+            body = sortedCols.map {
+                it.content
+            }.transpose().map {
+                splitCells(it, padAtEnd = !verticalPadAbove)
+            }.flatten()
         }
-        body = sortedCols.map {
-            it.content
-        }.transpose().map {
-            splitCells(it, padAtEnd=!verticalPadAbove)
-        }.flatten()
-        return this
     }
 
     fun render(): String {

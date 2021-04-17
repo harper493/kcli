@@ -1,3 +1,7 @@
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.*
+
 class ShowCommand(val cli: CliCommand, val verb: String) {
     private val parser get() = cli.parser
     private var classMd: ClassMetadata = CliMetadata.getClass("configuration")!!
@@ -9,6 +13,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private var descending: Boolean? = null
     private var limit = 100
     private var level = ""
+    private var from: LocalDateTime? = null
+    private var until: LocalDateTime? = null
+    private var every: DateInterval? = null
+    private var forInterval: DateInterval? = null
     private val optionsMap = mutableMapOf<String, String>()
     private lateinit var objectName: ObjectName
     private val levels = listOf("brief", "full", "detail", "debug")
@@ -31,6 +39,10 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         KeywordFn("with") { doWith() },
         KeywordFn("top") { doTopBottom(true) },
         KeywordFn("bottom") { doTopBottom(false) },
+        KeywordFn("from") { doFrom() },
+        KeywordFn("every") { doEvery() },
+        KeywordFn("until") { doUntil() },
+        KeywordFn("for") { doFor() },
     )
 
     fun doShow() {
@@ -111,6 +123,22 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 )
             }
         cli.outputln(table.render())
+    }
+
+    private fun doFrom() {
+        from = getHistoryTime(parser)
+    }
+
+    private fun doUntil() {
+        until = getHistoryTime(parser)
+    }
+
+    private fun doEvery() {
+        every = DateInterval.read(parser)
+    }
+
+    private fun doFor() {
+        forInterval = DateInterval.read(parser)
     }
 
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
@@ -512,6 +540,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 color="heading")
         }
     }
+
 
     private fun makeHeading(text: String, includeTime: Boolean=true): StyledText {
         val time = if (includeTime) " at ${getDateTime()}" else ""

@@ -7,6 +7,7 @@ data class Keyword(
     operator fun invoke() = function?.invoke()
     fun sameReferent(other: Keyword) =
         value==other.value && attribute==other.attribute && function==other.function
+    fun isFunction() = function != null
     fun asString() = value ?: ""
     fun getHelp(hctx: HelpContext?) =
         help ?: attribute?.getHelp() ?: hctx?.helpFor(key) ?: ""
@@ -89,5 +90,8 @@ class KeywordList()
     constructor(attrs: Iterable<AttributeMetadata>,
                 pred: (AttributeMetadata)->Boolean={ true }) : this() {
         addAttributes(attrs, pred=pred)
+    }
+    companion object {
+
     }
 }

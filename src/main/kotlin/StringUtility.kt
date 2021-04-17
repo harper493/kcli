@@ -294,5 +294,3 @@ Get a unique id for something
 
 fun<T> T.adr() = Integer.toHexString(System.identityHashCode(this))
 
-
-

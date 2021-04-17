@@ -39,13 +39,13 @@ data class ClassMetadata(
 
     fun setContainer(parentMd: AttributeMetadata?) {
         container = parentMd
-        if (container == null) {
-            isRoot = true
-        }
-        for (a in collections.filter{!it.isAlternate}) {
-            CliMetadata.getClass(a.typeName)?.setContainer(a)
-        }
+        isRoot = (parentMd == null)
+        collections.filter { !it.isAlternate }
+            .forEach { attr ->
+                CliMetadata.getClass(attr.typeName)?.setContainer(attr)
+            }
     }
+
     fun completeClassData(): Boolean {
         if (baseClassNames.isNotEmpty() && baseClasses.isEmpty()) {
             baseClasses = baseClassNames.mapNotNull { CliMetadata.getClass(it) }
