@@ -1,5 +1,8 @@
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalUnit
 import java.util.*
 
 class ShowCommand(val cli: CliCommand, val verb: String) {
@@ -51,28 +54,32 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             println(result.render())
             return
         }
-        makeOptions()
-        parser.checkFinished()
-        var (envelope, coll) = Rest.get(objectName, options = optionsMap)
-        if (coll.size == 0) {
-            throw CliException("no matching objects found")
-        } else if (objectName.isWild || coll.size > 1) {
-            cli.outputln(showCollection(objectName, coll).render())
-            var start = 0
-            while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
-                && run {
-                    cli.output(StyledText().render())
-                    true
-                }
-                && readYesNo("Show more", defaultNo = false, allowQuit = true)
-            ) {
-                start += pageSize
-                optionsMap["start"] = "$start"
-                coll = Rest.getCollection(objectName, options = optionsMap)
-                cli.outputln(showCollection(objectName, coll).render())
-            }
+        if (from ?: until ?: every ?: forInterval != null) {
+            doShowHistory()
         } else {
-            cli.outputln(showOne(coll.first()!!).render())
+            makeOptions()
+            parser.checkFinished()
+            var (envelope, coll) = Rest.get(objectName, options = optionsMap)
+            if (coll.size == 0) {
+                throw CliException("no matching objects found")
+            } else if (objectName.isWild || coll.size > 1) {
+                cli.outputln(showCollection(objectName, coll).render())
+                var start = 0
+                while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
+                    && run {
+                        cli.output(StyledText().render())
+                        true
+                    }
+                    && readYesNo("Show more", defaultNo = false, allowQuit = true)
+                ) {
+                    start += pageSize
+                    optionsMap["start"] = "$start"
+                    coll = Rest.getCollection(objectName, options = optionsMap)
+                    cli.outputln(showCollection(objectName, coll).render())
+                }
+            } else {
+                cli.outputln(showOne(coll.first()!!).render())
+            }
         }
     }
 
@@ -127,18 +134,120 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
 
     private fun doFrom() {
         from = getHistoryTime(parser)
+        parser.findKeyword(finalExtras, endOk = true)
     }
 
     private fun doUntil() {
         until = getHistoryTime(parser)
+        parser.findKeyword(finalExtras, endOk = true)
     }
 
     private fun doEvery() {
         every = DateInterval.read(parser)
+        parser.findKeyword(finalExtras, endOk = true)
     }
 
     private fun doFor() {
         forInterval = DateInterval.read(parser)
+        parser.findKeyword(finalExtras, endOk = true)
+    }
+
+    private fun doShowHistory() {
+        val now = LocalDateTime.now().atHour()
+        CliException.throwIf("'every' option requires a single object"){
+            objectName.isWild && every != null
+        }
+        when {
+            from == null && until == null && forInterval == null ->
+                throw CliException("history request requires at least one of 'from', 'until' and 'for'")
+            from != null && until == null && forInterval == null ->
+                until = now
+            from != null && until != null && forInterval == null ->
+                CliException.throwIf("'from' time must be earlier than 'until' time)")
+                { from!! >= until!! }
+            from != null && until == null && forInterval != null ->
+                until = forInterval!!.addTo(from!!)
+            from != null && until != null && forInterval != null ->
+                throw CliException("only two of 'from', 'until' and 'for' permitted")
+            from == null && until != null && forInterval == null ->
+                throw CliException("must specify 'from' or 'for' with 'until'")
+            from == null && until != null && forInterval != null ->
+                from = forInterval!!.subtractFrom(until!!)
+            from == null && until == null && forInterval != null -> {
+                from = forInterval!!.subtractFrom(now)
+                until = now
+            }
+        }
+        selections.filter { !it.isHistory }
+            .let {
+                CliException
+                    .throwIf("attributes ${it.joinToString(", ")} are not available in history")
+                    { it.isNotEmpty() }
+            }
+        if (!onlySelect) {
+            objectName.leafClass?.attributes
+                ?.filter{ it.isBrief && it.isHistory && it.total!="none" }
+                ?.forEach { selections.add(it) }
+            onlySelect = true
+        }
+        parser.checkFinished()
+        makeOptions()
+        if (every!=null || !objectName.isWild) {
+            optionsMap["history_points"] = "1"
+        }
+        var (_, coll) = Rest.get(objectName, options=optionsMap)
+        if (every==null && objectName.isWild) {
+            cli.outputln(StyledText("History from ${from!!.toNiceString()} until ${until!!.toNiceString()}", color = "heading"))
+            cli.outputln(showCollection(objectName, coll).render())
+        } else {
+            doShowHistoryPoints(coll)
+        }
+    }
+
+    private fun doShowHistoryPoints(coll: CollectionData) {
+        if (every == null) {
+            every =
+                with(from!!.until(until!!, ChronoUnit.HOURS)) {
+                    when {
+                        this < 48 -> DateInterval(1, IntervalType.hour)
+                        this <= 24 * 7 -> DateInterval(6, IntervalType.hour)
+                        this <= 24 * 32 -> DateInterval(1, IntervalType.day)
+                        else -> DateInterval(1, IntervalType.week)
+                    }
+                }
+        }
+        val header = StyledText("History for ${objectName.describe()} "
+                + "from ${from!!.toNiceString()} until ${until!!.toNiceString()}\n", color = "heading")
+        val table = cli.makeTable()
+        if (coll.isEmpty()) {
+            if (Rest.getObject(objectName.url) == null ) {
+                throw CliException("no matching objects found for ${objectName.describe()}")
+            } else {
+                throw CliException("no data found for ${objectName.describe()} for period ${from!!.toNiceString()} to ${until!!.toNiceString()}")
+            }
+
+        }
+        val values = coll.first()!!.attributes.values
+            .map{ it.attributeMd to it.historyReader() }
+        var time = from!!
+        while (time < until) {
+            table.append("Time", time.toNiceString())
+            values.filter{ !it.first.suppressed && it.first.name!="name" }
+                .forEach{ table.append(it.first.name,
+                    it.first.reformat(it.second.getAt(time.toUnix())?.toString() ?: "0"))}
+            time = every!!.addTo(time)
+        }
+        val columnOrder = ColumnOrder[classMd.name]
+        table.setColumns { name, col ->
+            val attrMd = classMd.getAttribute(name)
+            col.position =
+                if (name=="Time") -1
+                else columnOrder?.getPosition(attrMd?.name ?: "") ?: 0
+            col.heading = cli.abbreviateHeader((attrMd?.displayName ?: makeNameHuman(name)))
+        }
+        val styled = table.renderStyled()
+        cli.outputln(StyledText(header, StyledText(), styled))
+
     }
 
     private fun getShowInput(exclude: Iterable<String> = listOf()) {
@@ -172,7 +281,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 optionsMap[option] = value
             }
         }
-        if (doColor) {
+        if (doColor && from==null) {
             classMd.getAttribute("color")?.let { selections.add(it) }
         }
         (ColumnOrder[classMd.name]?.usedFields ?: listOf())
@@ -209,6 +318,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 else -> ">$order"
             }
         )
+        addOption("from", from?.toString() ?: "")
         addOption("limit", "${minOf(limit, pageSize).takeIf { it > 0 } ?: pageSize}")
     }
 
@@ -353,7 +463,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 table.append(elem.attrMd.containedClass?.displayName ?: "", elem.name, color)
             }
             for ((name, attributeData) in obj) {
-                if (Properties.get("suppress", classMd.name, name) == null && name != "name") {
+                if (!attributeData.attributeMd.suppressed && name != "name") {
                     table.append(name, attributeData.displayValue, color = color)
                 }
             }

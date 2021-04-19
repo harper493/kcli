@@ -39,6 +39,7 @@ abstract class Datatype (
     open fun hasNull(): Boolean = false
     open fun getClass(): ClassMetadata? = null
     open fun isNumeric(): Boolean = false
+    open fun isCounter(): Boolean = false
     open fun reformat(value: String): String = reformatter(value)
     fun validateCheck(value: String) =
         if (validate(value)) value
@@ -295,6 +296,7 @@ open class TypedDatatype<T: Comparable<T>>(
     override fun convert(s: String): GenericVariable {
         return gvFactory(s)
     }
+    override fun isCounter() = "counter" in properties
 }
 
 open class StringDatatype(
@@ -341,7 +343,8 @@ open class IntDatatype(
     converter,
     { IntGenericVariable( toInt(it)) },
     wrapper,
-    completer = CliCompleter(name, description, "An integer")
+    completer = CliCompleter(name, description, "An integer"),
+    reformatter = { formatter(it) }
 ) {
     override fun validate(value: String) =
         if (validator.isNull) conversionValidator(value, this)
@@ -353,7 +356,7 @@ open class IntDatatype(
 open class FloatDatatype(
     name: String,
     description: String = name,
-    formatter: (value: Any) -> String = { (it.toString().toFloatOrNull() ?: 0).toString() },
+    formatter: (value: Any) -> String = { "%.3f".format((it.toString().toFloatOrNull() ?: 0)) },
     validator: Validator=Validator(),
     unit: String = "",
     properties: String = "",
@@ -371,7 +374,8 @@ open class FloatDatatype(
     converter,
     gvFactory,
     wrapper,
-    completer = completer
+    completer = completer,
+    reformatter = { formatter(it) }
 ) {
     override fun validate(value: String) =
         if (validator.isNull) conversionValidator(value, this)

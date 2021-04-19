@@ -1,6 +1,5 @@
-import java.time.LocalDateTime
-import java.time.Month
-import java.time.DayOfWeek
+import java.time.*
+import java.time.temporal.ChronoUnit
 
 /*
 * This file contains miscellaneous classes, functions etc relating to time
@@ -17,7 +16,21 @@ fun LocalDateTime.atMidnight() =
     withHour(0).atHour()
 
 fun LocalDateTime.atHour() =
-    withMinute(0).withSecond(0).withNano(1)
+    withMinute(0).withSecond(0).withNano(0)
+
+fun LocalDateTime.toNiceString() =
+    toString().replace('T', ' ')
+
+fun LocalDateTime.toUnix() =
+    run {
+        val utcZone = ZoneId.of("UTC+0")
+        val utcTime = ZonedDateTime.ofLocal(this,
+            utcZone,
+            ZoneOffset.ofHours(0))
+        val base = ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, utcZone)
+        val delta = base.until(utcTime, ChronoUnit.SECONDS)
+        delta * 1000L
+    }
 
 fun KeywordList.Companion.months(fn: (Month)->Unit) =
     KeywordList(*Month.values().map {
@@ -65,7 +78,6 @@ class DateInterval(
             val keys = KeywordList(*IntervalType.values().map {
                 KeywordFn(it.name.toLowerCase().makePlural(), { interval = it })
             }.toTypedArray())
-            println(n)
             with (parser.findKeyword(keys, missOk=(n==null), endOk=endOk)) {
                 if (this==null) {
                     nn = parser.nextToken(tokenType=Parser.TokenType.ttInt, endOk=endOk)
@@ -120,7 +132,7 @@ fun getHistoryTime(parser: Parser) =
         var day = -1
         with (parser.findKeyword(KeywordList.days({ day = it.value })
             .add(KeywordList.months{ month = it.value })
-            .addKeys("yesterday", "last"), missOk=true)) {
+            .addKeys("yesterday", "today", "last"), missOk=true)) {
             if (this?.isFunction() ?: false) {
                 this!!()
             }
@@ -146,6 +158,8 @@ fun getHistoryTime(parser: Parser) =
                 }
                 this.asString()=="yesterday" ->
                     midnight.minusDays(1)
+                this.asString()=="today" ->
+                    midnight
                 this.asString()=="last" ->
                     DateInterval.read(parser, 1)!!.subtractFrom(now)
                 else ->

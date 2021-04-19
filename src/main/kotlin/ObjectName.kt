@@ -34,6 +34,9 @@ class ObjectName(val newUrl: String="") {
         if (newUrl.isNotEmpty()) parse(newUrl)
     }
 
+    fun describe() =
+        "${leafClass?.displayName} '$leafName'"
+
     fun append(attrMd: AttributeMetadata, name: String): ObjectName {
         if (isEmpty && attrMd.myClass != CliMetadata.getPolicyManagerMd()) {
             elements.add(Element(CliMetadata.getAttribute("policy_manager", "configurations")!!,

@@ -27,10 +27,12 @@ open class AttributeMetadata(
     val isEnum: Boolean get() = typeName=="enum"
     val isBrief get() = level <= ShowLevel.brief
     val isNoShow get() = "noshow" in natures
+    val isHistory get() = "history" in natures
     val relativeUrl: String = getMd("relative_url")
     val typeName: String = getMd("type_name")
     val containedClass get() = CliMetadata.getClass(typeName)
     val range get() = getMd("range")
+    val suppressed by lazy { Properties.get("suppress", myClass.name, name)!=null }
     val level by lazy {
         ShowLevel.values().find{ it.name==getMd("level") } ?: ShowLevel.detail
     }

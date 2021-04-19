@@ -10,8 +10,11 @@ class ObjectData(val classMd: ClassMetadata) {
     fun getValue(attributeName: String) = attributes[attributeName]?.value
     fun getInt(attributeName: String) = attributes[attributeName]?.toInt()
     fun getFloat(attributeName: String) = attributes[attributeName]?.toFloat()
+    operator fun iterator() = attributes.iterator()
+    fun filter(pred: (AttributeData)->Boolean) = attributes.values.filter(pred)
 
     fun load(json: JsonObject): ObjectData {
+        val histories = mutableMapOf<String, JsonObject>()
         for ( (name, value) in json.asDict()) {
             val attrMd = classMd.getAttribute(name)
             if (name=="link") {
@@ -21,15 +24,19 @@ class ObjectData(val classMd: ClassMetadata) {
                     add(AttributeData(attrMd, value.asString()))
                 } else if (value.isDict()) {
                     val innerValue = value.asDict()["name"]
-                    if (innerValue?.isString() ?: false) {
-                        add(AttributeData(attrMd, innerValue!!.asString()))
+                    if (innerValue?.isString() == true) {
+                        add(AttributeData(attrMd, innerValue.asString()))
                     }
                 }
+            } else if (name.startsWith("_history_")) {
+                histories[name.removePrefix("_history_")] = value
             }
         }
+        histories.forEach{
+            (name, value) ->
+                attributes[name]?.loadHistory(value)
+            }
         return this
     }
 
-    operator fun iterator() = attributes.iterator()
-    fun filter(pred: (AttributeData)->Boolean) = attributes.values.filter(pred)
 }
