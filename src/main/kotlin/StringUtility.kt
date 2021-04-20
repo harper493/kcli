@@ -294,3 +294,15 @@ Get a unique id for something
 
 fun<T> T.adr() = Integer.toHexString(System.identityHashCode(this))
 
+/**
+ * Replace regex according to given pattern
+ */
+
+fun String.regexReplace(rxstr: String,
+                        transform: (MatchResult)->String,
+                        option: RegexOption?=null): String =
+    let {
+        (if (option==null) Regex(rxstr) else Regex(rxstr, option))
+            .replace(it, transform)
+    }
+

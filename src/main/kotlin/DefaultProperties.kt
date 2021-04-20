@@ -122,6 +122,7 @@ help.*.by                                            = Select attribute to be us
 help.*.select                                        = Choose attributes to be shown
 help.*.only                                          = Show only selected attributes
 help.*.with                                          = Filter objects based on attribute values
+help.help                                            = Help!
 
 format.name_width                                    = 25
 format.value_width                                   = 25

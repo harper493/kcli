@@ -20,12 +20,17 @@ class Properties(
     fun getFloat(vararg keys: String, default: Double = 0.0) = get(*keys)?.toDoubleOrNull() ?: default
     fun loadFile(filename: String): Properties =
         also {
-            readFileOrEmpty(filename).split("\n")
-                .forEach { loadOneLine(it) }
+            load(readFileOrEmpty(filename))
         }
     fun load(content: String) =
         also {
-            content.split("\n")
+            content
+                .regexReplace("\\\\\n\\s*", { " " }, RegexOption.MULTILINE)
+                .regexReplace("""\\u([0-9a-eA-E]{4})""", { it.groupValues[1].toInt(16).toChar().toString() })
+                .replace("\\n", "\n")
+                .replace("\\", "")
+                .split("\n")
+                .filter{ !it.startsWith("#") }
                 .forEach { loadOneLine(it) }
         }
 

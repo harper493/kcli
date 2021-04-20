@@ -32,6 +32,9 @@ fun LocalDateTime.toUnix() =
         delta * 1000L
     }
 
+fun LocalDateTime.setTime(time: LocalTime) =
+    withHour(time.hour).withMinute(time.minute)
+
 fun KeywordList.Companion.months(fn: (Month)->Unit) =
     KeywordList(*Month.values().map {
         KeywordFn(it.name.toLowerCase(), { fn(it) })
@@ -96,10 +99,10 @@ class DateInterval(
 Parse a date and time
  */
 
-fun String.parseDateTime(value: String, pastOnly: Boolean = false): LocalDateTime {
+fun String.parseDateTime(pastOnly: Boolean = false): LocalDateTime {
     val now = LocalDateTime.now()
     val rx = Regex("""(?:(?:(\d+)-)?(\d+)-(\d+)T?)?(?:(\d+):(\d+))?""")
-    with(rx.matchEntire(value)?.groupValues) {
+    with (rx.matchEntire(this)?.groupValues) {
         this?.let {
             val year = it[1].toIntOrNull() ?: now.year
             val month = it[2].toIntOrNull() ?: now.month.value
@@ -115,13 +118,23 @@ fun String.parseDateTime(value: String, pastOnly: Boolean = false): LocalDateTim
                         return t1.minusYears(1)
                     }
                 } else {
-                    throw CliException("time $value must be in the past")
+                    throw CliException("time $this must be in the past")
                 }
             }
             return t1
         }
     }
-    throw CliException("invalid time '$value' should be in form yyyy-mm-dd[Thh:mm]")
+    throw CliException("invalid time '$this' should be in form yyyy-mm-dd[Thh:mm]")
+}
+
+fun String.parseTime(): LocalTime {
+    val rx = Regex("""(\d+):(\d+)""")
+    with (rx.matchEntire(this)?.groupValues) {
+        this?.let {
+            return LocalTime.of(it[1].toInt(), it[2].toInt())
+        }
+    }
+    throw CliException("invalid time '$this' should be in form hh:mm")
 }
 
 fun getHistoryTime(parser: Parser) =
@@ -143,7 +156,16 @@ fun getHistoryTime(parser: Parser) =
                     if (n != null) {
                         DateInterval.read(parser, n)!!.subtractFrom(now)
                     } else {
-                        t.parseDateTime(t, pastOnly = true)
+                        val result = t.parseDateTime(pastOnly = true)
+                        val t2 = parser.nextToken(tokenType = Parser.TokenType.ttNonBlank, endOk=true)
+                        try {
+                            t2?.let{
+                                result.setTime(it.parseTime())
+                            } ?: result
+                        } catch (exc: Exception) {
+                            parser.backup()
+                            result
+                        }
                     }
                 }
                 day >= 0 -> {
