@@ -11,7 +11,7 @@ class Args() {
         "-s", "--server",
         help = "specify server as username:password@address"
     ).default("")
-    val output by parser.storing("-o", "--output", help = "specify output file")
+    val output: String by parser.storing("-o", "--output", help = "specify output file")
         .default("")
     val color by parser.flagging("-c", "--color", help = "force color in output")
     val noColor by parser.flagging("-C", "--nocolor", help = "disable color in output")

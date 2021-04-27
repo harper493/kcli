@@ -21,7 +21,7 @@ fun LocalDateTime.atHour() =
 fun LocalDateTime.toNiceString() =
     toString().replace('T', ' ')
 
-fun LocalDateTime.toUnix() =
+fun LocalDateTime.toUnix(): Long =
     run {
         val utcZone = ZoneId.of("UTC+0")
         val utcTime = ZonedDateTime.ofLocal(this,
@@ -35,6 +35,11 @@ fun LocalDateTime.toUnix() =
 fun LocalDateTime.setTime(time: LocalTime) =
     withHour(time.hour).withMinute(time.minute)
 
+fun unixToLocalDateTime(unixTime: Long) =
+    LocalDateTime.ofEpochSecond(unixTime/1000,
+        (unixTime % 1000L).toInt(),
+        ZoneId.systemDefault().getRules().getOffset(Instant.now()))
+
 fun KeywordList.Companion.months(fn: (Month)->Unit) =
     KeywordList(*Month.values().map {
         KeywordFn(it.name.toLowerCase(), { fn(it) })
@@ -46,6 +51,7 @@ fun KeywordList.Companion.days(fn: (DayOfWeek)->Unit) =
     }.toTypedArray())
 
 enum class IntervalType {
+    minute,
     hour,
     day,
     week,
@@ -57,20 +63,47 @@ class DateInterval(
     val what: IntervalType
 ) {
 
-    fun subtractFrom(dt: LocalDateTime) =
-        when (what) {
-            IntervalType.hour -> dt.atHour().minusHours(howMany.toLong())
-            IntervalType.day -> dt.atMidnight().minusDays(howMany.toLong())
-            IntervalType.week -> dt.atMidnight().minusDays(howMany.toLong() * 7)
-            IntervalType.month -> dt.atMidnight().minusMonths(howMany.toLong())
-        }
     fun addTo(dt: LocalDateTime) =
-        when (what) {
-            IntervalType.hour -> dt.atHour().plusHours(howMany.toLong())
-            IntervalType.day -> dt.atMidnight().plusDays(howMany.toLong())
-            IntervalType.week -> dt.atMidnight().plusDays(howMany.toLong() * 7)
-            IntervalType.month -> dt.atMidnight().plusMonths(howMany.toLong())
+        with (howMany.toLong()) {
+            when (what) {
+                IntervalType.minute -> dt.plusMinutes(this)
+                IntervalType.hour -> dt.atHour().plusHours(this)
+                IntervalType.day -> dt.atMidnight().plusDays(this)
+                IntervalType.week -> dt.atMidnight().plusDays(this * 7)
+                IntervalType.month -> dt.atMidnight().plusMonths(this)
+            }
         }
+    fun subtractFrom(dt: LocalDateTime) =
+        with (howMany.toLong()) {
+            when (what) {
+                IntervalType.minute -> dt.minusMinutes(this)
+                IntervalType.hour -> dt.atHour().minusHours(this)
+                IntervalType.day -> dt.atMidnight().minusDays(this)
+                IntervalType.week -> dt.atMidnight().minusDays(this * 7)
+                IntervalType.month -> dt.atMidnight().minusMonths(this)
+            }
+        }
+    fun addTo(time: Long) =
+        with (howMany.toLong()) {
+            when (what) {
+                IntervalType.minute -> time + this * 60000
+                IntervalType.hour -> time + this * 60 * 60000
+                IntervalType.day -> time + this * 24 * 60 * 60000
+                IntervalType.week -> time + this * 7 * 24 * 60 * 60000
+                IntervalType.month -> time + this * 31 *24 * 60 * 60000
+            }
+        }
+    fun subtractFrom(time: Long) =
+        with (howMany.toLong()) {
+            when (what) {
+                IntervalType.minute -> time - this * 60000
+                IntervalType.hour -> time - this * 60 * 60000
+                IntervalType.day -> time - this * 24 * 60 * 60000
+                IntervalType.week -> time - this * 7 * 24 * 60 * 60000
+                IntervalType.month -> time - this * 31 *24 * 60 * 60000
+            }
+        }
+
     override fun toString() =
         "$howMany ${what.toString().makePlural(howMany)}"
 

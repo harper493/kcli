@@ -1,6 +1,8 @@
 class ObjectData(val classMd: ClassMetadata) {
     val attributes: MutableMap<String, AttributeData> = mutableMapOf()
     lateinit var name: ObjectName; private set
+    var hasHistory = false; private set
+    val historyValues = mutableListOf<AttributeData.HistoryReader>()
     val url get() = name.url
 
     operator fun get(attributeName: String): AttributeData = attributes[attributeName]
@@ -30,13 +32,47 @@ class ObjectData(val classMd: ClassMetadata) {
                 }
             } else if (name.startsWith("_history_")) {
                 histories[name.removePrefix("_history_")] = value
+                hasHistory = true
             }
         }
-        histories.forEach{
-            (name, value) ->
-                attributes[name]?.loadHistory(value)
+        histories
+            .map{ attributes[it.key] to it.value }
+            .filter{ it.first!=null }
+            .forEach { (attr, value) ->
+                attr!!.loadHistory(value)
+                historyValues.add(attr.historyReader())
             }
         return this
     }
+
+    class HistoryValue(val obj: ObjectData,
+                       val requestedTime: Long) {
+        var attributes: Map<String, AttributeData>? = null; private set
+        var actualTime: Long = 0L; private set
+        val isValid get() = attributes!=null
+
+        init {
+            var rawValues = obj.historyValues.map { it.getAt(requestedTime) }.filterNotNull()
+            if (rawValues.isEmpty()) {
+                obj.historyValues.firstOrNull()?.nextTime()?.let { goodTime ->
+                    rawValues = obj.historyValues
+                        .map { it.getAt(goodTime) }
+                        .filterNotNull()
+                }
+            }
+            if (rawValues.isNotEmpty()) {
+                actualTime = rawValues.firstOrNull()?.time ?: 0
+                attributes = rawValues.map {
+                    it.attributeMd.name to
+                            AttributeData(
+                                it.attributeMd,
+                                it.attributeMd.reformat(it.value.toString())
+                            )
+                }.toMap()
+            }
+        }
+    }
+
+    fun getHistoryValue(requestedTime: Long) = HistoryValue(this, requestedTime)
 
 }

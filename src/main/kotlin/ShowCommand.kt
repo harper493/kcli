@@ -191,20 +191,27 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             onlySelect = true
         }
         parser.checkFinished()
-        makeOptions()
         if (every!=null || !objectName.isWild) {
-            optionsMap["history_points"] = "1"
-        }
-        var (_, coll) = Rest.get(objectName, options=optionsMap)
-        if (every==null && objectName.isWild) {
-            cli.outputln(StyledText("History from ${from!!.toNiceString()} until ${until!!.toNiceString()}", color = "heading"))
-            cli.outputln(showCollection(objectName, coll).render())
+            doShowHistoryPoints()
         } else {
-            doShowHistoryPoints(coll)
+            makeOptions()
+            var (_, coll) = Rest.get(objectName, options = optionsMap)
+            cli.outputln(
+                StyledText(
+                    "History from ${from!!.toNiceString()} until ${until!!.toNiceString()}",
+                    color = "heading"
+                )
+            )
+            cli.outputln(showCollection(objectName, coll).render())
         }
     }
 
-    private fun doShowHistoryPoints(coll: CollectionData) {
+    private fun doShowHistoryPoints() {
+        var time = from!!.toUnix()
+        from = from?.minusMinutes(1)
+        makeOptions()
+        optionsMap["history_points"] = "1"
+        var (_, coll) = Rest.get(objectName, options = optionsMap)
         if (every == null) {
             every =
                 with(from!!.until(until!!, ChronoUnit.HOURS)) {
@@ -225,17 +232,19 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
             } else {
                 throw CliException("no data found for ${objectName.describe()} for period ${from!!.toNiceString()} to ${until!!.toNiceString()}")
             }
-
         }
-        val values = coll.first()!!.attributes.values
-            .map{ it.attributeMd to it.historyReader() }
-        var time = from!!
-        while (time < until) {
-            table.append("Time", time.toNiceString())
-            values.filter{ !it.first.suppressed && it.first.name!="name" }
-                .forEach{ table.append(it.first.name,
-                    it.first.reformat(it.second.getAt(time.toUnix())?.toString() ?: "0"))}
-            time = every!!.addTo(time)
+        val untilUnix = until!!.toUnix()
+        while (time < untilUnix) {
+            val historyValue = coll.first()!!.getHistoryValue(time)
+            if (!historyValue.isValid) {
+                break
+            }
+            table.append("Time", unixToLocalDateTime(historyValue.actualTime).toNiceString())
+            historyValue.attributes!!
+                .map{ it.value }
+                .filter{ !it.attributeMd.suppressed && it.name!="name" }
+                .forEach{ table.append(it.name, it.value) }
+            time = every!!.addTo(historyValue.actualTime)
         }
         val columnOrder = ColumnOrder[classMd.name]
         table.setColumns { name, col ->
