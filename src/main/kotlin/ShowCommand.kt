@@ -1,11 +1,7 @@
-import java.time.Duration
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
-import java.util.*
 
-class ShowCommand(val cli: CliCommand, val verb: String) {
+class ShowCommand(val cli: CliCommand) {
     private val parser get() = cli.parser
     private var classMd: ClassMetadata = CliMetadata.getClass("configuration")!!
     private val selections = mutableListOf<AttributeMetadata>()
@@ -19,6 +15,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     private var from: LocalDateTime? = null
     private var until: LocalDateTime? = null
     private var every: DateInterval? = null
+    private var raw: Boolean = false
     private var forInterval: DateInterval? = null
     private val optionsMap = mutableMapOf<String, String>()
     private lateinit var objectName: ObjectName
@@ -46,6 +43,7 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         KeywordFn("every") { doEvery() },
         KeywordFn("until") { doUntil() },
         KeywordFn("for") { doFor() },
+        KeywordFn("raw") { doRaw() },
     )
 
     fun doShow() {
@@ -152,10 +150,15 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
         parser.findKeyword(finalExtras, endOk = true)
     }
 
+    private fun doRaw() {
+        raw = true
+        parser.findKeyword(finalExtras, endOk = true)
+    }
+
     private fun doShowHistory() {
         val now = LocalDateTime.now().atHour()
-        CliException.throwIf("'every' option requires a single object"){
-            objectName.isWild && every != null
+        CliException.throwIf("'every' and 'raw' options requires a single object"){
+            objectName.isWild && (every != null || raw)
         }
         when {
             from == null && until == null && forInterval == null ->
@@ -207,12 +210,12 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
     }
 
     private fun doShowHistoryPoints() {
-        var time = from!!.toUnix()
+        var time = if (raw) 0L else from!!.toUnix()
         from = from?.minusMinutes(1)
         makeOptions()
         optionsMap["history_points"] = "1"
         var (_, coll) = Rest.get(objectName, options = optionsMap)
-        if (every == null) {
+        if (every == null && !raw) {
             every =
                 with(from!!.until(until!!, ChronoUnit.HOURS)) {
                     when {
@@ -244,7 +247,13 @@ class ShowCommand(val cli: CliCommand, val verb: String) {
                 .map{ it.value }
                 .filter{ !it.attributeMd.suppressed && it.name!="name" }
                 .forEach{ table.append(it.name, it.value) }
-            time = every!!.addTo(historyValue.actualTime)
+            if (raw) {
+                if (historyValue.actualTime > untilUnix) {
+                    break
+                }
+            } else {
+                time = every!!.addTo(historyValue.actualTime)
+            }
         }
         val columnOrder = ColumnOrder[classMd.name]
         table.setColumns { name, col ->

@@ -21,7 +21,7 @@ class CliCommand(line: String) {
             val extras = KeywordList(
                 KeywordFn("capture")  { doCapture() },
                 KeywordFn("columns")  { ColumnsCommand(this).doColumns() },
-                KeywordFn("count")    { ShowCommand(this, "count").doCount() },
+                KeywordFn("count")    { ShowCommand(this).doCount() },
                 KeywordFn("dump")     { doDump() },
                 KeywordFn("no")       { doNo() },
                 KeywordFn("ping")     { doPing() },
@@ -30,9 +30,9 @@ class CliCommand(line: String) {
                 KeywordFn("save")     { doSave() },
                 KeywordFn("server")   { doServer() },
                 KeywordFn("set")      { SetCommand(this).doSet() },
-                KeywordFn("show")     { ShowCommand(this, "show").doShow() },
+                KeywordFn("show")     { ShowCommand(this).doShow() },
                 KeywordFn("shutdown") { doShutdown() },
-                KeywordFn("total")    { ShowCommand(this, "total").doTotal()},
+                KeywordFn("total")    { ShowCommand(this).doTotal()},
                 KeywordFn("traceroute"){ doTraceroute() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
