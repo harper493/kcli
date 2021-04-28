@@ -11,7 +11,7 @@ class ShowCommand(val cli: CliCommand) {
     private var order = ""
     private var descending: Boolean? = null
     private var limit = 100
-    private var level = ""
+    private var level: ShowLevel? = null
     private var from: LocalDateTime? = null
     private var until: LocalDateTime? = null
     private var every: DateInterval? = null
@@ -52,6 +52,7 @@ class ShowCommand(val cli: CliCommand) {
             println(result.render())
             return
         }
+        level = level ?: (objectName.isWild).ifElse(ShowLevel.brief, ShowLevel.full)
         if (from ?: until ?: every ?: forInterval != null) {
             doShowHistory()
         } else {
@@ -189,7 +190,7 @@ class ShowCommand(val cli: CliCommand) {
             }
         if (!onlySelect) {
             objectName.leafClass?.attributes
-                ?.filter{ it.isBrief && it.isHistory && it.total!="none" }
+                ?.filter{ it.level <= level!! && it.isHistory && it.total!="none" }
                 ?.forEach { selections.add(it) }
             onlySelect = true
         }
@@ -322,13 +323,7 @@ class ShowCommand(val cli: CliCommand) {
             }
         }
         addOption("with", with)
-        addOption(
-            "level", when {
-                level.isNotEmpty() -> level
-                objectName.isWild -> "brief"
-                else -> "full"
-            }
-        )
+        addOption("level", level.toString())
         addOption(
             "order", when (descending) {
                 null -> ""
@@ -429,11 +424,8 @@ class ShowCommand(val cli: CliCommand) {
     }
 
     private fun doLevel(l: String) {
-        cli.checkRepeat({ level.isNotEmpty() }, msg = "duplicate level keyword '$l'")
-        if (l !in levels) {
-            throw CliException("invalid show level '$l'")
-        }
-        level = l
+        cli.checkRepeat({ level != null }, msg = "duplicate level keyword '$l'")
+        level = ShowLevel.parse(l)
         parser.findKeyword(finalExtras, endOk = true)
     }
 

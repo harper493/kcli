@@ -1,5 +1,6 @@
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 // import com.sun.org.apache.xpath.internal.operations.Bool
 //import kotlin.reflect.full.cast
@@ -182,6 +183,8 @@ abstract class Datatype (
             IntDatatype("uid"),
             FloatDatatype("rate", description="Traffic rate in Kbit/sec",
                 converter={ toFloat(it) * if ((it.lastOrNull()?:' ').isLetter()) 1.0 else 0.001 }),
+            FloatDatatype("item_rate", description="Event rate per second",
+                converter={ toFloat(it) }),
             StringDatatype("mac_address", description="MAC address in form 00:11:22:33:44:55",
                 validator = Validator(fn={ value, _ -> validateMacAddress(value) },
                     prefixRx="""[\w:]+""")),
@@ -197,7 +200,9 @@ abstract class Datatype (
             StringDatatype("ipv4_address", description="IPv4 address in form 1.2.3.4",
                 validator = Validator(fn={ value, _ -> validateIpV4Address(value) },
                     prefixRx="""[\d\.]+""")),
-            DurationDatatype("duration")
+            DurationDatatype("duration"),
+            CounterDatatype("counter"),
+            CounterDatatype("byte_counter"),
         )
     }
 }
@@ -328,7 +333,7 @@ open class IntDatatype(
     name: String,
     description: String = name,
     formatter: (value: Any) -> String =
-        { (it.toString().toFloatOrNull()?:(0.0.toFloat())).roundToInt().toString() },
+        { (it.toString().toDoubleOrNull()?:(0.0.toDouble())).roundToLong().toString() },
     validator: Validator=Validator(),
     unit: String = "",
     properties: String = "",
@@ -356,7 +361,7 @@ open class IntDatatype(
 open class FloatDatatype(
     name: String,
     description: String = name,
-    formatter: (value: Any) -> String = { "%.3f".format((it.toString().toFloatOrNull() ?: 0)) },
+    formatter: (value: Any) -> String = { "%.3f".format((it.toString().toDoubleOrNull() ?: 0)) },
     validator: Validator=Validator(),
     unit: String = "",
     properties: String = "",
@@ -412,6 +417,13 @@ class EnumDatatype(
     reformatter=reformatter
 ) {
     override fun hasNull() = false
+}
+
+class CounterDatatype(
+    name: String,
+    description: String = name,
+): IntDatatype(name, description) {
+    override fun isCounter() = true
 }
 
 class DurationDatatype(name: String,

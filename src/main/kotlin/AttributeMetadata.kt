@@ -34,7 +34,7 @@ open class AttributeMetadata(
     val range get() = getMd("range")
     val suppressed by lazy { Properties.get("suppress", myClass.name, name)!=null }
     val level by lazy {
-        ShowLevel.values().find{ it.name==getMd("level") } ?: ShowLevel.detail
+        ShowLevel.parse(getMd("level"), missOk=true) ?: ShowLevel.detail
     }
     val default get() = natures["default"]
     val total get() = natures["total"] ?: "none"

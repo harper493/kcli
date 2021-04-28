@@ -38,6 +38,7 @@ class AttributeData(val attributeMd: AttributeMetadata,
         private var startTime: Long = 0
         private var lastTime: Long = 0
         private var accumulator: Double = 0.0
+        private var lastReturnedValue: Double? = null
         private var accumulated: Boolean = false
         private val iter = data.history?.iterator()
         private var nextValue: HistoryValue? = if (iter?.hasNext() == true) iter.next() else null
@@ -53,14 +54,16 @@ class AttributeData(val attributeMd: AttributeMetadata,
             }
 
         private fun getValue() =
-            (if (data.attributeMd.type.isCounter()
-                || data.attributeMd.total == "none"
-                || prevValue == null
-            )
+            (if (data.attributeMd.type.isCounter())
+                with (nextValue!!.value) {
+                    this - (lastReturnedValue ?: this)
+                        .also { lastReturnedValue = this }
+                }
+            else if (data.attributeMd.total == "none"
+                || prevValue == null)
                 nextValue!!.value
             else accumulator / ((nextValue?.time ?: prevValue!!.time) - startTime).toDouble()
                 .let { if (it==0.0) 1.0 else it})
-
                 .also {
                     start()
                 }
@@ -114,10 +117,12 @@ class AttributeData(val attributeMd: AttributeMetadata,
                             else ->
                                 accumulate().reload()
                         }
-                    nextValue!=null && prevValue==null && (myTime >= nextValue!!.time) ->
+                    nextValue!=null && prevValue==null && (myTime >= nextValue!!.time) -> {
                         return makeResult(myTime, nextValue!!).also {
-                            start().reload()
+                            start()
+                            reload()
                         }
+                    }
                     nextValue!=null && prevValue==null && (myTime < nextValue!!.time) ->
                         reload()
                     nextValue==null && (prevValue==null || (myTime < prevValue!!.time)) ->
