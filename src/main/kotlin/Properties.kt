@@ -25,12 +25,12 @@ class Properties(
     fun load(content: String) =
         also {
             content
-                .regexReplace("\\\\\n\\s*", { " " }, RegexOption.MULTILINE)
+                .regexReplace("\\s*\\\\\n\\s*", { " " }, RegexOption.MULTILINE)
                 .regexReplace("""\\u([0-9a-eA-E]{4})""", { it.groupValues[1].toInt(16).toChar().toString() })
-                .replace("\\n", "\n")
-                .replace("\\", "")
                 .split("\n")
                 .filter{ !it.startsWith("#") }
+                .map{ it.replace("\\n", "\n") }
+                .map{ it.replace("\\", "") }
                 .forEach { loadOneLine(it) }
         }
 
@@ -56,7 +56,7 @@ class Properties(
     }
 
     companion object {
-        var properties = Properties()
+        val properties = Properties()
         fun loadFile(filename: String) = properties.loadFile(filename)
         fun load(content: String) = properties.load(content)
 

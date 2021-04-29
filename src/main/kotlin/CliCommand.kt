@@ -23,6 +23,7 @@ class CliCommand(line: String) {
                 KeywordFn("columns")  { ColumnsCommand(this).doColumns() },
                 KeywordFn("count")    { ShowCommand(this).doCount() },
                 KeywordFn("dump")     { doDump() },
+                KeywordFn("help")     { doHelp() },
                 KeywordFn("no")       { doNo() },
                 KeywordFn("ping")     { doPing() },
                 KeywordFn("quit")     { doQuit() },
@@ -124,6 +125,23 @@ class CliCommand(line: String) {
         val kw = parser.findKeyword(keywords)!!
         parser.checkFinished()
         Rest.put("configurations/running", mapOf("dump_${kw.asString()}" to "1"))
+    }
+
+    private fun doHelp() {
+        val table = HelpTable()
+        val topics = Properties.properties
+            .filter{ it.first.startsWith("help.help.")}
+            .map{ it.first.removePrefix("help.help.")}
+            .sorted()
+        val kw = parser.findKeyword(KeywordList(*topics.toTypedArray()), endOk=true)?.asString()
+        parser.checkFinished()
+        if (kw==null) {
+            table.append(mapOf("" to (Properties.get("help", "help")?:"") +
+                    " ${topics.joinToString(", ")}"))
+        } else {
+            table.append(mapOf("" to Properties.get("help", "help", kw)))
+        }
+        Cli.outputln(table.renderStyled())
     }
 
     private fun doNo() {

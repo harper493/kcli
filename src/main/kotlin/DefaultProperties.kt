@@ -87,6 +87,7 @@ help.command.capture                                 = Control packet capture
 help.command.columns                                 = Control table columns
 help.command.count                                   = Count objects matching criteria
 help.command.dump                                    = Dump diagnostic information
+help.command.help                                    = Get help on specified command or topic
 help.command.no                                      = Delete specified object
 help.command.ping                                    = Ping specified address
 help.command.quit                                    = Exit CLI
@@ -122,7 +123,18 @@ help.*.by                                            = Select attribute to be us
 help.*.select                                        = Choose attributes to be shown
 help.*.only                                          = Show only selected attributes
 help.*.with                                          = Filter objects based on attribute values
-help.help                                            = Help!
+
+help.help                                            = To see available commands, type <tab> at the command prompt. \
+                                                       For help on a particular command, type 'help <command>'. \
+                                                       Help is also available for the following topics: 
+help.help.editing                                    = Command editing works like the shell. \nUse the left/right arrow keys \
+                                                       to move around within the line, and the up/down arrow keys to \
+                                                       recall previous commands.
+help.help.show                                       = Show attributes (settings, counters, etc) of the specified \
+                                                       object or objects. Use 'with' to filter which objects \
+                                                       are shown, 'select' to select additional attributes, 'top' \
+                                                       and 'bottom' to sort objects based on some attribute. For \
+                                                       help on retrieving historical data, type 'help history'.
 
 format.name_width                                    = 25
 format.value_width                                   = 25
