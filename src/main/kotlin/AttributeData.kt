@@ -26,7 +26,7 @@ class AttributeData(val attributeMd: AttributeMetadata,
                 with(source.asArray()) {
                     HistoryValue(
                         attributeMd,
-                        this[0].asString().toLongOrNull() ?: 0,
+                        this[0].asInt(),
                         this[1].asString().toDoubleOrNull() ?: 0.0
                     )
                 }

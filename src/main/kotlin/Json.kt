@@ -1,6 +1,6 @@
 interface JsonObject {
     fun asString(): String
-    fun asInt(): Int
+    fun asInt(): Long
     fun asBoolean(): Boolean
     fun asFloat(): Double
     fun asArray(): List<JsonObject>
@@ -111,13 +111,13 @@ class JsonObjectImpl : JsonObject {
         }
     }
     private var stringVal : String? = null
-    private var intVal : Int? = null
+    private var intVal : Long? = null
     private var boolVal : Boolean? = null
     private var floatVal : Double? = null
     private var arrayVal : MutableList<JsonObject>? = null
     private var dictVal : MutableMap<String, JsonObject>? = null
     override fun asString() = stringVal ?: ""
-    override fun asInt() = intVal ?: stringVal?.toIntOrNull() ?: 0
+    override fun asInt() = intVal ?: stringVal?.toLongOrNull() ?: 0
     override fun asBoolean() = boolVal ?: false
     override fun asFloat() = floatVal ?: 0.0
     override fun asArray() = arrayVal ?: listOf()
@@ -235,7 +235,7 @@ class JsonObjectImpl : JsonObject {
                             "false" -> boolVal = false
                             else -> {
                                 try {
-                                    intVal = v.toInt()
+                                    intVal = v.toLong()
                                 } catch (exc: NumberFormatException) {
                                     try {
                                         floatVal = v.toDouble()
