@@ -199,23 +199,26 @@ class ShowCommand(val cli: CliCommand) {
             doShowHistoryPoints()
         } else {
             makeOptions()
-            var (_, coll) = Rest.get(objectName, options = optionsMap)
+            val (_, coll) = Rest.get(objectName, options = optionsMap)
             cli.outputln(
                 StyledText(
                     "History from ${from!!.toNiceString()} until ${until!!.toNiceString()}",
                     color = "heading"
                 )
             )
-            cli.outputln(showCollection(objectName, coll).render())
+            cli.outputln(showCollection(objectName, coll, nameMap=mapOf("_total" to "Total")).render())
         }
     }
 
     private fun doShowHistoryPoints() {
+        val header = StyledText("History for ${objectName.describe()} "
+                + "from ${from!!.toNiceString()} until ${until!!.toNiceString()}\n", color = "heading")
         var time = if (raw) 0L else from!!.toUnix()
+        val t = unixToLocalDateTime(time)
         from = from?.minusMinutes(1)
         makeOptions()
         optionsMap["history_points"] = "1"
-        var (_, coll) = Rest.get(objectName, options = optionsMap)
+        val (_, coll) = Rest.get(objectName, options = optionsMap)
         if (every == null && !raw) {
             every =
                 with(from!!.until(until!!, ChronoUnit.HOURS)) {
@@ -227,8 +230,6 @@ class ShowCommand(val cli: CliCommand) {
                     }
                 }
         }
-        val header = StyledText("History for ${objectName.describe()} "
-                + "from ${from!!.toNiceString()} until ${until!!.toNiceString()}\n", color = "heading")
         val table = cli.makeTable()
         if (coll.isEmpty()) {
             if (Rest.getObject(objectName.url) == null ) {
@@ -277,9 +278,11 @@ class ShowCommand(val cli: CliCommand) {
             levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
         }
         val (oname, terminator) = parser.getObjectName(initialExtras = initialExtras,
-            helpContext = HelpContext(listOf("show"),
-                { collName-> Properties.get("nav", collName)
-                    ?.let { "Select objects from $it" }}),
+            helpContext = HelpContext(listOf("show")
+            ) { collName ->
+                Properties.get("nav", collName)
+                    ?.let { "Select objects from $it" }
+            },
             finalExtras = finalExtras,
             initialPred = { !it.name.startsWith("parameter") })
         classMd = oname.leafClass ?: CliMetadata.getClass("configuration")!!
@@ -331,7 +334,7 @@ class ShowCommand(val cli: CliCommand) {
                 else -> ">$order"
             }
         )
-        addOption("from", from?.toString() ?: "")
+        addOption("from", from?.toUTC()?.toString() ?: "")
         addOption("limit", "${minOf(limit, pageSize).takeIf { it > 0 } ?: pageSize}")
     }
 
@@ -460,7 +463,10 @@ class ShowCommand(val cli: CliCommand) {
         return StyledText(heading, display.renderStyled())
     }
 
-    private fun showCollection(oname: ObjectName, coll: CollectionData, header: StyledText?=null): StyledText {
+    private fun showCollection(oname: ObjectName,
+                               coll: CollectionData,
+                               header: StyledText?=null,
+                               nameMap: Map<String,String> = mapOf()): StyledText {
         val table = cli.makeTable()
         var namePosition = -1000000
         val nameColumns = oname.elements.takeLast(oname.wildDepth)
@@ -470,7 +476,9 @@ class ShowCommand(val cli: CliCommand) {
         for (obj in coll) {
             val color = obj.getOr("color")?.value?.ifBlank { null }
             for (elem in obj.name.elements.takeLast(oname.wildDepth)) {
-                table.append(elem.attrMd.containedClass?.displayName ?: "", elem.name, color)
+                table.append(elem.attrMd.containedClass?.displayName ?: "",
+                    nameMap[elem.name] ?: elem.name,
+                    color)
             }
             for ((name, attributeData) in obj) {
                 if (!attributeData.attributeMd.suppressed && name != "name") {

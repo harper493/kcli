@@ -1,5 +1,6 @@
 import java.time.*
 import java.time.temporal.ChronoUnit
+import java.util.*
 
 /*
 * This file contains miscellaneous classes, functions etc relating to time
@@ -21,15 +22,16 @@ fun LocalDateTime.atHour() =
 fun LocalDateTime.toNiceString() =
     toString().replace('T', ' ')
 
+fun LocalDateTime.toUTC() =
+    minusNanos(timeZoneOffset() * 1000000L)
+
 fun LocalDateTime.toUnix(): Long =
     run {
         val utcZone = ZoneId.of("UTC+0")
-        val utcTime = ZonedDateTime.ofLocal(this,
-            utcZone,
-            ZoneOffset.ofHours(0))
-        val base = ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, utcZone)
-        val delta = base.until(utcTime, ChronoUnit.SECONDS)
-        delta * 1000L
+        val zone = ZoneId.systemDefault()
+        val base = ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, zone)
+        val utcTime = ZonedDateTime.of(toUTC(), utcZone)
+        base.until(utcTime, ChronoUnit.SECONDS) * 1000
     }
 
 fun LocalDateTime.setTime(time: LocalTime) =
@@ -38,7 +40,20 @@ fun LocalDateTime.setTime(time: LocalTime) =
 fun unixToLocalDateTime(unixTime: Long) =
     LocalDateTime.ofEpochSecond(unixTime/1000,
         (unixTime % 1000L).toInt(),
-        ZoneId.systemDefault().getRules().getOffset(Instant.now()))
+        ZoneOffset.ofTotalSeconds(timeZoneOffset()/1000))
+
+var tzOffset: Int? = null
+
+fun timeZoneOffset() =
+    tzOffset ?:
+    run {
+        val zone = ZoneId.systemDefault()
+        val tz = TimeZone.getDefault()
+        val base = ZonedDateTime.of(1970, 1, 1, 0, 0, 0, 0, zone)
+        val utcTime = ZonedDateTime.of(LocalDateTime.now(), zone)
+        val delta = base.until(utcTime, ChronoUnit.SECONDS)
+        tz.getOffset(delta*1000).also { tzOffset = it }
+    }
 
 fun KeywordList.Companion.months(fn: (Month)->Unit) =
     KeywordList(*Month.values().map {
