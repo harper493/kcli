@@ -20,18 +20,19 @@ class HelpTable(values: Map<String,String> = mapOf(),
             }
         }
 
-    fun renderStyled() =
-        if (header==null) complete().table.renderStyled()
+    fun renderStyled(comparator: Comparator<String> = Comparator{ a,b -> a.compareTo(b)}) =
+        if (header==null) complete(comparator).table.renderStyled()
         else StyledText(
             StyledText(header, color="help"),
-            complete().table.renderStyled())
+            complete(comparator).table.renderStyled())
 
-    fun render() = renderStyled().render()
+    fun render(comparator: Comparator<String> = Comparator{ a,b -> a.compareTo(b)}) =
+        renderStyled(comparator).render()
 
-    private fun complete() =
+    private fun complete(comparator: Comparator<String>) =
         also {
             content
-                .toSortedMap()
+                .toSortedMap(comparator)
                 .forEach {
                     table.append(
                         "key", it.key,

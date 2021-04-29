@@ -8,6 +8,7 @@ import java.io.File
 // jline-reader
 import org.jline.reader.*
 import org.jline.reader.impl.DefaultParser
+import org.jline.reader.impl.history.DefaultHistory
 // jline-terminal
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
@@ -33,13 +34,18 @@ object CommandReader {
     private val terminal: Terminal = builder.build()
     private val completer = CommandCompleter()
     private var prompt: String = ""
+    private var history = DefaultHistory()
     var lastPrompt: String = ""; private set
 
     private val reader: LineReader = LineReaderBuilder.builder()
         .terminal(terminal)
         .completer(completer)
+        .history(history)
+        .variable(LineReader.HISTORY_FILE, "${Cli.kcliDir}/command_history.txt")
+        .also{ history.load() }
         .parser(DefaultParser())
         .build()
+
 
     fun setPrompt(p: String) { prompt = p }
 
@@ -59,6 +65,14 @@ object CommandReader {
         reader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, false)
         return result
     }
+
+    fun saveHistory() {
+        history.save()
+    }
+
+    fun getHistory(limit: Int = history.last()+1) =
+        (maxOf(history.first(), history.last()-limit+1)..history.last())
+            .map { it+1 to history.get(it) }
 }
 
 

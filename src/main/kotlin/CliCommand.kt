@@ -24,6 +24,7 @@ class CliCommand(line: String) {
                 KeywordFn("count")    { ShowCommand(this).doCount() },
                 KeywordFn("dump")     { doDump() },
                 KeywordFn("help")     { doHelp() },
+                KeywordFn("history")  { doHistory() },
                 KeywordFn("no")       { doNo() },
                 KeywordFn("ping")     { doPing() },
                 KeywordFn("quit")     { doQuit() },
@@ -142,6 +143,13 @@ class CliCommand(line: String) {
             table.append(mapOf("" to Properties.get("help", "help", kw)))
         }
         Cli.outputln(table.renderStyled())
+    }
+
+    private fun doHistory() {
+        val table = HelpTable()
+        CommandReader.getHistory(Properties.getParameterInt("history_limit"))
+            .forEach{ table.append(it.first.toString(), it.second) }
+        Cli.outputln(table.renderStyled(Comparator<String>{ a,b -> a.toInt().compareTo(b.toInt())}))
     }
 
     private fun doNo() {

@@ -70,6 +70,7 @@ parameter.metadata_column_width                      = 35
 parameter.ping_timeout                               = 5
 parameter.help_key_width                             = 30
 parameter.help_help_width                            = 80
+parameter.history_limit                              = 40
 
 color.odd_row                                        = yucky_green
 color.even_row                                       = yucky_brown

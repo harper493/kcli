@@ -105,6 +105,7 @@ object Cli {
         if (args.output.isNotBlank()) {
             outFile.close()
         }
+        CommandReader.saveHistory()
     }
 
     private fun getCredentials(server: Server): Server {
