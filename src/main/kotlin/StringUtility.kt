@@ -106,7 +106,7 @@ fun String.wrap(width: Int, force: Boolean = false,
 
 fun String.wrapLine(width: Int,
          force: Boolean = false,
-         splitter: (String)->Pair<String,String> = { baseSplitter(it) }): Iterable<String> {
+         splitter: (String)->Pair<String,String>): Iterable<String> {
     var newWidth = width
     var line = ""
     return if (width==0) {
@@ -244,7 +244,8 @@ fun readYesNo(prompt: String, defaultNo: Boolean=true, allowQuit: Boolean=false)
         keywords.addKeys("quit")
     }
     while (true) {
-        val answer = CommandReader.read("$prompt (${defaultNo.ifElse("y/N", "Y/n")})? ")
+        val answer = CommandReader.read("$prompt (${defaultNo.ifElse("y/N", "Y/n")})? ",
+            makeHistory=false)
         if (answer.isEmpty()) {
             return !defaultNo
         } else {

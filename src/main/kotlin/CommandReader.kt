@@ -49,10 +49,15 @@ object CommandReader {
 
     fun setPrompt(p: String) { prompt = p }
 
-    fun read(myPrompt: String? = null): String =
+    fun read(myPrompt: String? = null, makeHistory: Boolean=true): String =
         try {
             lastPrompt = myPrompt ?: prompt
-            reader.readLine(lastPrompt)
+            reader.readLine(lastPrompt).also {
+                if (!makeHistory) {
+                    history.previous()
+                    history.removeAll { it.index() == history.last() }
+                }
+            }
         } catch (exc: UserInterruptException) {
             throw CliException("")
         } catch (exc: EndOfFileException) {

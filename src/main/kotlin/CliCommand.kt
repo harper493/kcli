@@ -38,9 +38,11 @@ class CliCommand(line: String) {
                 KeywordFn("traceroute"){ doTraceroute() },
             )
             val (objName, key) = parser.getObjectName(initialExtras = extras,
-                helpContext=HelpContext(listOf("command"),
-                        { collName-> Properties.get("nav", collName)
-                            ?.let { "Create or modify objects in $it" }}),
+                helpContext=HelpContext(listOf("command")
+                ) { collName ->
+                    Properties.get("nav", collName)
+                        ?.let { "Create or modify objects in $it" }
+                },
                 keywordAdder={ classMd, keywords ->
                     if (classMd.name != "configuration")
                         classMd.settableAttributes.forEach{ keywords.addAttributes(it) } },
@@ -50,7 +52,7 @@ class CliCommand(line: String) {
                 if (key==null) {
                     throw CliException("unknown command or collection '${parser.curToken}'")
                 }
-                key?.invoke()
+                key.invoke()
             } else {
                 if (!parser.isFinished()) {
                     parser.backup()
@@ -149,11 +151,11 @@ class CliCommand(line: String) {
         val table = HelpTable()
         CommandReader.getHistory(Properties.getParameterInt("history_limit"))
             .forEach{ table.append(it.first.toString(), it.second) }
-        Cli.outputln(table.renderStyled(Comparator<String>{ a,b -> a.toInt().compareTo(b.toInt())}))
+        Cli.outputln(table.renderStyled { a, b -> a.toInt().compareTo(b.toInt()) })
     }
 
     private fun doNo() {
-        val extras = KeywordList(KeywordFn("server", { doNoServer() }))
+        val extras = KeywordList(KeywordFn("server") { doNoServer() })
         val (objName, key) = parser.getObjectName(initialExtras = extras, missOk=true, wildOk=false)
         if (objName.isEmpty) {
             if (key==null) {
