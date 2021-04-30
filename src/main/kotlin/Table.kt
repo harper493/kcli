@@ -98,7 +98,7 @@ open class Table (
 
     private fun splitCells(row: Iterable<StyledText>, padAtEnd: Boolean): List<List<StyledText>> {
         val splitRows = zip(sortedCols, row).map { colCell ->
-            wrap(colCell.second.getText(), colCell.first.maxWidth.absoluteValue, force=true).toMutableList()
+            colCell.second.getText().wrap(colCell.first.maxWidth.absoluteValue, force=true).toMutableList()
         }
         val depth = splitRows.maxSize()
         for (subCol in splitRows) {
@@ -122,7 +122,8 @@ open class Table (
                 val s = if (col.maxWidth < 0) -1 else 1
                 col.maxWidth = s * maxOf(
                     w,
-                    if (squishHeadings) wrap(col.heading, maxOf(w, 1)).map { it.length }.maxOrNull() ?: 0
+                    if (squishHeadings) col.heading.wrap(maxOf(w, 1))
+                        .map { it.length }.maxOrNull() ?: 0
                     else col.heading.length
                 )
             }

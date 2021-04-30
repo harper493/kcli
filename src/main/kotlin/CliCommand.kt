@@ -136,12 +136,12 @@ class CliCommand(line: String) {
             .sorted()
         val kw = parser.findKeyword(KeywordList(*topics.toTypedArray()), endOk=true)?.asString()
         parser.checkFinished()
-        if (kw==null) {
-            table.append(mapOf("" to (Properties.get("help", "help")?:"") +
-                    " ${topics.joinToString(", ")}"))
-        } else {
-            table.append(mapOf("" to Properties.get("help", "help", kw)))
-        }
+        val help = if (kw==null)
+                ((Properties.get("help", "help")?:"") +
+                    " ${topics.joinToString(", ")}")
+        else
+            Properties.get("help", "help", kw) ?: ""
+        table.append("" to help)
         Cli.outputln(table.renderStyled())
     }
 

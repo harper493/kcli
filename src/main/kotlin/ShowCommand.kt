@@ -214,7 +214,6 @@ class ShowCommand(val cli: CliCommand) {
         val header = StyledText("History for ${objectName.describe()} "
                 + "from ${from!!.toNiceString()} until ${until!!.toNiceString()}\n", color = "heading")
         var time = if (raw) 0L else from!!.toUnix()
-        val t = unixToLocalDateTime(time)
         from = from?.minusMinutes(1)
         makeOptions()
         optionsMap["history_points"] = "1"
@@ -492,7 +491,7 @@ class ShowCommand(val cli: CliCommand) {
                 col.position = nameColumns[name]!!
             } else {
                 val attrMd = classMd.getAttribute(name)
-                col.position = columnOrder?.getPosition(attrMd?.name ?: "") ?: 0
+                col.position = columnOrder?.getPosition(attrMd?.name ?: "") ?: 10000
                 col.heading = cli.abbreviateHeader((attrMd?.displayName ?: makeNameHuman(name)))
             }
         }

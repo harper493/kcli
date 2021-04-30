@@ -6,14 +6,14 @@ class ColumnOrder(val name: String) {
     )
 
     data class FieldInfo(
-        val preference: Int,
+        val preference: Int?,
         val include: Boolean
     )
 
     data class FieldData(
         val name: String,
-        val preference:Int = 0) {
-        var position: Int = 0
+        val preference:Int) {
+        var position: Int = defaultPosition
     }
 
     private val fieldMap = mutableMapOf<String,FieldData>()
@@ -23,8 +23,9 @@ class ColumnOrder(val name: String) {
     val fields get() = fieldMap.keys
     val usedFields get() = orderedFields.map{ it.name }
 
-    private fun makeField(name: String, preference:Int = 0) =
-        fieldMap[name] ?: (FieldData(name, preference).also{ fieldMap[name] = it })
+    private fun makeField(fieldName: String, preference: Int? = null) =
+        fieldMap[fieldName] ?: (FieldData(fieldName, preference ?: defaultPosition)
+            .also{ fieldMap[fieldName] = it })
 
     fun setPreferences(fields: Map<String,FieldInfo>) =
         also {
@@ -81,7 +82,8 @@ class ColumnOrder(val name: String) {
         orderedFields = orderedFields.filter{ it.name !in fields }
     }
 
-    fun getPosition(name: String) = fieldMap[name]?.position ?: defaultPosition
+    fun getPosition(name: String) =
+        (fieldMap[name]?.position ?: defaultPosition)
 
     override fun toString() =
         "$name = ${usedFields.joinToString(",")}"

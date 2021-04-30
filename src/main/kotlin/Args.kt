@@ -20,15 +20,15 @@ class Args() {
 
     private fun parse (): Args {
         parser.force()
-        if (serverOpt.isEmpty()
+        command = (if (serverOpt.isEmpty()
             && commandOpt.isNotEmpty()
             && commandOpt.first().containsAnyOf(":.@")) {
             server = commandOpt.first()
-            command = commandOpt.drop(1).joinToString(" ")
+            commandOpt.drop(1)
         } else {
             server = serverOpt
-            command = commandOpt.joinToString(" ")
-        }
+            commandOpt
+        }).map{ (" " in it).ifElse("\"$it\"", it)  }.joinToString(" ")
         return this
     }
     companion object {

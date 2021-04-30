@@ -20,7 +20,7 @@ open class AttributeMetadata(
     val defaultValue: String? get() = natures["default"]
     val unit: String get() = getMd("unit")
     val filterType: Datatype get() = Datatype[natures["f"] ?: ""]
-    val preference: Int get() = getMd("preference").toIntOrNull() ?: 0
+    val preference: Int? get() = getMd("preference").toIntOrNull()
     val isCollection: Boolean = getMd("usage_type") == "collection"
     val isRelation: Boolean = getMd("usage_type") == "related"
     val isPseudonym: Boolean = "pseudonym" in natures

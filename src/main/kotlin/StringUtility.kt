@@ -97,16 +97,22 @@ fun baseSplitter(text: String): Pair<String, String> =
  * an intelligent way (see baseSplitter).
  */
 
-fun wrap(text: String, width: Int,
+fun String.wrap(width: Int, force: Boolean = false,
+                splitter: (String)->Pair<String,String> = { baseSplitter(it) }): Iterable<String> =
+    with (split("\n")) {
+        if (width==0) this
+        else map { it.wrapLine(width, force, splitter) }.flatten()
+    }
+
+fun String.wrapLine(width: Int,
          force: Boolean = false,
          splitter: (String)->Pair<String,String> = { baseSplitter(it) }): Iterable<String> {
     var newWidth = width
     var line = ""
     return if (width==0) {
-        listOf(text)
+        listOf(this)
     } else {
-
-        text.trim().split(" ").map { it.trim() }
+        this.trim().split(" ").map { it.trim() }
             .map { word ->
                 val thisResult = mutableListOf<String>()
                 val space = if (line.isEmpty()) "" else " "
@@ -292,7 +298,7 @@ fun readFileOrEmpty(filename: String) =
 Get a unique id for something
  */
 
-fun<T> T.adr() = Integer.toHexString(System.identityHashCode(this))
+fun<T> T.adr(): String = Integer.toHexString(System.identityHashCode(this))
 
 /**
  * Replace regex according to given pattern

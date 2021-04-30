@@ -51,11 +51,14 @@ class Parser (
                     escape = true
                     ch = nullCh
                 } else if (ch == quote) {
+                    quote = nullCh
                     ch = nullCh
                 } else if (ch in quotes && (token ?: "").isEmpty()) {
                     quote = ch
                     ch = nullCh
-                } else if ((token ?: "").isNotEmpty() && ch!=completerCh) {
+                } else if ((token ?: "").isNotEmpty()
+                    && ch!=completerCh
+                    && quote==nullCh) {
                     if (!myValidator.validatePfx(token + ch)) {
                         break
                     }
