@@ -49,23 +49,23 @@ fun String.splitUsing(splitter: (String)->Pair<String,String>, size: Int): List<
 }
 
 /**
- * Hyphenate [word], choosing the longest fragment that will fit in [size],
+ * Hyphenate string, choosing the longest fragment that will fit in [size],
  * returning a pair corresponding to the split. If there is no suitable hyphenation
  * the result is an empty string followed by the full word.
  *
  * If [size] is -1, pick the shortest fragment.
  */
 
-fun hyphenate(word: String, size: Int): Pair<String,String> =
-    if ("-" in word) Pair("", word)
-    else word.splitAt(
-        (Properties.get("hyphenate", word.toLowerCase()) ?: word)
+fun String.hyphenate(size: Int): Pair<String,String> =
+    if ("-" in this) Pair("", this)
+    else splitAt(
+        (Properties.get("hyphenate", this.toLowerCase()) ?: this)
             .split("-")
             .map{ it.length }
             .let{
                 when {
-                    size < 0 && it.first() < word.length -> it.first()
-                    size < 0 && it.first() >= word.length -> 0
+                    size < 0 && it.first() < length -> it.first()
+                    size < 0 && it.first() >= length -> 0
                     else ->  it.chooseSplit(size, takeFirst = false)
                 }
             })
@@ -122,7 +122,7 @@ fun String.wrapLine(width: Int,
                     if (!force) {
                         newWidth = maxOf(newWidth, line.length)
                     }
-                    var (prefix, residue) = hyphenate(word, maxOf(0, newWidth - line.length - space.length - 1))
+                    var (prefix, residue) = word.hyphenate(maxOf(0, newWidth - line.length - space.length - 1))
                     if (prefix.isNotEmpty()) {
                         if (line.length + prefix.length + space.length <= newWidth - 1) {
                             line = "$line$space${prefix}-"
@@ -137,7 +137,7 @@ fun String.wrapLine(width: Int,
                     }
                     if (residue.length > newWidth) {
                         if (force) {
-                            hyphenate(residue, -1)
+                            residue.hyphenate(-1)
                                 .also {
                                     prefix = it.first
                                     residue = it.second
@@ -157,7 +157,7 @@ fun String.wrapLine(width: Int,
                                 residue = chunks.last()
                             }
                         } else {
-                            val h3 = hyphenate(residue, -1)
+                            val h3 = residue.hyphenate(-1)
                             if (h3.first.isNotEmpty()) {
                                 thisResult.add("${h3.first}-")
                                 residue = h3.second
@@ -197,7 +197,8 @@ fun addToTextList(old: String?, new: String, delimiter: String = ",") =
  * Return time/date in format yyyy-mm-dd hh:mm:ss
  */
 
-fun getDateTime() = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(Date())
+fun getDateTime() =
+    SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(Date())
 
 /*
 * Convert just the first character of a string to uppercase
