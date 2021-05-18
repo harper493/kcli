@@ -108,8 +108,8 @@ class Rest(
             ?.split("/")
             ?.get(2)
 
-    fun put(url: String, body: Map<String,String>): JsonObject {
-        val u = makeUrl(url)
+    fun put(url: String, body: Map<String,String>, options: Map<String,String> = mapOf()): JsonObject {
+        val u = makeUrl(url, options)
         if (trace) {
             println("PUT $u ${body.toJson()}")
         }
@@ -208,7 +208,8 @@ class Rest(
             theRest.getRaw(url, options)
         fun getJson(url: String, options: Map<String,String>?=null) =
             theRest.getJson(url, options)
-        fun put(url: String, body: Map<String,String>) = theRest.put(url, body)
+        fun put(url: String, body: Map<String,String>, options: Map<String,String> = mapOf()) =
+            theRest.put(url, body, options)
         fun post(url: String, body: Map<String,String>) = theRest.post(url, body)
         fun delete(url: String) = theRest.delete(url)
         fun get(oname: ObjectName, options: Map<String,String>?=null) =

@@ -49,13 +49,17 @@ object CommandReader {
 
     fun setPrompt(p: String) { prompt = p }
 
+    fun removeLastHstory() = also {
+        history.previous()
+        history.removeAll { it.index() == history.last() }
+    }
+
     fun read(myPrompt: String? = null, makeHistory: Boolean=true): String =
         try {
             lastPrompt = myPrompt ?: prompt
             reader.readLine(lastPrompt).also {
                 if (!makeHistory) {
-                    history.previous()
-                    history.removeAll { it.index() == history.last() }
+                    removeLastHstory()
                 }
             }
         } catch (exc: UserInterruptException) {
@@ -64,11 +68,12 @@ object CommandReader {
             throw CommandException(terminate=true)
         }
 
-    fun readPassword(myPrompt: String? = null): String {
+    fun readPassword(myPrompt: String? = null): String = let {
         reader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
-        val result = reader.readLine (myPrompt ?: prompt, '*')
-        reader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, false)
-        return result
+        reader.readLine(myPrompt ?: prompt, '*').also {
+            reader.option(LineReader.Option.DISABLE_EVENT_EXPANSION, false)
+            removeLastHstory()
+        }
     }
 
     fun saveHistory() {

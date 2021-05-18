@@ -1,5 +1,5 @@
 enum class ShowLevel{
-    brief, full, detail, expert, debug;
+    list, brief, full, detail, expert, debug;
 
     companion object {
         fun parse(value: String, missOk:Boolean = false) =

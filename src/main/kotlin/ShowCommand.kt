@@ -1,5 +1,7 @@
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.*
+import java.util.Random
 
 class ShowCommand(val cli: CliCommand) {
     private val parser get() = cli.parser
@@ -84,9 +86,9 @@ class ShowCommand(val cli: CliCommand) {
 
     fun doCount() {
         getShowInput(exclude = listOf("select", "top", "bottom", "limit", "level"))
+        makeOptions()
         optionsMap["limit"] = "1"
         optionsMap["level"] = "list"
-        makeOptions()
         val (envelope, _) = Rest.get(objectName, options = optionsMap)
         val quantity = envelope["size"]?.toInt() ?: 0
         val result = StyledText(
@@ -98,10 +100,10 @@ class ShowCommand(val cli: CliCommand) {
 
     fun doTotal() {
         getShowInput(exclude = listOf("level"))
-        optionsMap["limit"] = "1"
-        optionsMap["total"] = "post"
         CliException.throwIf("must use 'select' for attributes in total command") { selections.isEmpty() }
         makeOptions(doColor = false)
+        optionsMap["limit"] = "1"
+        optionsMap["total"] = "post"
         val totals = Rest.getTotals(objectName, options = optionsMap)
         CliException.throwIf("no matching objects found")
         {
@@ -131,6 +133,37 @@ class ShowCommand(val cli: CliCommand) {
         cli.outputln(table.render())
     }
 
+    fun doForEach() {
+        getShowInput(exclude = listOf("level", "select"),
+            extras = KeywordList(KeywordFn("set", { doSet() })))
+        level = ShowLevel.list
+        makeOptions()
+        optionsMap["limit"] = "1000"
+        val coll = Rest.get(objectName, options = optionsMap).second.objects.values.toList()
+        val values = cli.readAttributes(objectName.leafClass!!, true)
+        CliException.throwIf("no matching objects found"){ coll.isEmpty() }
+        optionsMap.clear()
+        optionsMap["transaction"] = Math.abs(Random().nextLong()).toString()
+        optionsMap["validate"] = "true"
+        val errors = coll.mapNotNull{
+            try {
+                Rest.put(it.url, values, optionsMap)
+                null
+            } catch (exc: RestException) {
+                Pair(it.url, exc)
+            }}
+        optionsMap["commit"] = "true"
+        Rest.put(coll.last().url, mapOf<String,String>(), optionsMap)
+        if (errors.isEmpty()) {
+            optionsMap["validate"] = "false"
+            coll.forEach{ Rest.put(it.url, values, optionsMap) }
+        } else {
+            Cli.outputError("Operation not performed because of the following errors:")
+            Cli.outputError(errors.map{"  ${it.first}: ${it.second.status} ${it.second.text}"}.
+            joinToString("\n"))
+        }
+    }
+
     private fun doFrom() {
         from = getHistoryTime(parser)
         parser.findKeyword(finalExtras, endOk = true)
@@ -154,6 +187,10 @@ class ShowCommand(val cli: CliCommand) {
     private fun doRaw() {
         raw = true
         parser.findKeyword(finalExtras, endOk = true)
+    }
+
+    private fun doSet() {
+        result = StyledText("just make it stop")
     }
 
     private fun doShowHistory() {
@@ -269,10 +306,11 @@ class ShowCommand(val cli: CliCommand) {
 
     }
 
-    private fun getShowInput(exclude: Iterable<String> = listOf()) {
+    private fun getShowInput(exclude: Iterable<String> = listOf(), extras: KeywordList = KeywordList()) {
         optionsMap["link"] = "name"
         finalExtraTemplate.keywords
             .forEach { if (it.second.key !in exclude) finalExtras.add(it.second) }
+        finalExtras.add(extras)
         if ("levels" !in exclude) {
             levels.map { finalExtras.addOne(Keyword(it, function = { doLevel(it) })) }
         }

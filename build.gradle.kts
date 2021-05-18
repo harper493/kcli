@@ -17,6 +17,7 @@ dependencies {
     testImplementation(kotlin("test-junit"))
     compile("com.github.kittinunf.fuel:fuel:2.3.1")
     compile("org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.1")
+    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
     compile("com.xenomachina:kotlin-argparser:2.0.7")
     //compile("khttp:khttp:1.0.0")
     //compile("jline:jline:2.14.2")

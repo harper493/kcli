@@ -23,6 +23,7 @@ class CliCommand(line: String) {
                 KeywordFn("columns")  { ColumnsCommand(this).doColumns() },
                 KeywordFn("count")    { ShowCommand(this).doCount() },
                 KeywordFn("dump")     { doDump() },
+                KeywordFn("foreach")  { ShowCommand(this).doForEach() },
                 KeywordFn("help")     { doHelp() },
                 KeywordFn("history")  { doHistory() },
                 KeywordFn("no")       { doNo() },
