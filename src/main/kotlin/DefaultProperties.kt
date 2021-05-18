@@ -128,9 +128,37 @@ help.*.with                                          = Filter objects based on a
 help.help                                            = To see available commands, type <tab> at the command prompt. \
                                                        For help on a particular command, type 'help <command>'. \
                                                        Help is also available for the following topics: 
+help.help.command                                    = Previous commands are stored and can be reused and edited just \
+                                                       like with the Unix shell. The 'history' command shows\
+                                                       all previous commands, which can be reused by typing\
+                                                       '!nnn' with the number alongside the command, or\
+                                                       '!prefix' with the first few characters of the command.
+help.help.delete                                     = To delete an object, where applicable and allowed,\
+                                                       type'no' followed by the object name, e.g.\n\
+                                                       no application metube
 help.help.editing                                    = Command editing works like the shell. \nUse the left/right arrow keys \
                                                        to move around within the line, and the up/down arrow keys to \
                                                        recall previous commands.
+help.help.history                                    = (This describes the retrieval of historical data. For command \
+                                                       history, type 'help command').\n\
+                                                       Historical data can be retrieved for a single object, \
+                                                       or for several objects. In either case, use 'from' to \
+                                                       specify the start time. This can be a date in the form \
+                                                       e.g. 2021-05-18, possibly followed by a time in the form \
+                                                       hh:mm. It can also be a time interval like '2 weeks', \
+                                                       or the name of a day or month. \n\
+                                                       'until' can specify an end time, in the same form, or if omitted \
+                                                       then data is retrieved to the present time.\n\
+                                                       Alternatively 'for' can specify a period, e.g. '3 days'.\n\
+                                                       For a single object, 'every' allows the sample time to be\
+                                                       given, e.g. 'every day', 'every 4 hours'. If omitted, a suitable\
+                                                       interval is chosen based on the elapsed period.
+help.help.modify                                     = To modify an object, type its object name (e.g. \
+                                                       'application youtube') followed by the attribute(s) to \
+                                                       be changed and their values. Use 'no' to set a boolean\
+                                                       attribute to false, or to clear the value where this \
+                                                       is applicable. For example:\n\
+                                                       application youtube no drop priority 9999
 help.help.show                                       = Show attributes (settings, counters, etc) of the specified \
                                                        object or objects. Use 'with' to filter which objects \
                                                        are shown, 'select' to select additional attributes, 'top' \
