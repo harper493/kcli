@@ -12,7 +12,7 @@ class ShowCommand(val cli: CliCommand) {
     private var filterConjunction = ""
     private var order = ""
     private var descending: Boolean? = null
-    private var limit = 100
+    private var limit: Int? = null
     private var level: ShowLevel? = null
     private var from: LocalDateTime? = null
     private var until: LocalDateTime? = null
@@ -61,22 +61,21 @@ class ShowCommand(val cli: CliCommand) {
             makeOptions()
             parser.checkFinished()
             var (envelope, coll) = Rest.get(objectName, options = optionsMap)
+
             if (coll.size == 0) {
                 throw CliException("no matching objects found")
             } else if (objectName.isWild || coll.size > 1) {
-                cli.outputln(showCollection(objectName, coll).render())
                 var start = 0
-                while ((envelope["size"]?.toInt() ?: 0) > (pageSize + start)
-                    && run {
-                        cli.output(StyledText().render())
-                        true
-                    }
-                    && readYesNo("Show more", defaultNo = false, allowQuit = true)
-                ) {
-                    start += pageSize
-                    optionsMap["start"] = "$start"
-                    coll = Rest.getCollection(objectName, options = optionsMap)
+                while (true) {
                     cli.outputln(showCollection(objectName, coll).render())
+                    start += pageSize
+                    if ((limit ?: envelope["size"]?.toInt() ?: 0) > (pageSize + start)
+                        && readYesNo("Show more", defaultNo = false, allowQuit = true)) {
+                        optionsMap["start"] = "$start"
+                        coll = Rest.getCollection(objectName, options = optionsMap)
+                    } else {
+                        break
+                    }
                 }
             } else {
                 cli.outputln(showOne(coll.first()!!).render())
@@ -372,7 +371,7 @@ class ShowCommand(val cli: CliCommand) {
             }
         )
         addOption("from", from?.toUTC()?.toString() ?: "")
-        addOption("limit", "${minOf(limit, pageSize).takeIf { it > 0 } ?: pageSize}")
+        addOption("limit", "${minOf(limit ?: pageSize, pageSize).takeIf { it > 0 } ?: pageSize}")
     }
 
     private fun doSelect() {
@@ -418,7 +417,7 @@ class ShowCommand(val cli: CliCommand) {
                     thisFilter = "!$thisFilter"
                 }
             } else {
-                thisFilter += parser.nextToken() ?: ""
+                thisFilter += parser.nextToken(tokenType = Parser.TokenType.ttGeneral) ?: ""
                 val rhs: String = if (lhsAttr.type.isNumeric()) {
                     if (parser.peekRx("[-+0-9]")) {
                         lhsAttr.type.validateCheck(parser.nextToken(validator = lhsAttr.type.validator)!!)

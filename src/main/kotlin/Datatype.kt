@@ -128,12 +128,14 @@ abstract class Datatype (
         }
 
         fun formatDuration(value: Double) =
-            "%s%.0f:%.0f:%.3f".format(
-                (value<0).ifElse("-", ""),
-                value / 3600.0,
-                (value - value % 3600) / 60.0,
-                (value - value % 60)
-            )
+            run {
+                var h = (value / 3600.0).toInt()
+                var m = ((value - (h * 3600).toDouble()) / 60.0).toInt()
+                var s = (value - (h * 3600 + m * 60).toDouble())
+                "%s%02d:%02d:%06.3f".format(
+                    (value < 0).ifElse("-", ""), h, m, s
+                )
+            }
 
         fun formatEnum(value: String) =
             Properties.get("value", "enum", value) ?: value
@@ -433,7 +435,7 @@ class DurationDatatype(name: String,
 ): FloatDatatype(
     name,
     description,
-    formatter = { formatDuration(it.toString().toDoubleOrNull() ?: 0.0) },
+    formatter = { formatDuration(fromDuration(it.toString())) },
     unit = "S",
     converter = { fromDuration(it) },
     gvFactory = { NumericGenericVariable(fromDuration(it)) },

@@ -187,7 +187,10 @@ class Parser (
                     endOk: Boolean=false,
                     errFn: ((String)->Unit)?=null): Keyword? {
         var result: Keyword? = null
-        val token = nextToken(completer=KeywordCompleter(keys), helpContext=helpContext, endOk=missOk || endOk)
+        val token = nextToken(completer=KeywordCompleter(keys),
+            tokenType=TokenType.ttName,
+            helpContext=helpContext,
+            endOk=missOk || endOk)
         if ((token?:"").isNotEmpty()) {
             val exact = keys.exactMatch(token!!)
             if (exact!=null) {

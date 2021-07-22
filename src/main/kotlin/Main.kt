@@ -50,7 +50,7 @@ object Cli {
             try {
                 outFile = PrintWriter(args.output)
             } catch (exc: Exception) {
-                println("Failed to open output file '${args.output}': $exc")
+                println("Failed to open file '${args.output}': $exc")
                 return@run
             }
         }

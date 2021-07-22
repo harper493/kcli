@@ -150,6 +150,7 @@ help.help.history                                    = (This describes the retri
                                                        'until' can specify an end time, in the same form, or if omitted \
                                                        then data is retrieved to the present time.\n\
                                                        Alternatively 'for' can specify a period, e.g. '3 days'.\n\
+                                                       Alternatively 'for' can specify a period, e.g. '3 days'.\n\
                                                        For a single object, 'every' allows the sample time to be\
                                                        given, e.g. 'every day', 'every 4 hours'. If omitted, a suitable\
                                                        interval is chosen based on the elapsed period.
