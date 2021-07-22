@@ -1,5 +1,5 @@
 <component name="ArtifactManager">
-  <artifact type="jar" name="kcli2.main:jar">
+  <artifact type="jar" build-on-make="true" name="kcli2.main:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/kcli2_main_jar</output-path>
     <root id="archive" name="kcli2.main.jar">
       <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.kittinunf.fuel/fuel/2.3.1/c1b88ced2b60d50c519526d0a82463561afcbcd4/fuel-2.3.1.jar" path-in-jar="/" />

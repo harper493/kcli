@@ -77,7 +77,11 @@ object CommandReader {
     }
 
     fun saveHistory() {
-        history.save()
+        try {
+            history.save()
+        } catch(e: Exception) {
+            // ignore all exceptions, nothing we can do about them anyway
+        }
     }
 
     fun getHistory(limit: Int = history.last()+1) =
